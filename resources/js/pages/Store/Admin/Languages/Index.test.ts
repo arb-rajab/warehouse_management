@@ -253,6 +253,51 @@ describe('Language Index', () => {
         expect(status.text()).toContain(t('store.languages.defaultLocked'));
         expect(wrapper.findAllComponents(Form)).toHaveLength(2);
     });
+    it('lets an inactive default language be switched back on', () => {
+        const wrapper = mount(Index, {
+            props: {
+                languages: paginated([
+                    adminLanguage({
+                        is_default: true,
+                        is_english: true,
+                        status: false,
+                    }),
+                ]),
+                filters: {},
+                defaultLanguage: 'en',
+            },
+        });
+        const [, status] = wrapper.findAllComponents(StoreStatusSwitch);
+        expect(status.props('locked')).toBeUndefined();
+        expect(status.findComponent(Form).exists()).toBe(true);
+    });
+    it('marks the default language notice for a setup checklist deep link, and nothing without one', async () => {
+        const scrollIntoView = vi.fn();
+        Element.prototype.scrollIntoView = scrollIntoView;
+        const props = {
+            languages: paginated([adminLanguage()]),
+            filters: {},
+            defaultLanguage: 'nl',
+        };
+        const wrapper = mount(Index, {
+            props: { ...props, highlight: 'default_language' },
+            attachTo: document.body,
+        });
+        await wrapper.vm.$nextTick();
+        await wrapper.vm.$nextTick();
+        const marked = wrapper.findAll('[data-highlighted]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0].attributes('data-section')).toBe('default_language');
+        expect(marked[0].text()).toContain(
+            t('store.languages.defaultReadOnly', { code: 'nl' }),
+        );
+        expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
+        expect(document.activeElement).toBe(marked[0].element);
+        wrapper.unmount();
+
+        const plain = mount(Index, { props });
+        expect(plain.findAll('[data-highlighted]')).toHaveLength(0);
+    });
     it('changes page size through the languages route', () => {
         mountPage().getComponent(Pagination).vm.$emit('update:per-page', 10);
         expect(routerGetMock).toHaveBeenCalledWith(

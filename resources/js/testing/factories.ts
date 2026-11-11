@@ -1612,8 +1612,6 @@ export function storeDashboardProps(): StoreDashboardProps {
             stock: { labels: ['Oils'], values: [45] },
             visits: { labels: ['SY'], values: [25] },
         },
-        showSmtpAlert: true,
-        setupAlerts: [],
         setupChecklist: { items: [], done: 0, total: 0 },
         topProducts: [
             {

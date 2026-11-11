@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
+use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\UpdateGoogleMapRequest;
 use App\Models\BusinessSetting;
 use App\Support\GoogleMapsKey;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Cache;
@@ -18,6 +20,7 @@ use Inertia\Response;
 class GoogleMapController extends Controller implements HasMiddleware
 {
     use FlashesSuccess;
+    use ReadsHighlight;
 
     /** @return array<int, Middleware> */
     public static function middleware(): array
@@ -29,7 +32,7 @@ class GoogleMapController extends Controller implements HasMiddleware
      * The saved key is never sent to the page: only whether one is saved, its
      * masked tail, and whether MAP_API_KEY supplies one.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $stored = GoogleMapsKey::stored();
 
@@ -42,6 +45,7 @@ class GoogleMapController extends Controller implements HasMiddleware
                 'google_map_api_key_mask' => GoogleMapsKey::mask($stored),
                 'google_map_api_key_from_env' => GoogleMapsKey::fromEnvironment() !== null,
             ],
+            'highlight' => $this->highlight($request, [GoogleMapsKey::SETTING]),
         ]);
     }
 

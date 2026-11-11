@@ -1,12 +1,5 @@
-import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
-import {
-    activation,
-    payments,
-    smtp,
-} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shipping } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import StoreDashboardChart from '@/components/StoreDashboardChart.vue';
 import StoreSetupChecklist from '@/components/StoreSetupChecklist.vue';
@@ -74,8 +67,6 @@ it.each(['en', 'ar'] as const)(
             'categories',
             'brands',
             'topProducts',
-            'smtpWarning',
-            'configureNow',
             'category',
             'count',
             'numberOfSales',
@@ -143,69 +134,22 @@ it.each(['en', 'ar'] as const)(
         expect(wrapper.get('article').text()).toContain(
             t('store.dashboard.rating', { rating: 4.5 }),
         );
-        expect(
-            wrapper
-                .findAllComponents(Link)
-                .some(
-                    (link) =>
-                        JSON.stringify(link.props('href')) ===
-                        JSON.stringify(smtp()),
-                ),
-        ).toBe(true);
         wrapper.unmount();
     },
 );
-it('shows each setup alert with the page that fixes it, beside the SMTP one', () => {
-    permissions.value = ['admin_dashboard', 'smtp_settings'];
-    const wrapper = mount(Index, {
-        props: {
-            ...storeDashboardProps(),
-            setupAlerts: ['noPaymentMethod', 'cashOnDeliveryProducts'],
-        },
-    });
-    const alerts = wrapper.findAll('[role="alert"]');
-    expect(alerts.map((alert) => alert.text())).toEqual([
-        expect.stringContaining(t('store.dashboard.smtpWarning')),
-        expect.stringContaining(t('store.dashboard.setup.noPaymentMethod')),
-        expect.stringContaining(
-            t('store.dashboard.setup.cashOnDeliveryProducts'),
-        ),
-    ]);
-    const hrefs = wrapper
-        .findAllComponents(Link)
-        .map((link) => JSON.stringify(link.props('href')));
-    expect(hrefs).toContain(JSON.stringify(payments()));
-    expect(hrefs).toContain(JSON.stringify(allProducts()));
-    wrapper.unmount();
-});
-it('sends the no-payment alert to the Cash payment option in Features activation when the admin may open it', () => {
-    permissions.value = ['admin_dashboard', 'features_activation'];
-    const wrapper = mount(Index, {
-        props: { ...storeDashboardProps(), setupAlerts: ['noPaymentMethod'] },
-    });
-    const hrefs = wrapper
-        .findAllComponents(Link)
-        .map((link) => JSON.stringify(link.props('href')));
-    expect(hrefs).toContain(
-        JSON.stringify(activation({ query: { highlight: 'cash_payment' } })),
-    );
-    expect(hrefs).not.toContain(JSON.stringify(payments()));
-    wrapper.unmount();
-});
-it('hides SMTP without its flag or permission and renders the empty product state', () => {
-    permissions.value = ['admin_dashboard'];
+it('shows no red setup banners: the checklist is the single place for them', () => {
+    permissions.value = [
+        'admin_dashboard',
+        'smtp_settings',
+        'features_activation',
+        'show_all_products',
+    ];
     const wrapper = mount(Index, {
         props: { ...storeDashboardProps(), topProducts: [] },
     });
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     expect(wrapper.text()).toContain(t('store.dashboard.emptyProducts'));
     wrapper.unmount();
-    permissions.value = ['admin_dashboard', 'smtp_settings'];
-    const hidden = mount(Index, {
-        props: { ...storeDashboardProps(), showSmtpAlert: false },
-    });
-    expect(hidden.find('[role="alert"]').exists()).toBe(false);
-    hidden.unmount();
 });
 it('gates the dashboard body and does not show an undiscounted price twice', () => {
     const props = storeDashboardProps();
@@ -233,8 +177,18 @@ const checklistProps = (done: number, total = 11) => ({
     ...storeDashboardProps(),
     setupChecklist: {
         items: [
-            { key: 'smtp' as const, done: done > 0 },
-            { key: 'shipping' as const, done: false },
+            { key: 'smtp' as const, done: done > 0, reasons: [] },
+            {
+                key: 'shipping' as const,
+                done: false,
+                reasons: [
+                    {
+                        key: 'shipping.flat_rate_cost',
+                        route: 'shipping_configuration.index' as const,
+                        highlight: 'flat_rate_shipping_cost',
+                    },
+                ],
+            },
         ],
         done,
         total,
@@ -251,7 +205,7 @@ it('does not render the setup checklist when total is 0 or everything is done', 
     complete.unmount();
 });
 
-it('shows the setup checklist above the red banners with its progress', () => {
+it('shows the setup checklist with its progress and a reason that deep-links to the setting', () => {
     const wrapper = mount(Index, { props: checklistProps(8) });
     const card = wrapper.getComponent(StoreSetupChecklist);
     expect(card.text()).toContain(
@@ -260,26 +214,16 @@ it('shows the setup checklist above the red banners with its progress', () => {
     expect(card.get('li[data-key="smtp"]').attributes('data-done')).toBe(
         'true',
     );
-    expect(card.get('li[data-key="shipping"] a').attributes('href')).toBe(
-        shipping().url,
+    const reason = card.get(
+        'li[data-key="shipping"] [data-reason="shipping.flat_rate_cost"]',
     );
-    const html = wrapper.html();
-    expect(html.indexOf(t('store.dashboard.checklist.title'))).toBeLessThan(
-        html.indexOf(t('store.dashboard.smtpWarning')),
+    expect(reason.text()).toContain(
+        t('store.dashboard.checklist.reasons.shipping.flat_rate_cost'),
     );
-    wrapper.unmount();
-});
-
-it('keeps the red banners when the setup checklist is shown', () => {
-    const wrapper = mount(Index, {
-        props: { ...checklistProps(8), setupAlerts: ['noPaymentMethod'] },
-    });
-    expect(
-        wrapper.findAll('[role="alert"]').map((alert) => alert.text()),
-    ).toEqual([
-        expect.stringContaining(t('store.dashboard.smtpWarning')),
-        expect.stringContaining(t('store.dashboard.setup.noPaymentMethod')),
-    ]);
+    expect(reason.get('a').attributes('href')).toBe(
+        shipping({ query: { highlight: 'flat_rate_shipping_cost' } }).url,
+    );
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     wrapper.unmount();
 });
 

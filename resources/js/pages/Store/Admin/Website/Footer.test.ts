@@ -167,4 +167,15 @@ describe('Website footer', () => {
         );
         expect(wrapper.text()).toContain('Invalid email');
     });
+    it.each(['contact_email', 'contact_phone'])(
+        'marks only %s for a setup checklist link',
+        async (key) => {
+            const wrapper = mountPage();
+            expect(wrapper.findAll('[data-highlighted]')).toHaveLength(0);
+            await wrapper.setProps({ highlight: key });
+            const marked = wrapper.findAll('[data-highlighted]');
+            expect(marked).toHaveLength(1);
+            expect(marked[0].find(`#${key}`).exists()).toBe(true);
+        },
+    );
 });

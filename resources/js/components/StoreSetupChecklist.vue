@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { ChevronDown, ChevronUp, Circle, CircleCheck } from '@lucide/vue';
 import { computed, ref, useId } from 'vue';
+import { index as categories } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import { index as currencies } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
 import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as googleMap } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
@@ -10,55 +11,64 @@ import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/P
 import {
     activation,
     firebase,
-    payments,
     smtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shipping } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import { index as taxes } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
+import { edit as websiteFooter } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
+import { edit as websiteHeader } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { t } from '@/lib/i18n';
-import { useStoreAccess } from '@/lib/storeAccess';
 import type {
     StoreSetupChecklist,
-    StoreSetupChecklistKey,
+    StoreSetupChecklistReason,
+    StoreSetupChecklistRoute,
 } from '@/types/store';
-import type { RouteDefinition } from '@/wayfinder';
+import type { RouteDefinition, RouteQueryOptions } from '@/wayfinder';
 
 /**
  * The dashboard's setup checklist: every setting the shop needs, each done or
- * still to do, with the page that fixes it and the overall progress.
+ * still to do, with the overall progress.
  *
- * The backend lists only the items the signed-in staff member may fix, so a
- * row's link needs no permission check of its own (the cash payment link
- * below is the one exception, as on the dashboard's red banners). The card
- * renders nothing when there is nothing to list or everything is done. It
- * always starts expanded; the collapse is not remembered and cannot dismiss it.
+ * A to-do row never shows a bare "not done" (.ai/rules/setup-checklist-reasons.md):
+ * each reason the backend gives names the exact missing setting and links to
+ * the page that sets it with `?highlight=<key>`, so that page marks and
+ * scrolls to it (.ai/rules/deep-link-highlight.md). The backend lists only
+ * the items the signed-in staff member may fix and picks a page they may
+ * open, so a link needs no permission check of its own. The card renders
+ * nothing when there is nothing to list or everything is done. It always
+ * starts expanded; the collapse is not remembered and cannot dismiss it.
  */
 const props = defineProps<{ checklist: StoreSetupChecklist }>();
-const access = useStoreAccess();
 const expanded = ref(true);
 const listId = useId();
 
-// The page that fixes each item. Every item has one: the Google Maps key is
-// set on the Google map settings page (MAP_API_KEY is only a fallback).
-const links: Record<
-    StoreSetupChecklistKey,
-    () => RouteDefinition<'get'> | null
+// The page behind each route name a reason can name.
+const routes: Record<
+    StoreSetupChecklistRoute,
+    (options?: RouteQueryOptions) => RouteDefinition<'get'>
 > = {
-    smtp: () => smtp(),
-    paymentMethod: () =>
-        access.value.can('features_activation')
-            ? activation({ query: { highlight: 'cash_payment' } })
-            : payments(),
-    cashOnDeliveryProducts: () => allProducts(),
-    shipping: () => shipping(),
-    firebasePush: () => firebase(),
-    googleMaps: () => googleMap(),
-    currency: () => currencies(),
-    vatTax: () => taxes(),
-    catalog: () => allProducts(),
-    siteBasics: () => generalSettings(),
-    language: () => languages(),
+    'smtp_settings.index': smtp,
+    'activation.index': activation,
+    'products.all': allProducts,
+    'shipping_configuration.index': shipping,
+    'google-firebase.index': firebase,
+    'google-map.index': googleMap,
+    'currency.index': currencies,
+    'tax.index': taxes,
+    'categories.index': categories,
+    'general_setting.index': generalSettings,
+    'website.header': websiteHeader,
+    'website.footer': websiteFooter,
+    'languages.index': languages,
 };
+
+function href(reason: StoreSetupChecklistReason): RouteDefinition<'get'> {
+    const route = routes[reason.route];
+
+    return reason.highlight
+        ? route({ query: { highlight: reason.highlight } })
+        : route();
+}
 
 const visible = computed(
     () =>
@@ -78,10 +88,25 @@ const progressText = computed(() =>
 );
 const rows = computed(() =>
     props.checklist.items.map((item) => ({
-        ...item,
+        key: item.key,
+        done: item.done,
         label: t(`store.dashboard.checklist.items.${item.key}.label`),
-        hint: t(`store.dashboard.checklist.items.${item.key}.hint`),
-        href: item.done ? null : links[item.key](),
+        reasons: item.done
+            ? []
+            : item.reasons.map((reason) => {
+                  const text = t(
+                      `store.dashboard.checklist.reasons.${reason.key}`,
+                  );
+
+                  return {
+                      key: reason.key,
+                      text,
+                      href: href(reason),
+                      ariaLabel: t('store.dashboard.checklist.fixReason', {
+                          reason: text,
+                      }),
+                  };
+              }),
     })),
 );
 </script>
@@ -160,22 +185,27 @@ const rows = computed(() =>
                         </span>
                         {{ row.label }}
                     </p>
-                    <p v-if="!row.done" class="mt-1 text-sm text-muted">
-                        {{ row.hint }}
-                    </p>
+                    <ul
+                        v-if="row.reasons.length"
+                        class="mt-1 space-y-1 text-sm text-muted"
+                    >
+                        <li
+                            v-for="reason in row.reasons"
+                            :key="reason.key"
+                            :data-reason="reason.key"
+                            class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+                        >
+                            <span class="min-w-0">{{ reason.text }}</span>
+                            <Link
+                                :href="reason.href"
+                                :aria-label="reason.ariaLabel"
+                                class="shrink-0 font-semibold text-ink underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                            >
+                                {{ t('store.dashboard.checklist.fix') }}
+                            </Link>
+                        </li>
+                    </ul>
                 </div>
-                <Link
-                    v-if="row.href"
-                    :href="row.href"
-                    :aria-label="
-                        t('store.dashboard.checklist.configureItem', {
-                            item: row.label,
-                        })
-                    "
-                    class="shrink-0 font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                >
-                    {{ t('store.dashboard.checklist.configure') }}
-                </Link>
             </li>
         </ul>
     </section>

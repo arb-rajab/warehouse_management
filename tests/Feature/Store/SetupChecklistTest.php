@@ -7,11 +7,32 @@ use App\Services\Store\SetupChecklist;
 use App\Support\StorePermissions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use Inertia\Testing\AssertableInertia as Assert;
+
+/** @return list<string> every permission any check is gated by */
+function setupChecklistPermissions(): array
+{
+    return array_values(array_unique(array_merge(...array_values(SetupChecklist::PERMISSIONS))));
+}
 
 /** A staff account holding every permission a check is gated by. */
 function setupChecklistStaff(): StoreUser
 {
-    return createStoreStaff(...array_values(array_unique(SetupChecklist::PERMISSIONS)));
+    return createStoreStaff(...setupChecklistPermissions());
+}
+
+/**
+ * The reason keys of one check for a staff member holding every permission
+ * (empty when done), or null when the check is not listed.
+ *
+ * @return list<string>|null
+ */
+function setupChecklistReasons(string $key): ?array
+{
+    $item = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))->firstWhere('key', $key);
+
+    return $item === null ? null : array_column($item['reasons'], 'key');
 }
 
 /**
@@ -50,28 +71,108 @@ test('a user holding every permission gets the eleven checks in order, and an em
     ]);
 });
 
-test('each item carries the permission that can fix it', function () {
+test('each item carries every permission needed to fix it', function () {
     $items = app(SetupChecklist::class)->items(setupChecklistStaff());
 
-    expect(array_column($items, 'permission', 'key'))->toBe([
-        'smtp' => 'smtp_settings', 'paymentMethod' => 'payment_methods_configurations',
-        'cashOnDeliveryProducts' => 'show_all_products', 'shipping' => 'shipping_configuration',
-        'firebasePush' => 'google_firebase_setting', 'googleMaps' => 'google_map_setting',
-        'currency' => 'currency_setup', 'vatTax' => 'vat_&_tax_setup', 'catalog' => 'show_all_products',
-        'siteBasics' => 'general_settings', 'language' => 'language_setup',
+    expect(array_column($items, 'permissions', 'key'))->toBe([
+        'smtp' => ['smtp_settings'], 'paymentMethod' => ['features_activation'],
+        'cashOnDeliveryProducts' => ['show_all_products'], 'shipping' => ['shipping_configuration'],
+        'firebasePush' => ['google_firebase_setting'], 'googleMaps' => ['google_map_setting'],
+        'currency' => ['currency_setup'], 'vatTax' => ['vat_&_tax_setup'], 'catalog' => ['show_all_products'],
+        'siteBasics' => ['general_settings', 'header_setup', 'footer_setup'], 'language' => ['language_setup'],
     ]);
 });
 
 test('every permission a check is gated by is a real store permission', function () {
-    expect(array_values(array_diff(array_unique(SetupChecklist::PERMISSIONS), array_keys(StorePermissions::all()))))->toBe([]);
+    expect(array_values(array_diff(setupChecklistPermissions(), array_keys(StorePermissions::all()))))->toBe([]);
 });
+
+// reasons
+
+test('a check is done exactly when it has no reason, and every reason names its check', function () {
+    foreach (app(SetupChecklist::class)->items(setupChecklistStaff()) as $item) {
+        expect($item['done'])->toBe($item['reasons'] === []);
+        foreach ($item['reasons'] as $reason) {
+            expect($reason['key'])->toStartWith($item['key'].'.')
+                ->and(SetupChecklist::TARGETS)->toHaveKey($reason['key']);
+        }
+    }
+});
+
+test('every reason links to a real page and highlights a key that page accepts', function () {
+    $this->withoutVite();
+    seedStoreCurrency();
+    foreach (SetupChecklist::TARGETS as $reason => [$route, $highlight]) {
+        expect(Route::has($route))->toBeTrue("{$reason} links to a missing route {$route}");
+        if ($highlight !== null) {
+            actingAsStoreUser(createStoreStaff(...setupChecklistPermissions()));
+            $this->get(route($route, ['highlight' => $highlight]))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page->where('highlight', $highlight));
+        }
+    }
+});
+
+test('every page a reason highlights on ignores an unknown, array or missing highlight', function () {
+    $this->withoutVite();
+    seedStoreCurrency();
+    actingAsStoreUser(createStoreStaff(...setupChecklistPermissions()));
+    $routes = collect(SetupChecklist::TARGETS)->filter(fn (array $target): bool => $target[1] !== null)
+        ->map(fn (array $target): string => $target[0])->unique()->values();
+
+    foreach ($routes as $route) {
+        foreach ([['highlight' => 'not_a_setting'], ['highlight' => ['site_name']], []] as $query) {
+            $this->get(route($route, $query))->assertOk()
+                ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+        }
+    }
+});
+
+test('an empty shop explains every check with its exact missing setting', function () {
+    $reasons = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))
+        ->mapWithKeys(fn (array $item): array => [$item['key'] => array_column($item['reasons'], 'key')])->all();
+
+    expect($reasons)->toBe([
+        'smtp' => ['smtp.username_and_password'],
+        'paymentMethod' => ['paymentMethod.none_enabled'],
+        'cashOnDeliveryProducts' => [],
+        'shipping' => ['shipping.type_unset'],
+        'firebasePush' => ['firebasePush.project_unset', 'firebasePush.credentials_missing'],
+        'googleMaps' => ['googleMaps.api_key_unset'],
+        'currency' => ['currency.default_unset'],
+        'vatTax' => ['vatTax.no_active_tax'],
+        'catalog' => ['catalog.no_published_product', 'catalog.no_category'],
+        'siteBasics' => ['siteBasics.site_name', 'siteBasics.contact_email', 'siteBasics.contact_phone', 'siteBasics.header_logo'],
+        'language' => ['language.default_missing'],
+    ]);
+});
+
+test('a reason carries the page and the setting it highlights', function () {
+    storeSetting('shipping_type', 'flat_rate');
+    $shipping = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))->firstWhere('key', 'shipping');
+
+    expect($shipping['reasons'])->toBe([
+        ['key' => 'shipping.flat_rate_cost', 'route' => 'shipping_configuration.index', 'highlight' => 'flat_rate_shipping_cost'],
+    ]);
+});
+
+test('a missing category links to the categories page only for staff who may open it', function (bool $canOpen, string $route) {
+    $user = createStoreStaff('show_all_products', ...($canOpen ? ['view_product_categories'] : []));
+    $catalog = collect(app(SetupChecklist::class)->items($user))->firstWhere('key', 'catalog');
+
+    expect(collect($catalog['reasons'])->firstWhere('key', 'catalog.no_category')['route'])->toBe($route);
+})->with([
+    'may open categories' => [true, 'categories.index'],
+    'may not' => [false, 'products.all'],
+]);
 
 // smtp
 
 test('smtp is done as soon as either credential is set, as the dashboard warning has always tested it', function (?string $username, ?string $password, bool $done) {
     config(['mail.mailers.smtp.username' => $username, 'mail.mailers.smtp.password' => $password]);
 
-    expect(setupChecklistDone('smtp'))->toBe($done);
+    expect(setupChecklistDone('smtp'))->toBe($done)
+        ->and(setupChecklistReasons('smtp'))->toBe($done ? [] : ['smtp.username_and_password']);
 })->with([
     'both missing' => [null, null, false],
     'both empty' => ['', '', false],
@@ -188,6 +289,36 @@ test('shipping is done per type only when the data that type prices delivery fro
     'carrier wise with only a city cost' => ['carrier_wise_shipping', [], [[3, 1]], [], false],
 ]);
 
+test('a shipping check that is not done names the exact setting the saved type still needs', function (?string $type, array $settings, ?string $reason) {
+    if ($type !== null) {
+        storeSetting('shipping_type', $type);
+    }
+    foreach ($settings as $key => $value) {
+        storeSetting($key, $value);
+    }
+
+    expect(setupChecklistReasons('shipping'))->toBe($reason === null ? [] : [$reason]);
+})->with([
+    'no type' => [null, [], 'shipping.type_unset'],
+    'an unknown type' => ['teleport', [], 'shipping.type_unset'],
+    'product wise' => ['product_wise_shipping', [], null],
+    'flat rate, cost never saved' => ['flat_rate', [], 'shipping.flat_rate_cost'],
+    'flat rate, cost only for seller wise' => ['flat_rate', ['shipping_cost_admin' => '5'], 'shipping.flat_rate_cost'],
+    'flat rate, a saved zero' => ['flat_rate', ['flat_rate_shipping_cost' => '0'], null],
+    'seller wise, in-house cost never saved' => ['seller_wise_shipping', [], 'shipping.seller_admin_cost'],
+    'area wise, no city' => ['area_wise_shipping', [], 'shipping.area_no_active_city_with_cost'],
+    'carrier wise, no carrier' => ['carrier_wise_shipping', [], 'shipping.carrier_none_usable'],
+]);
+
+test('the checks read the row the settings pages write: the one without a language wins', function () {
+    DB::table('business_settings')->insert([
+        ['type' => 'contact_email', 'value' => '', 'lang' => 'en'],
+        ['type' => 'contact_email', 'value' => 'shop@example.com', 'lang' => null],
+    ]);
+
+    expect(setupChecklistReasons('siteBasics'))->not->toContain('siteBasics.contact_email');
+});
+
 // firebasePush
 
 test('firebase push is done when the push service is configured', function (bool $configured) {
@@ -201,10 +332,11 @@ test('firebase push is done when the push service is configured', function (bool
     expect(setupChecklistDone('firebasePush'))->toBe($configured);
 })->with([true, false]);
 
-test('firebase push is not done with a project but no credentials file', function () {
+test('firebase push is not done with a project but no credentials file, and says the file is missing', function () {
     config(['services.fcm.firebase_credentials' => 'framework/testing/missing-fcm.json', 'services.fcm.firebase_project' => 'albarakabv-store']);
 
-    expect(setupChecklistDone('firebasePush'))->toBeFalse();
+    expect(setupChecklistDone('firebasePush'))->toBeFalse()
+        ->and(setupChecklistReasons('firebasePush'))->toBe(['firebasePush.credentials_missing']);
 });
 
 // googleMaps
@@ -233,7 +365,7 @@ test('google maps is not done by a blank saved key without MAP_API_KEY, and fall
 
 // currency
 
-test('currency is done when the default currency is set and its row exists', function (array $settings, string $seed, bool $done) {
+test('currency is done when the default currency is set and its row exists', function (array $settings, string $seed, bool $done, ?string $reason) {
     if ($seed === 'default') {
         seedStoreCurrency();
     } elseif ($seed === 'row') {
@@ -243,13 +375,14 @@ test('currency is done when the default currency is set and its row exists', fun
         storeSetting($type, $value);
     }
 
-    expect(setupChecklistDone('currency'))->toBe($done);
+    expect(setupChecklistDone('currency'))->toBe($done)
+        ->and(setupChecklistReasons('currency'))->toBe($reason === null ? [] : [$reason]);
 })->with([
-    'no default currency' => [[], '', false],
-    'a default that is not an id' => [['system_default_currency' => 'EUR'], '', false],
-    'a default whose row is gone' => [['system_default_currency' => 987654], '', false],
-    'a default that exists' => [[], 'default', true],
-    'a currency row but no default set' => [[], 'row', false],
+    'no default currency' => [[], '', false, 'currency.default_unset'],
+    'a default that is not an id' => [['system_default_currency' => 'EUR'], '', false, 'currency.default_unset'],
+    'a default whose row is gone' => [['system_default_currency' => 987654], '', false, 'currency.default_missing'],
+    'a default that exists' => [[], 'default', true, null],
+    'a currency row but no default set' => [[], 'row', false, 'currency.default_unset'],
 ]);
 
 // vatTax
@@ -274,7 +407,7 @@ test('vat and tax is done when one of several taxes is active', function () {
 
 // catalog
 
-test('the catalog is done with a published product and a category', function (bool $published, ?bool $product, bool $category, bool $done) {
+test('the catalog is done with a published product and a category', function (bool $published, ?bool $product, bool $category, bool $done, array $reasons) {
     if ($product !== null) {
         createStoreProduct(['published' => $published && $product]);
     }
@@ -282,13 +415,14 @@ test('the catalog is done with a published product and a category', function (bo
         Category::forceCreate(['name' => 'Root', 'parent_id' => 0, 'level' => 0]);
     }
 
-    expect(setupChecklistDone('catalog'))->toBe($done);
+    expect(setupChecklistDone('catalog'))->toBe($done)
+        ->and(setupChecklistReasons('catalog'))->toBe($reasons);
 })->with([
-    'nothing' => [true, null, false, false],
-    'a published product, no category' => [true, true, false, false],
-    'a category, no product' => [true, null, true, false],
-    'an unpublished product and a category' => [false, true, true, false],
-    'a published product and a category' => [true, true, true, true],
+    'nothing' => [true, null, false, false, ['catalog.no_published_product', 'catalog.no_category']],
+    'a published product, no category' => [true, true, false, false, ['catalog.no_category']],
+    'a category, no product' => [true, null, true, false, ['catalog.no_published_product']],
+    'an unpublished product and a category' => [false, true, true, false, ['catalog.no_published_product']],
+    'a published product and a category' => [true, true, true, true, []],
 ]);
 
 // siteBasics
@@ -308,7 +442,8 @@ test('site basics are not done while any of the four settings is missing or blan
         }
     }
 
-    expect(setupChecklistDone('siteBasics'))->toBeFalse();
+    expect(setupChecklistDone('siteBasics'))->toBeFalse()
+        ->and(setupChecklistReasons('siteBasics'))->toBe(["siteBasics.{$missing}"]);
 })->with(function () {
     foreach (['site_name', 'contact_email', 'contact_phone', 'header_logo'] as $key) {
         yield $key.' missing' => [$key, false];
@@ -318,48 +453,67 @@ test('site basics are not done while any of the four settings is missing or blan
 
 // language
 
-test('language is done when the default language exists and is active', function (?string $default, array $languages, bool $done) {
+test('language is done when the default language exists and is active', function (?string $default, array $languages, bool $done, ?string $reason) {
     config(['app.default_language' => $default]);
     foreach ($languages as [$code, $status]) {
         DB::table('languages')->insert(['name' => strtoupper($code), 'code' => $code, 'status' => $status]);
     }
 
-    expect(setupChecklistDone('language'))->toBe($done);
+    expect(setupChecklistDone('language'))->toBe($done)
+        ->and(setupChecklistReasons('language'))->toBe($reason === null ? [] : [$reason]);
 })->with([
-    'no languages' => ['en', [], false],
-    'the default is inactive' => ['en', [['en', 0]], false],
-    'only another language is active' => ['en', [['ar', 1], ['en', 0]], false],
-    'the default is active' => ['en', [['en', 1]], true],
-    'an arabic default that is active' => ['ar', [['en', 1], ['ar', 1]], true],
-    'no default configured' => [null, [['en', 1]], false],
+    'no languages' => ['en', [], false, 'language.default_missing'],
+    'the default is inactive' => ['en', [['en', 0]], false, 'language.default_inactive'],
+    'only another language is active' => ['en', [['ar', 1], ['en', 0]], false, 'language.default_inactive'],
+    'the default is active' => ['en', [['en', 1]], true, null],
+    'an arabic default that is active' => ['ar', [['en', 1], ['ar', 1]], true, null],
+    'no default configured' => [null, [['en', 1]], false, 'language.default_missing'],
 ]);
 
 // permission gating and counts
 
-test('a user lacking the permission does not get the item', function (string $key) {
-    $permission = SetupChecklist::PERMISSIONS[$key];
-    $others = array_values(array_unique(array_filter(SetupChecklist::PERMISSIONS, fn (string $p): bool => $p !== $permission)));
+test('a user lacking any permission a check needs does not get the item', function (string $key) {
+    $needed = SetupChecklist::PERMISSIONS[$key];
 
-    $withoutIt = app(SetupChecklist::class)->items(createStoreStaff(...$others));
-    $onlyIt = app(SetupChecklist::class)->items(createStoreStaff($permission));
+    $onlyIt = app(SetupChecklist::class)->items(createStoreStaff(...$needed));
+    expect(array_column($onlyIt, 'key'))->toContain($key);
 
-    expect(array_column($withoutIt, 'key'))->not->toContain($key)
-        ->and(array_column($onlyIt, 'key'))->toContain($key)
-        ->and(array_column($onlyIt, 'permission'))->each->toBe($permission);
+    foreach ($needed as $missing) {
+        $withoutIt = app(SetupChecklist::class)->items(createStoreStaff(...array_values(array_diff(setupChecklistPermissions(), [$missing]))));
+        expect(array_column($withoutIt, 'key'))->not->toContain($key);
+    }
 })->with(array_keys(SetupChecklist::PERMISSIONS));
+
+test('site basics are listed only for staff who can open all three of their pages', function (array $permissions, bool $listed) {
+    $items = app(SetupChecklist::class)->items(createStoreStaff(...$permissions));
+
+    expect(in_array('siteBasics', array_column($items, 'key'), true))->toBe($listed);
+})->with([
+    'general settings only' => [['general_settings'], false],
+    'general settings and header' => [['general_settings', 'header_setup'], false],
+    'all three' => [['general_settings', 'header_setup', 'footer_setup'], true],
+]);
+
+test('the payment check is listed for staff who can switch payment methods on, not for payment gateway configuration alone', function () {
+    $checklist = app(SetupChecklist::class);
+
+    expect(array_column($checklist->items(createStoreStaff('payment_methods_configurations')), 'key'))->not->toContain('paymentMethod')
+        ->and(array_column($checklist->items(createStoreStaff('features_activation')), 'key'))->toBe(['paymentMethod']);
+});
 
 test('items without a permission are not counted as to do or as total', function () {
     $checklist = app(SetupChecklist::class);
     storeSetting('bkash', 1);
-    $user = createStoreStaff('payment_methods_configurations', 'smtp_settings');
+    $user = createStoreStaff('features_activation', 'smtp_settings');
 
     $items = $checklist->items($user);
 
     expect($items)->toBe([
-        ['key' => 'smtp', 'done' => false, 'permission' => 'smtp_settings'],
-        ['key' => 'paymentMethod', 'done' => true, 'permission' => 'payment_methods_configurations'],
-    ])->and($checklist->progress($items))->toBe(['done' => 1, 'total' => 2])
-        ->and($checklist->pending($items))->toBe(['smtp']);
+        ['key' => 'smtp', 'done' => false, 'permissions' => ['smtp_settings'], 'reasons' => [
+            ['key' => 'smtp.username_and_password', 'route' => 'smtp_settings.index', 'highlight' => 'mail_credentials'],
+        ]],
+        ['key' => 'paymentMethod', 'done' => true, 'permissions' => ['features_activation'], 'reasons' => []],
+    ])->and($checklist->progress($items))->toBe(['done' => 1, 'total' => 2]);
 });
 
 test('a user with no setup permission has an empty checklist', function () {
@@ -379,13 +533,18 @@ test('one permission can list two checks and both count', function () {
         ->and($checklist->progress($items))->toBe(['done' => 1, 'total' => 2]);
 });
 
-test('the payload carries only the key and state of each item with the counts', function () {
+test('the payload carries the key, state and reasons of each item with the counts', function () {
     $checklist = app(SetupChecklist::class);
     config(['mail.mailers.smtp.username' => 'user']);
     $items = $checklist->items(createStoreStaff('smtp_settings', 'currency_setup'));
 
     expect($checklist->payload($items))->toBe([
-        'items' => [['key' => 'smtp', 'done' => true], ['key' => 'currency', 'done' => false]],
+        'items' => [
+            ['key' => 'smtp', 'done' => true, 'reasons' => []],
+            ['key' => 'currency', 'done' => false, 'reasons' => [
+                ['key' => 'currency.default_unset', 'route' => 'currency.index', 'highlight' => 'system_default_currency'],
+            ]],
+        ],
         'done' => 1,
         'total' => 2,
     ]);
@@ -393,7 +552,7 @@ test('the payload carries only the key and state of each item with the counts', 
 
 test('the checklist re-reads the settings on every call', function () {
     $checklist = app(SetupChecklist::class);
-    $user = createStoreStaff('payment_methods_configurations');
+    $user = createStoreStaff('features_activation');
 
     expect($checklist->items($user)[0]['done'])->toBeFalse();
 

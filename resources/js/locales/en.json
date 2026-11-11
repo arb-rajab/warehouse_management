@@ -1294,7 +1294,8 @@
             "areaNote": "Uses the customer’s shipping area. Configure shipping cities to set area costs.",
             "carrierNote": "Uses the carrier’s free shipping, weight range, or price range. Configure shipping carriers to set these costs.",
             "cities": "Configure shipping cities",
-            "carriers": "Configure shipping carriers"
+            "carriers": "Configure shipping carriers",
+            "chooseMethod": "Choose a shipping type"
         },
         "orderConfiguration": {
             "title": "Order configuration",
@@ -1442,6 +1443,24 @@
                 "iyzico_sandbox": "Iyzico sandbox",
                 "payhere_sandbox": "Payhere sandbox",
                 "voguepay_sandbox": "Voguepay sandbox"
+            },
+            "server": {
+                "set": "Set",
+                "notSet": "Not set",
+                "found": "Found",
+                "notFound": "Not found",
+                "smtp": {
+                    "title": "Mail server (set on the server)",
+                    "mailer": "Mailer (MAIL_MAILER)",
+                    "host": "SMTP host (MAIL_HOST)",
+                    "username": "SMTP username (MAIL_USERNAME)",
+                    "password": "SMTP password (MAIL_PASSWORD)"
+                },
+                "firebase": {
+                    "title": "Push notifications (set on the server)",
+                    "project": "Firebase project (FIREBASE_PROJECT)",
+                    "credentials": "Credentials file (FIREBASE_CREDENTIALS)"
+                }
             }
         },
         "languages": {
@@ -2696,8 +2715,6 @@
             "searchProducts": "Search products by name, SKU or id…"
         },
         "dashboard": {
-            "smtpMissing": "SMTP is not configured.",
-            "configure": "Configure SMTP",
             "customers": "Verified customers",
             "orders": "Total orders",
             "categories": "Product categories",
@@ -2723,68 +2740,97 @@
             "numberOfVisits": "Number of visits",
             "category": "Category / country",
             "emptyProducts": "No products yet.",
-            "smtpWarning": "Please configure SMTP settings for email sending to work.",
-            "setup": {
-                "noPaymentMethod": "Payments are not set up: no payment method is switched on, so customers cannot place an order in the app.",
-                "cashOnDeliveryProducts": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it. Tick \"Cash on delivery\" on the products that take cash."
-            },
             "checklist": {
                 "title": "Setup checklist",
                 "progress": "{done} of {total} done",
                 "collapse": "Hide checklist",
                 "expand": "Show checklist",
-                "configure": "Configure",
-                "configureItem": "Configure {item}",
                 "statusDone": "Done",
                 "statusTodo": "To do",
                 "items": {
                     "smtp": {
-                        "label": "Email (SMTP)",
-                        "hint": "No SMTP username or password is set, so the store cannot send emails."
+                        "label": "Email (SMTP)"
                     },
                     "paymentMethod": {
-                        "label": "Payment methods",
-                        "hint": "No payment method is switched on, so customers cannot place an order in the app."
+                        "label": "Payment methods"
                     },
                     "cashOnDeliveryProducts": {
-                        "label": "Cash on delivery products",
-                        "hint": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it."
+                        "label": "Cash on delivery products"
                     },
                     "shipping": {
-                        "label": "Shipping",
-                        "hint": "The shipping type is not set up, or the cost or area data it needs is missing."
+                        "label": "Shipping"
                     },
                     "firebasePush": {
-                        "label": "Push notifications (Firebase)",
-                        "hint": "Firebase is not configured, so the app cannot send push notifications."
+                        "label": "Push notifications (Firebase)"
                     },
                     "googleMaps": {
-                        "label": "Google Maps",
-                        "hint": "The Google Maps key is not set. Add it on the Google map settings page (it can also be supplied by MAP_API_KEY in the server environment)."
+                        "label": "Google Maps"
                     },
                     "currency": {
-                        "label": "Currency",
-                        "hint": "No default currency is set, or the chosen one no longer exists."
+                        "label": "Currency"
                     },
                     "vatTax": {
-                        "label": "VAT and tax",
-                        "hint": "No active VAT or tax rate is set up."
+                        "label": "VAT and tax"
                     },
                     "catalog": {
-                        "label": "Products and categories",
-                        "hint": "The shop needs at least one published product and one category."
+                        "label": "Products and categories"
                     },
                     "siteBasics": {
-                        "label": "Site basics",
-                        "hint": "The site name, contact email, contact phone or logo is missing."
+                        "label": "Site basics"
                     },
                     "language": {
-                        "label": "Default language",
-                        "hint": "The default language does not exist or is not active."
+                        "label": "Default language"
+                    }
+                },
+                "fix": "Fix this setting",
+                "fixReason": "Fix: {reason}",
+                "reasons": {
+                    "smtp": {
+                        "username_and_password": "MAIL_USERNAME and MAIL_PASSWORD are both empty on the server, so the store cannot send emails."
+                    },
+                    "paymentMethod": {
+                        "none_enabled": "No payment method is switched on in Features activation, so customers cannot place an order in the app."
+                    },
+                    "cashOnDeliveryProducts": {
+                        "no_product_allows_cod": "Cash payment is on, but no product allows cash on delivery. Tick \"Cash on delivery\" on the products that take cash."
+                    },
+                    "shipping": {
+                        "type_unset": "No shipping type is chosen yet.",
+                        "flat_rate_cost": "The shipping type is \"Flat rate\", but the flat rate cost was never saved.",
+                        "seller_admin_cost": "The shipping type is \"Seller wise\", but the in-house seller shipping cost was never saved.",
+                        "area_no_active_city_with_cost": "The shipping type is \"Area wise\", but no active shipping city has a cost above zero.",
+                        "carrier_none_usable": "The shipping type is \"Carrier wise\", but no active carrier ships free or has a price for a weight or price range."
+                    },
+                    "firebasePush": {
+                        "project_unset": "FIREBASE_PROJECT is not set on the server.",
+                        "credentials_missing": "The FIREBASE_CREDENTIALS file is not found on the server."
+                    },
+                    "googleMaps": {
+                        "api_key_unset": "No Google Maps key is saved on the Google map settings page, and MAP_API_KEY is not set on the server."
+                    },
+                    "currency": {
+                        "default_unset": "No default currency is chosen.",
+                        "default_missing": "The default currency no longer exists. Choose another one."
+                    },
+                    "vatTax": {
+                        "no_active_tax": "No VAT or tax rate is active. Switch one on or add one."
+                    },
+                    "catalog": {
+                        "no_published_product": "No product is published.",
+                        "no_category": "No product category exists."
+                    },
+                    "siteBasics": {
+                        "site_name": "The site name is missing (General settings).",
+                        "contact_email": "The contact email is missing (Website footer).",
+                        "contact_phone": "The contact phone is missing (Website footer).",
+                        "header_logo": "The header logo is missing (Website header)."
+                    },
+                    "language": {
+                        "default_missing": "The default language (DEFAULT_LANGUAGE on the server) is not in the language list.",
+                        "default_inactive": "The default language is switched off."
                     }
                 }
             },
-            "configureNow": "Configure now",
             "charts": {
                 "products": "Products",
                 "sources": "Products Source",

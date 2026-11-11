@@ -116,4 +116,15 @@ describe('Website header', () => {
             '555',
         );
     });
+    it('marks only the header logo for a setup checklist link', async () => {
+        const wrapper = mount(Header, {
+            props: { settings: storeWebsiteHeaderSettings() },
+        });
+        expect(wrapper.findAll('[data-highlighted]')).toHaveLength(0);
+        await wrapper.setProps({ highlight: 'header_logo' });
+        const marked = wrapper.findAll('[data-highlighted]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0].find('#header_logo').exists()).toBe(true);
+        wrapper.unmount();
+    });
 });

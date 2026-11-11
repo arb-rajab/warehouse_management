@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
+use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\TestSmtpRequest;
 use App\Http\Requests\Store\Admin\UpdateStoreSettingsRequest;
 use App\Mail\EmailManager;
 use App\Models\BusinessSetting;
+use App\Services\FcmPushService;
 use App\Support\StoreLocale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +24,14 @@ use Inertia\Response;
 class SettingsController extends Controller implements HasMiddleware
 {
     use FlashesSuccess;
+    use ReadsHighlight;
 
-    /** @var array<string, array{permission: string, index: string, keys: list<string>}> */
+    /**
+     * `keys` are the page's switches; `sections` are read-only blocks a deep
+     * link may also highlight (the server values behind a setup check).
+     *
+     * @var array<string, array{permission: string, index: string, keys: list<string>, sections?: list<string>}>
+     */
     public const PAGES = [
         'activation' => [
             'permission' => 'features_activation',
@@ -94,13 +102,13 @@ class SettingsController extends Controller implements HasMiddleware
                 'apple_login',
             ],
         ],
-        'smtp' => ['permission' => 'smtp_settings', 'index' => 'smtp_settings.index', 'keys' => []],
+        'smtp' => ['permission' => 'smtp_settings', 'index' => 'smtp_settings.index', 'keys' => [], 'sections' => ['mail_credentials']],
         'socialLogin' => ['permission' => 'social_media_logins', 'index' => 'social_login.index', 'keys' => []],
         'facebookChat' => ['permission' => 'facebook_chat', 'index' => 'facebook_chat.index', 'keys' => ['facebook_chat']],
         'facebookComments' => ['permission' => 'facebook_comment', 'index' => 'facebook-comment', 'keys' => ['facebook_comment']],
         'analytics' => ['permission' => 'analytics_tools_configuration', 'index' => 'google_analytics.index', 'keys' => ['google_analytics', 'facebook_pixel']],
         'recaptcha' => ['permission' => 'google_recaptcha_configuration', 'index' => 'google_recaptcha.index', 'keys' => ['google_recaptcha']],
-        'firebase' => ['permission' => 'google_firebase_setting', 'index' => 'google-firebase.index', 'keys' => ['google_firebase']],
+        'firebase' => ['permission' => 'google_firebase_setting', 'index' => 'google-firebase.index', 'keys' => ['google_firebase'], 'sections' => ['firebase_server']],
         'payments' => ['permission' => 'payment_methods_configurations', 'index' => 'payment_method.index', 'keys' => ['bkash_sandbox', 'sslcommerz_sandbox', 'aamarpay_sandbox', 'iyzico_sandbox', 'payhere_sandbox', 'voguepay_sandbox']],
         'filesystem' => ['permission' => 'file_system_&_cache_configuration', 'index' => 'file_system.index', 'keys' => []],
     ];
@@ -133,9 +141,9 @@ class SettingsController extends Controller implements HasMiddleware
         return $this->save($request, 'activation');
     }
 
-    public function smtp(): Response
+    public function smtp(Request $request): Response
     {
-        return $this->page('smtp');
+        return $this->page('smtp', $request);
     }
 
     public function socialLogin(): Response
@@ -183,9 +191,9 @@ class SettingsController extends Controller implements HasMiddleware
         return $this->save($request, 'recaptcha');
     }
 
-    public function firebase(): Response
+    public function firebase(Request $request): Response
     {
-        return $this->page('firebase');
+        return $this->page('firebase', $request);
     }
 
     public function updateFirebase(UpdateStoreSettingsRequest $request): RedirectResponse
@@ -225,12 +233,12 @@ class SettingsController extends Controller implements HasMiddleware
     /**
      * `?highlight=<setting key>` makes the page scroll to that option and mark it,
      * so a button that sends an admin here to change one option lands on it. Only
-     * a key this page holds is passed on; anything else is ignored.
+     * a key or section this page holds is passed on; anything else is ignored.
      */
     private function page(string $page, ?Request $request = null): Response
     {
-        $highlight = $request?->query('highlight');
-        $highlight = is_string($highlight) && in_array($highlight, self::PAGES[$page]['keys'], true) ? $highlight : null;
+        $highlight = $request === null ? null
+            : $this->highlight($request, [...self::PAGES[$page]['keys'], ...(self::PAGES[$page]['sections'] ?? [])]);
 
         $settings = BusinessSetting::query()->whereIn('type', self::PAGES[$page]['keys'])
             ->select(['type', 'value'])->pluck('value', 'type');
@@ -241,7 +249,40 @@ class SettingsController extends Controller implements HasMiddleware
             'settings' => collect(self::PAGES[$page]['keys'])->mapWithKeys(
                 fn (string $key): array => [$key => (string) $settings->get($key, '0') === '1']
             )->all(),
+            'server' => $this->server($page),
         ]);
+    }
+
+    /**
+     * Whether each server value a setup check reads is there, never the value
+     * itself: the SMTP credentials (MAIL_USERNAME, MAIL_PASSWORD) and Firebase
+     * push (FIREBASE_PROJECT, the FIREBASE_CREDENTIALS file). Only the server
+     * environment sets them, so the page shows them read-only.
+     *
+     * @return array<string, string|bool|null>|null
+     */
+    private function server(string $page): ?array
+    {
+        if ($page === 'smtp') {
+            return [
+                'mailer' => (string) config('mail.default'),
+                'host' => filled(config('mail.mailers.smtp.host')) ? (string) config('mail.mailers.smtp.host') : null,
+                'username_set' => config('mail.mailers.smtp.username') != null,
+                'password_set' => config('mail.mailers.smtp.password') != null,
+            ];
+        }
+
+        if ($page === 'firebase') {
+            $push = app(FcmPushService::class);
+            $path = $push->credentialsPath();
+
+            return [
+                'project_set' => $push->project() !== null,
+                'credentials_found' => $path !== null && is_file($path),
+            ];
+        }
+
+        return null;
     }
 
     private function save(UpdateStoreSettingsRequest $request, string $page): RedirectResponse

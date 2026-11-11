@@ -274,6 +274,81 @@ describe('Store settings', () => {
         );
         highlighted.unmount();
     });
+    it.each([
+        [
+            'smtp',
+            {
+                mailer: 'smtp',
+                host: 'mail.example.com',
+                username_set: false,
+                password_set: true,
+            },
+            'mail_credentials',
+            [
+                ['mailer', 'smtp'],
+                ['host', 'mail.example.com'],
+                ['username', 'store.settings.server.notSet'],
+                ['password', 'store.settings.server.set'],
+            ],
+        ],
+        [
+            'firebase',
+            { project_set: true, credentials_found: false },
+            'firebase_server',
+            [
+                ['project', 'store.settings.server.set'],
+                ['credentials', 'store.settings.server.notFound'],
+            ],
+        ],
+    ] as const)(
+        'shows whether each %s server value is set, never the value, and highlights it for a setup checklist link',
+        async (section, server, anchor, rows) => {
+            Element.prototype.scrollIntoView = vi.fn();
+            usePageMock.mockReturnValue({
+                url: `/temp/admin/settings?highlight=${anchor}`,
+                props: defaultAuthProps({
+                    store: storeSharedProps({
+                        permissions: [pages[section].permission],
+                    }),
+                }),
+            });
+            const wrapper = mount(Index, {
+                props: {
+                    section,
+                    server,
+                    highlight: anchor,
+                    settings: Object.fromEntries(
+                        pages[section].keys.map((key) => [key, true]),
+                    ),
+                },
+                attachTo: document.body,
+            });
+            await wrapper.vm.$nextTick();
+            await wrapper.vm.$nextTick();
+            const block = wrapper.get(`[data-section="${anchor}"]`);
+            expect(block.attributes('data-highlighted')).toBeDefined();
+            expect(wrapper.findAll('[data-highlighted]')).toHaveLength(1);
+            expect(block.text()).toContain(
+                t(`store.settings.server.${section}.title`),
+            );
+            for (const [label, value] of rows) {
+                expect(block.text()).toContain(
+                    t(`store.settings.server.${section}.${label}`),
+                );
+                expect(block.text()).toContain(
+                    value.startsWith('store.') ? t(value) : value,
+                );
+            }
+            expect(document.activeElement).toBe(block.element);
+            wrapper.unmount();
+
+            const plain = mountPage(section);
+            expect(plain.find(`[data-section="${anchor}"]`).exists()).toBe(
+                false,
+            );
+            plain.unmount();
+        },
+    );
     it('lets an admin holding the permission write activation', () => {
         expect(
             pageForms(mountPage('activation', ['features_activation'])),

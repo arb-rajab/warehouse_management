@@ -1060,12 +1060,8 @@ export interface StoreDashboardProps {
         visits: StoreDashboardSeries;
     };
     topProducts: StoreDashboardProduct[];
-    showSmtpAlert: boolean;
-    setupAlerts: StoreSetupAlert[];
     setupChecklist: StoreSetupChecklist;
 }
-
-export type StoreSetupAlert = 'noPaymentMethod' | 'cashOnDeliveryProducts';
 
 /** The setup checklist items, in display order. */
 export type StoreSetupChecklistKey =
@@ -1081,10 +1077,48 @@ export type StoreSetupChecklistKey =
     | 'siteBasics'
     | 'language';
 
+/** The pages a setup checklist reason links to (Laravel route names). */
+export type StoreSetupChecklistRoute =
+    | 'smtp_settings.index'
+    | 'activation.index'
+    | 'products.all'
+    | 'shipping_configuration.index'
+    | 'google-firebase.index'
+    | 'google-map.index'
+    | 'currency.index'
+    | 'tax.index'
+    | 'categories.index'
+    | 'general_setting.index'
+    | 'website.header'
+    | 'website.footer'
+    | 'languages.index';
+
+/**
+ * Why a check is not done: the exact missing setting (`shipping.flat_rate_cost`),
+ * the page that sets it and the key that page highlights (null on a list page).
+ */
+export interface StoreSetupChecklistReason {
+    key: string;
+    route: StoreSetupChecklistRoute;
+    highlight: string | null;
+}
+
 export interface StoreSetupChecklistItem {
     key: StoreSetupChecklistKey;
     done: boolean;
+    /** Empty when done; at least one while to do. */
+    reasons: StoreSetupChecklistReason[];
 }
+
+/** Whether each server value a setup check reads is set (never the value). */
+export type StoreServerSettings =
+    | {
+          mailer: string;
+          host: string | null;
+          username_set: boolean;
+          password_set: boolean;
+      }
+    | { project_set: boolean; credentials_found: boolean };
 
 /** Only the items the signed-in staff member may fix; done/total count those. */
 export interface StoreSetupChecklist {

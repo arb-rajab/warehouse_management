@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
+use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\FilterLanguagesRequest;
 use App\Http\Requests\Store\Admin\ImportAppTranslationsRequest;
 use App\Http\Requests\Store\Admin\StoreLanguageRequest;
@@ -26,6 +27,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class LanguageController extends Controller implements HasMiddleware
 {
     use FlashesSuccess;
+    use ReadsHighlight;
 
     /** @return array<int, Middleware> */
     public static function middleware(): array
@@ -43,6 +45,7 @@ class LanguageController extends Controller implements HasMiddleware
                 ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage],
             'defaultLanguage' => config('app.default_language'),
+            'highlight' => $this->highlight($request, ['default_language']),
         ]);
     }
 

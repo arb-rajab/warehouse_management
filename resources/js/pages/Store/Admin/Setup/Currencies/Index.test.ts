@@ -297,4 +297,12 @@ describe('Store Currencies Index', () => {
         expectColumnLocked(wrapper, t('store.reference.name'));
         window.localStorage.clear();
     });
+    it('marks the default currency for a setup checklist link, and nothing without one', async () => {
+        const wrapper = mountPage();
+        expect(wrapper.findAll('[data-highlighted]')).toHaveLength(0);
+        await wrapper.setProps({ highlight: 'system_default_currency' });
+        const marked = wrapper.findAll('[data-highlighted]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0].find('#system_default_currency').exists()).toBe(true);
+    });
 });

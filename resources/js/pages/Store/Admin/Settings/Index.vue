@@ -17,10 +17,12 @@ import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
+import StoreServerSettingsStatus from '@/components/StoreServerSettingsStatus.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import type { StoreServerSettings } from '@/types/store';
 const props = defineProps<{
     section:
         | 'activation'
@@ -34,9 +36,16 @@ const props = defineProps<{
         | 'payments'
         | 'filesystem';
     settings: Record<string, boolean>;
-    /** The option a button sent the admin here to change, if any. */
+    /** The option or section a button sent the admin here to change, if any. */
     highlight?: string | null;
+    /** The server values a setup check reads (SMTP and Firebase pages only). */
+    server?: StoreServerSettings | null;
 }>();
+// The read-only block of server values each page shows, by its deep-link key.
+const serverAnchors = {
+    smtp: 'mail_credentials',
+    firebase: 'firebase_server',
+} as const;
 const access = useStoreAccess();
 const actions = {
     activation: updateActivation,
@@ -98,6 +107,13 @@ const canWrite = computed(() => access.value.can(permissions[props.section]));
                     :error="errors[`settings.${key}`]"
                 />
             </div>
+            <StoreServerSettingsStatus
+                v-if="server && section === 'firebase'"
+                section="firebase"
+                :server="server"
+                :anchor="serverAnchors.firebase"
+                :highlight="highlight"
+            />
         </ResourceFormPage>
         <StoreAdminLayout v-else>
             <Head :title="t(`store.settings.titles.${section}`)" />
@@ -107,6 +123,13 @@ const canWrite = computed(() => access.value.can(permissions[props.section]));
                     t('store.settings.environmentReadOnly')
                 }}
             </p>
+            <StoreServerSettingsStatus
+                v-if="server && section === 'smtp'"
+                section="smtp"
+                :server="server"
+                :anchor="serverAnchors.smtp"
+                :highlight="highlight"
+            />
             <Form
                 v-if="
                     section === 'smtp' &&

@@ -68,6 +68,38 @@ test('the activation page passes on only a highlight key it holds', function () 
         ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
 });
 
+test('the SMTP page says whether each mail credential is set, never its value, and passes on its section highlight', function () {
+    actingAsStoreUser(createStoreStaff('smtp_settings'));
+    config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'mail.example.com', 'mail.mailers.smtp.username' => 'smtp-user-secret', 'mail.mailers.smtp.password' => null]);
+
+    $this->get(route('smtp_settings.index', ['highlight' => 'mail_credentials']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'mail_credentials')
+            ->where('server', ['mailer' => 'smtp', 'host' => 'mail.example.com', 'username_set' => true, 'password_set' => false]))
+        ->assertDontSee('smtp-user-secret');
+    $this->get(route('smtp_settings.index', ['highlight' => 'cash_payment']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+});
+
+test('the Firebase page says whether the project and credentials file are there and passes on its section highlight', function () {
+    actingAsStoreUser(createStoreStaff('google_firebase_setting'));
+    config(['services.fcm.firebase_project' => 'albarakabv-store', 'services.fcm.project_id' => null, 'services.fcm.firebase_credentials' => 'framework/testing/missing-fcm.json']);
+
+    $this->get(route('google-firebase.index', ['highlight' => 'firebase_server']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'firebase_server')
+            ->where('server', ['project_set' => true, 'credentials_found' => false]));
+    $this->get(route('google-firebase.index', ['highlight' => 'google_firebase']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'google_firebase'));
+    $this->get(route('google-firebase.index', ['highlight' => 'mail_credentials']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+});
+
+test('settings pages without server values send none', function () {
+    actingAsStoreUser(createStoreStaff('features_activation'));
+
+    $this->get(route('activation.index'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('server', null));
+});
+
 test('each settings page refuses unauthorized callers', function (string $section, string $route, string $permission, string $caller) {
     actingAsRefusedStoreCaller($caller);
     assertStoreCallerRefused($this->get(route($route)), $caller);

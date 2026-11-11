@@ -4,6 +4,7 @@ import type { LeafletMouseEvent, Map as LeafletMap, Marker } from 'leaflet';
 import { computed, ref, watch } from 'vue';
 import FormField from '@/components/FormField.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreLeafletMap from '@/components/StoreLeafletMap.vue';
 import { t } from '@/lib/i18n';
 
@@ -21,6 +22,8 @@ export interface StoreGoogleMapSettings {
 const props = defineProps<{
     settings: StoreGoogleMapSettings;
     errors: Record<string, string>;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
 }>();
 const enabled = ref(props.settings.google_map);
 const latitude = ref(props.settings.google_map_latitude);
@@ -129,7 +132,7 @@ watch([latitude, longitude], movePin);
         <p class="text-sm text-muted">
             {{ t('store.googleMap.requirementsHint') }}
         </p>
-        <div>
+        <StoreHighlight :active="highlight === 'google_map_api_key'">
             <FormField
                 id="google_map_api_key"
                 :label="t('store.googleMap.apiKey')"
@@ -155,7 +158,7 @@ watch([latitude, longitude], movePin);
                     {{ t('store.googleMap.apiKeyRequiredHint') }}
                 </p>
             </div>
-        </div>
+        </StoreHighlight>
         <template v-if="enabled">
             <h2 class="text-lg font-semibold">
                 {{ t('store.googleMap.location') }}

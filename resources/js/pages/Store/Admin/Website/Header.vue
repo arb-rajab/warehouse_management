@@ -7,7 +7,11 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import type { StoreWebsiteHeaderSettings } from '@/types/store';
 
-const props = defineProps<{ settings: StoreWebsiteHeaderSettings }>();
+const props = defineProps<{
+    settings: StoreWebsiteHeaderSettings;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
+}>();
 const settings = ref<StoreWebsiteHeaderSettings>({
     ...props.settings,
     header_menu_labels: [...props.settings.header_menu_labels],
@@ -29,6 +33,10 @@ function transform() {
         wide
         #default="{ errors }"
     >
-        <StoreWebsiteHeaderFormFields v-model="settings" :errors="errors" />
+        <StoreWebsiteHeaderFormFields
+            v-model="settings"
+            :errors="errors"
+            :highlight="highlight"
+        />
     </ResourceFormPage>
 </template>

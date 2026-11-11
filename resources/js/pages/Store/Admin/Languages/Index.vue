@@ -20,6 +20,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -35,6 +36,8 @@ defineProps<{
     languages: Paginated<AdminLanguage>;
     filters: PerPageFilters;
     defaultLanguage: string;
+    /** `default_language` when a setup checklist link sent the admin here. */
+    highlight?: string | null;
 }>();
 const access = useStoreAccess();
 function onPerPageChange(per_page: number): void {
@@ -71,13 +74,18 @@ const tableColumns = computed(() => [
                     :label="t('store.languages.create')"
                 />
             </PageHeader>
-            <p class="mb-4 flex items-center gap-2">
+            <StoreHighlight
+                as="p"
+                :active="highlight === 'default_language'"
+                data-section="default_language"
+                class="mb-4 flex items-center gap-2"
+            >
                 <TriangleAlert class="h-4 w-4" />{{
                     t('store.languages.defaultReadOnly', {
                         code: defaultLanguage,
                     })
                 }}
-            </p>
+            </StoreHighlight>
             <p class="mb-4">{{ t('store.languages.translationScope') }}</p>
             <StoreColumnPicker :state="columns" />
             <DataTable
@@ -117,7 +125,7 @@ const tableColumns = computed(() => [
                                 })
                             "
                             :locked="
-                                language.is_default
+                                language.is_default && language.status
                                     ? {
                                           reason: t(
                                               'store.languages.defaultLocked',

@@ -263,4 +263,12 @@ describe('general settings page', () => {
         expect(own.findAllComponents(StoreUploadField)).toHaveLength(3);
         expect(own.text()).toContain('White logo');
     });
+    it('marks the site name for a setup checklist link, and nothing without one', async () => {
+        const wrapper = page();
+        expect(wrapper.findAll('[data-highlighted]')).toHaveLength(0);
+        await wrapper.setProps({ highlight: 'site_name' });
+        const marked = wrapper.findAll('[data-highlighted]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0].find('#site_name').exists()).toBe(true);
+    });
 });

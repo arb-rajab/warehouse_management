@@ -38,6 +38,11 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
     never deleted by a form, new values pass `NewProductBarcode` under its lock,
     every product delete path deletes its barcodes, labels go through
     `ProductBarcodeLabels`, and the Store form always posts `product_barcodes_seen`.
+12. Every setup or readiness check (the dashboard setup checklist included) must say
+    which exact setting is missing and link to it with a highlight, never a bare
+    "not done", per [.ai/rules/setup-checklist-reasons.md](.ai/rules/setup-checklist-reasons.md):
+    reasons come from `SetupChecklist::TARGETS`, the target page validates and marks the
+    `highlight` key, and the page shows exactly what the check reads.
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for

@@ -17,6 +17,7 @@ import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreCurrencyDialog from '@/components/StoreCurrencyDialog.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreSelectField from '@/components/StoreSelectField.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -40,6 +41,8 @@ const props = defineProps<{
     };
     dialog: 'create' | 'edit' | null;
     selectedCurrency: StoreCurrency | null;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
 }>();
 const access = useStoreAccess();
 const hasRequiredFields = provideRequiredFields();
@@ -197,14 +200,18 @@ const tableColumns = computed(() => [
                 <h2 class="text-lg font-semibold">
                     {{ t('store.currencies.defaultCurrency') }}
                 </h2>
-                <StoreSelectField
-                    id="system_default_currency"
-                    :label="t('store.currencies.defaultCurrency')"
-                    :options="activeCurrencies"
-                    :value="settings.system_default_currency"
-                    :error="errors.system_default_currency"
-                    required
-                />
+                <StoreHighlight
+                    :active="highlight === 'system_default_currency'"
+                >
+                    <StoreSelectField
+                        id="system_default_currency"
+                        :label="t('store.currencies.defaultCurrency')"
+                        :options="activeCurrencies"
+                        :value="settings.system_default_currency"
+                        :error="errors.system_default_currency"
+                        required
+                    />
+                </StoreHighlight>
                 <SubmitButton
                     :label="t('store.reference.save')"
                     :processing-label="t('store.reference.saving')"
