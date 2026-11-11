@@ -96,6 +96,7 @@ const rows = computed(() =>
             : item.reasons.map((reason) => {
                   const text = t(
                       `store.dashboard.checklist.reasons.${reason.key}`,
+                      reason.params,
                   );
 
                   return {

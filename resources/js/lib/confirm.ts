@@ -45,3 +45,12 @@ export function confirmAcceptVerificationReport(slot: string): boolean {
 export function confirmSellerPayment(): boolean {
     return confirm(t('store.sellers.confirmPayment'));
 }
+
+/**
+ * Ask before changing the default content language: existing text saved under
+ * the old default is then read as the new default's text until it is
+ * translated. `name` is the language chosen.
+ */
+export function confirmDefaultLanguageChange(name: string): boolean {
+    return confirm(t('store.languages.defaultConfirm', { name }));
+}

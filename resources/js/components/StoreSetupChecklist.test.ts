@@ -227,6 +227,7 @@ const REASONS: [StoreSetupChecklistReason, RouteDefinition<'get'>][] = [
             key: 'language.default_missing',
             route: 'languages.index',
             highlight: 'default_language',
+            params: { code: 'nl' },
         },
         languages({ query: { highlight: 'default_language' } }),
     ],
@@ -235,6 +236,7 @@ const REASONS: [StoreSetupChecklistReason, RouteDefinition<'get'>][] = [
             key: 'language.default_inactive',
             route: 'languages.index',
             highlight: 'default_language',
+            params: { code: 'nl' },
         },
         languages({ query: { highlight: 'default_language' } }),
     ],
@@ -373,6 +375,25 @@ describe('StoreSetupChecklist', () => {
         ]);
         expect(reasons.every((reason) => reason.find('a').exists())).toBe(true);
     });
+
+    it.each(['en', 'ar'] as const)(
+        'names the language in both language reasons in %s',
+        (locale) => {
+            i18n.global.locale.value = locale;
+            const wrapper = mount(StoreSetupChecklistCard, {
+                props: { checklist: checklist([]) },
+            });
+
+            for (const key of ['default_missing', 'default_inactive']) {
+                expect(
+                    wrapper.get(`[data-reason="language.${key}"]`).text(),
+                ).toContain('nl');
+                expect(
+                    wrapper.get(`[data-reason="language.${key}"]`).text(),
+                ).not.toContain('{code}');
+            }
+        },
+    );
 
     it.each(['en', 'ar'] as const)(
         'words every reason in %s, never falling back to its key',

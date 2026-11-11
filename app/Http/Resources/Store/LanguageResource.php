@@ -25,7 +25,7 @@ class LanguageResource extends JsonResource
             'app_lang_code' => $this->app_lang_code,
             'rtl' => (bool) $this->rtl,
             'status' => (bool) $this->status,
-            'is_default' => $this->code === config('app.default_language'),
+            'is_default' => $this->code === default_language(),
             'is_english' => $this->code === 'en',
         ];
     }

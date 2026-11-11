@@ -71,7 +71,7 @@ if (!function_exists('clean_html')) {
 if (!function_exists('default_language')) {
     function default_language()
     {
-        return config("app.default_language");
+        return app(\App\Support\StoreDefaultLanguage::class)->get();
     }
 }
 

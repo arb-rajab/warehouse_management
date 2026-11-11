@@ -1101,6 +1101,8 @@ export interface StoreSetupChecklistReason {
     key: string;
     route: StoreSetupChecklistRoute;
     highlight: string | null;
+    /** Words the reason's text fills in (the language reasons: `code`). */
+    params?: Record<string, string>;
 }
 
 export interface StoreSetupChecklistItem {
@@ -1292,4 +1294,56 @@ export interface StoreSellerVerificationField {
     type: 'text' | 'file' | 'select' | 'multi_select' | 'radio';
     label: string;
     options?: string[];
+}
+
+/** Where a setting's value in use comes from: saved in the admin, or `.env`. */
+export type StoreSettingSource = 'admin' | 'env';
+
+/**
+ * The delivery date settings on the Order configuration page
+ * (StoreDeliverySettings): what is saved (null when nothing is), what is in
+ * use and its source, and the `.env` values the empty fields fall back to.
+ */
+export interface StoreDeliverySettings {
+    saved: {
+        delivery_lead_days: number | null;
+        delivery_timezone: string | null;
+    };
+    effective: {
+        delivery_lead_days: {
+            value: number | string | null;
+            source: StoreSettingSource;
+        };
+        delivery_timezone: {
+            value: number | string | null;
+            source: StoreSettingSource;
+        };
+    };
+    environment: {
+        delivery_lead_days: number | string | null;
+        delivery_timezone: number | string | null;
+    };
+    timezones: string[];
+    bounds: { min: number; max: number };
+}
+
+/** One choice of the default-language select. */
+export interface StoreDefaultLanguageOption {
+    code: string;
+    name: string;
+    /** False for the saved language when it is switched off or gone. */
+    active: boolean;
+}
+
+/**
+ * The default-language control on the Languages page (StoreDefaultLanguage).
+ * `state` is about the language in use: it is missing from the list, switched
+ * off, or fine.
+ */
+export interface StoreDefaultLanguageSetting {
+    saved: string | null;
+    effective: { value: string | null; source: StoreSettingSource };
+    environment: string | null;
+    state: 'ok' | 'missing' | 'inactive';
+    options: StoreDefaultLanguageOption[];
 }

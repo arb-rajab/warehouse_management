@@ -14,6 +14,7 @@ use App\Models\StoreUser;
 use App\Models\Tax;
 use App\Services\FcmPushService;
 use App\Support\GoogleMapsKey;
+use App\Support\StoreDefaultLanguage;
 use App\Support\StoreMailSettings;
 
 /**
@@ -107,14 +108,23 @@ class SetupChecklist
     private ?array $settings = null;
 
     /**
+     * Words a reason's text fills in, by reason key (the language reasons name
+     * the language code); only a reason that has some carries `params`.
+     *
+     * @var array<string, array<string, string>>
+     */
+    private array $params = [];
+
+    /**
      * The checks `$user` may fix, in display order, each with why it is not
      * done yet (empty when done).
      *
-     * @return list<array{key: string, done: bool, permissions: list<string>, reasons: list<array{key: string, route: string, highlight: string|null}>}>
+     * @return list<array{key: string, done: bool, permissions: list<string>, reasons: list<array{key: string, route: string, highlight: string|null, params?: array<string, string>}>}>
      */
     public function items(StoreUser $user): array
     {
         $this->settings = null;
+        $this->params = [];
         $items = [];
 
         foreach (self::PERMISSIONS as $key => $permissions) {
@@ -149,8 +159,8 @@ class SetupChecklist
     /**
      * The Inertia prop: the key, state and reasons of each listed check, and the count.
      *
-     * @param  list<array{key: string, done: bool, permissions: list<string>, reasons: list<array{key: string, route: string, highlight: string|null}>}>  $items
-     * @return array{items: list<array{key: string, done: bool, reasons: list<array{key: string, route: string, highlight: string|null}>}>, done: int, total: int}
+     * @param  list<array{key: string, done: bool, permissions: list<string>, reasons: list<array{key: string, route: string, highlight: string|null, params?: array<string, string>}>}>  $items
+     * @return array{items: list<array{key: string, done: bool, reasons: list<array{key: string, route: string, highlight: string|null, params?: array<string, string>}>}>, done: int, total: int}
      */
     public function payload(array $items): array
     {
@@ -180,7 +190,7 @@ class SetupChecklist
      * who may not open it are sent to the product list, where the category of
      * a product is chosen.
      *
-     * @return array{key: string, route: string, highlight: string|null}
+     * @return array{key: string, route: string, highlight: string|null, params?: array<string, string>}
      */
     private function target(string $reason, StoreUser $user): array
     {
@@ -191,7 +201,8 @@ class SetupChecklist
             $route = 'products.all';
         }
 
-        return ['key' => $reason, 'route' => $route, 'highlight' => $highlight];
+        return ['key' => $reason, 'route' => $route, 'highlight' => $highlight]
+            + (isset($this->params[$reason]) ? ['params' => $this->params[$reason]] : []);
     }
 
     /**
@@ -399,21 +410,30 @@ class SetupChecklist
     }
 
     /**
-     * The app's default language (`app.default_language`, a language code from
-     * DEFAULT_LANGUAGE) has to exist and be active.
+     * The effective default language (StoreDefaultLanguage: chosen on the
+     * Languages page, else DEFAULT_LANGUAGE) has to exist and be active. Each
+     * reason carries `params.code`, the language it is about ("-" when none is
+     * configured at all), so its text names it.
      *
      * @return list<string>
      */
     private function language(): array
     {
-        $code = config('app.default_language');
+        $code = app(StoreDefaultLanguage::class)->get();
         $language = filled($code) ? Language::query()->where('code', $code)->first(['id', 'status']) : null;
-
-        return match (true) {
-            $language === null => ['default_missing'],
-            (int) $language->status !== 1 => ['default_inactive'],
-            default => [],
+        $reason = match (true) {
+            $language === null => 'default_missing',
+            (int) $language->status !== 1 => 'default_inactive',
+            default => null,
         };
+
+        if ($reason === null) {
+            return [];
+        }
+
+        $this->params["language.{$reason}"] = ['code' => filled($code) ? (string) $code : '-'];
+
+        return [$reason];
     }
 
     /**

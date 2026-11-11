@@ -1331,7 +1331,25 @@
             "chooseProduct": "Select the default product",
             "searchProducts": "Search by product ID…",
             "chooseRepresentative": "Select the default representative",
-            "searchRepresentatives": "Search representatives by name, phone or email…"
+            "searchRepresentatives": "Search representatives by name, phone or email…",
+            "delivery": {
+                "title": "Delivery dates",
+                "intro": "Orders placed in the app are refused when the delivery date is earlier than today plus the lead days. \"Today\" is read in the timezone below. A field left empty uses the server's setting (.env).",
+                "leadDays": "Lead days",
+                "leadDaysHelp": "Whole days to skip after today, from {min} to {max}. With 2, today and tomorrow cannot be picked.",
+                "timezone": "Timezone",
+                "timezoneServer": "Use the server setting ({timezone})",
+                "timezoneHelp": "The warehouse's timezone, used to decide what \"today\" is.",
+                "sources": {
+                    "admin": "saved in admin",
+                    "env": "from .env"
+                },
+                "inUse": {
+                    "title": "In use",
+                    "leadDays": "{value} days ({source})",
+                    "timezone": "{value} ({source})"
+                }
+            }
         },
         "generalSettings": {
             "title": "General settings",
@@ -1603,7 +1621,7 @@
             "defaultLocked": "Default language",
             "actions": "Actions",
             "empty": "No languages found.",
-            "defaultReadOnly": "Default content language ({code}) is managed on the server. The interface language is selected separately.",
+            "defaultReadOnly": "Default content language ({code}) is chosen in the default language section above. The interface language is selected separately.",
             "translations": "Content and custom labels",
             "appTranslations": "Mobile compatibility translations",
             "delete": "Delete",
@@ -1619,7 +1637,21 @@
             "key": "Key",
             "source": "English",
             "value": "Translation",
-            "noTranslations": "No translation keys found."
+            "noTranslations": "No translation keys found.",
+            "defaultTitle": "Default content language",
+            "defaultLabel": "Default language",
+            "defaultServer": "Use the server setting ({code})",
+            "defaultHelp": "Only active languages can be chosen. Existing product, category and brand text is not translated when you change the default: text saved under the old default is read as the new default's until you translate it.",
+            "defaultInUse": "In use: {code} ({source})",
+            "defaultSources": {
+                "admin": "saved in admin",
+                "env": "from .env"
+            },
+            "defaultSwitchedOff": "switched off",
+            "defaultNone": "No default language is set. Choose one.",
+            "default_missing": "The default language ({code}) is not in the language list. Choose another language or add it.",
+            "default_inactive": "The default language ({code}) is switched off. Switch it on in the list below or choose another language.",
+            "defaultConfirm": "Change the default content language to {name}? Existing text saved under the old default will be read as {name} until it is translated."
         },
         "reports": {
             "number": "#",
@@ -2954,8 +2986,8 @@
                         "header_logo": "The header logo is missing (Website header)."
                     },
                     "language": {
-                        "default_missing": "The default language (DEFAULT_LANGUAGE on the server) is not in the language list.",
-                        "default_inactive": "The default language is switched off."
+                        "default_missing": "The default language ({code}) is not in the language list.",
+                        "default_inactive": "The default language ({code}) is switched off."
                     }
                 }
             },
@@ -3700,6 +3732,9 @@
             "facebook_app_id": "Facebook app ID",
             "recaptcha_site_key": "reCAPTCHA site key",
             "recaptcha_secret_key": "reCAPTCHA secret key",
+            "delivery_lead_days": "delivery lead days",
+            "delivery_timezone": "delivery timezone",
+            "default_language": "default language",
             "slug": "slug",
             "old_photo": "Otajer images",
             "purchase_price": "purchase price",

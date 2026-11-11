@@ -300,7 +300,12 @@ is an owner decision; removing one's own held permissions can still lock one out
   (`StoreRecaptchaSettings`, the secret encrypted and read through the class, never
   laid over config). Those four pages are dedicated Inertia pages
   (`Settings/{Analytics,FacebookChat,FacebookComments,Recaptcha}.vue`), not the
-  plain switch list. The README's Deployment section lists the
+  plain switch list. The delivery lead days and timezone are saved on the Order
+  configuration page (`StoreDeliverySettings`, read by the order API) and the default
+  content language on the Languages page (`StoreDefaultLanguage`, laid over
+  `config('app.default_language')` on web requests and queued jobs only, never at
+  console boot; the Languages page, its guards and the setup checklist read the
+  class). The README's Deployment section lists the
   superseded `.env` keys.
 - Website script fields remain plain code on the restricted compatibility endpoint
   with existing rendering, appearance gate and WAF behavior. New script policy,

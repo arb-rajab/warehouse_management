@@ -6,6 +6,7 @@ use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Support\ApiResourceResponse;
 use App\Support\MergeRepeatedResponseAttributes;
+use App\Support\StoreDefaultLanguage;
 use App\Support\StoreMailSettings;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
@@ -70,6 +71,9 @@ class AppServiceProvider extends ServiceProvider
 
         // One per process: it remembers the `.env` mail values it overrides.
         $this->app->singleton(StoreMailSettings::class);
+
+        // One per process: it remembers the `.env` default language it overrides.
+        $this->app->singleton(StoreDefaultLanguage::class);
     }
 
     /**
@@ -80,6 +84,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureApiDocumentation();
         $this->applyStoreMailSettings();
+        $this->applyStoreDefaultLanguage();
 
         // Merged from the legacy store's AppServiceProvider (see
         // .ai/rules/legacy-albaraka-holland.md section 2). Its migrations
@@ -189,6 +194,24 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(JobProcessing::class, function (): void {
             $this->app->make(StoreMailSettings::class)->apply();
+        });
+    }
+
+    /**
+     * The default content language saved on the Languages page wins over
+     * DEFAULT_LANGUAGE (StoreDefaultLanguage, .ai/rules/admin-env-overrides.md).
+     * Applied on web requests and before each queued job; never for other
+     * console commands, so `config:cache` and `optimize` cannot write it into
+     * bootstrap/cache/config.php.
+     */
+    private function applyStoreDefaultLanguage(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            $this->app->make(StoreDefaultLanguage::class)->apply();
+        }
+
+        Event::listen(JobProcessing::class, function (): void {
+            $this->app->make(StoreDefaultLanguage::class)->apply();
         });
     }
 

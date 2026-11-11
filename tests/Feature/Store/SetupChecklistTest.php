@@ -471,6 +471,68 @@ test('language is done when the default language exists and is active', function
     'no default configured' => [null, [['en', 1]], false, 'language.default_missing'],
 ]);
 
+test('language reads the default chosen in the admin, not DEFAULT_LANGUAGE, once one is saved', function (string $saved, array $languages, ?string $reason) {
+    config(['app.default_language' => 'en']);
+    foreach ($languages as [$code, $status]) {
+        DB::table('languages')->insert(['name' => strtoupper($code), 'code' => $code, 'status' => $status]);
+    }
+    storeSetting('default_language', $saved);
+    Cache::forget('business_settings');
+    Cache::forget('business_settings:default_language');
+
+    expect(setupChecklistReasons('language'))->toBe($reason === null ? [] : [$reason]);
+})->with([
+    'a saved active language while .env names an inactive one' => ['ar', [['en', 0], ['ar', 1]], null],
+    'a saved language that was switched off while .env names an active one' => ['ar', [['en', 1], ['ar', 0]], 'language.default_inactive'],
+    'a saved language that was deleted' => ['xx', [['en', 1]], 'language.default_missing'],
+]);
+
+test('each language reason names the exact language and still links to the default language control', function (string $env, ?string $saved, array $languages, string $reason, string $code) {
+    config(['app.default_language' => $env]);
+    foreach ($languages as [$languageCode, $status]) {
+        DB::table('languages')->insert(['name' => strtoupper($languageCode), 'code' => $languageCode, 'status' => $status]);
+    }
+    if ($saved !== null) {
+        storeSetting('default_language', $saved);
+    }
+    Cache::forget('business_settings');
+    Cache::forget('business_settings:default_language');
+
+    $language = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))->firstWhere('key', 'language');
+
+    expect($language['reasons'])->toBe([
+        ['key' => $reason, 'route' => 'languages.index', 'highlight' => 'default_language', 'params' => ['code' => $code]],
+    ]);
+})->with([
+    'missing from .env' => ['nl', null, [['en', 1]], 'language.default_missing', 'nl'],
+    'inactive from .env' => ['en', null, [['en', 0]], 'language.default_inactive', 'en'],
+    'missing, saved' => ['en', 'xx', [['en', 1]], 'language.default_missing', 'xx'],
+    'inactive, saved' => ['en', 'ar', [['en', 1], ['ar', 0]], 'language.default_inactive', 'ar'],
+]);
+
+test('with no default language at all the reason names none with a dash', function () {
+    config(['app.default_language' => null]);
+    DB::table('languages')->insert(['name' => 'EN', 'code' => 'en', 'status' => 1]);
+
+    $language = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))->firstWhere('key', 'language');
+
+    expect($language['reasons'][0])->toBe(['key' => 'language.default_missing', 'route' => 'languages.index', 'highlight' => 'default_language', 'params' => ['code' => '-']]);
+});
+
+test('only the language reasons carry params, and a done language check has none', function () {
+    $items = collect(app(SetupChecklist::class)->items(setupChecklistStaff()));
+
+    foreach ($items->where('key', '!=', 'language') as $item) {
+        foreach ($item['reasons'] as $reason) {
+            expect($reason)->not->toHaveKey('params');
+        }
+    }
+
+    DB::table('languages')->insert(['name' => 'EN', 'code' => 'en', 'status' => 1]);
+
+    expect(setupChecklistReasons('language'))->toBe([]);
+});
+
 // permission gating and counts
 
 test('a user lacking any permission a check needs does not get the item', function (string $key) {

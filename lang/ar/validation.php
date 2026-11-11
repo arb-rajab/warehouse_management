@@ -325,6 +325,9 @@ return [
         'facebook_app_id' => 'معرّف تطبيق فيسبوك',
         'recaptcha_site_key' => 'مفتاح موقع reCAPTCHA',
         'recaptcha_secret_key' => 'المفتاح السري لـ reCAPTCHA',
+        'delivery_lead_days' => 'أيام مهلة التوصيل',
+        'delivery_timezone' => 'المنطقة الزمنية للتوصيل',
+        'default_language' => 'اللغة الافتراضية',
     ],
 
 ];

@@ -47,6 +47,8 @@ import type {
     StoreFlashDeal,
     StoreCampaignProduct,
     AdminLanguage,
+    StoreDefaultLanguageSetting,
+    StoreDeliverySettings,
     StoreTranslation,
     StoreCountry,
     StoreState,
@@ -1766,4 +1768,39 @@ export function storeSellerVerificationFields(): StoreSellerVerificationField[] 
         { type: 'text', label: 'Company' },
         { type: 'select', label: 'Country', options: ['NL', 'Syria'] },
     ];
+}
+
+export function defaultLanguageSetting(
+    overrides: Partial<StoreDefaultLanguageSetting> = {},
+): StoreDefaultLanguageSetting {
+    return {
+        saved: null,
+        effective: { value: 'en', source: 'env' },
+        environment: 'en',
+        state: 'ok',
+        options: [
+            { code: 'ar', name: 'Arabic', active: true },
+            { code: 'en', name: 'English', active: true },
+        ],
+        ...overrides,
+    };
+}
+
+export function deliverySettings(
+    overrides: Partial<StoreDeliverySettings> = {},
+): StoreDeliverySettings {
+    return {
+        saved: { delivery_lead_days: null, delivery_timezone: null },
+        effective: {
+            delivery_lead_days: { value: 2, source: 'env' },
+            delivery_timezone: { value: 'Europe/Amsterdam', source: 'env' },
+        },
+        environment: {
+            delivery_lead_days: 2,
+            delivery_timezone: 'Europe/Amsterdam',
+        },
+        timezones: ['Europe/Amsterdam', 'Europe/London', 'UTC'],
+        bounds: { min: 0, max: 30 },
+        ...overrides,
+    };
 }

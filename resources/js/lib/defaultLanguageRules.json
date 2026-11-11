@@ -1,0 +1,5 @@
+{
+    "rules": {
+        "default_language": ["nullable", "string", "max:10"]
+    }
+}

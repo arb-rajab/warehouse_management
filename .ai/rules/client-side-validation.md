@@ -53,6 +53,16 @@ paths:
   - 'app/Http/Requests/Store/Admin/UpdateRecaptchaSettingsRequest.php'
   - 'tests/Feature/Store/Admin/IntegrationIdsClientValidationParityTest.php'
   - 'tests/Feature/Store/Admin/RecaptchaSettingsClientValidationParityTest.php'
+  - 'resources/js/lib/deliverySettingsForm.ts'
+  - 'resources/js/lib/deliverySettingsRules.json'
+  - 'resources/js/lib/defaultLanguageForm.ts'
+  - 'resources/js/lib/defaultLanguageRules.json'
+  - 'resources/js/components/StoreDeliverySettingsForm.vue'
+  - 'resources/js/components/StoreDefaultLanguageForm.vue'
+  - 'app/Http/Requests/Store/Admin/UpdateDeliverySettingsRequest.php'
+  - 'app/Http/Requests/Store/Admin/UpdateDefaultLanguageRequest.php'
+  - 'tests/Feature/Store/Admin/DeliverySettingsClientValidationParityTest.php'
+  - 'tests/Feature/Store/Admin/DefaultLanguageClientValidationParityTest.php'
 ---
 
 # Forms validate in the browser first
@@ -85,6 +95,15 @@ The Analytics, Facebook chat and Facebook comments forms use
 (`settings`, `settings.*`) are selects that always post a value and sit on the
 file's `serverOnly` list, and the reCAPTCHA request's `after()` checks (the secret
 for a new or changed site key) stay on the server.
+The Order configuration page's delivery form (`StoreDeliverySettingsForm`) uses
+`lib/deliverySettingsRules.json` (its `serverOnly` holds the timezone's
+`Rule::in(DateTimeZone::listIdentifiers())`, which the select offers whole), and the
+Languages page's default-language form (`StoreDefaultLanguageForm`) uses
+`lib/defaultLanguageRules.json` (the request's `after()` check that the language
+exists and is active reads the database). Both are inline `<Form>`s in a page that is
+not a `ResourceFormPage`, so they call `useFormValidation` themselves; the parity
+tests are `DeliverySettingsClientValidationParityTest` and
+`DefaultLanguageClientValidationParityTest`.
 
 ## The layer
 

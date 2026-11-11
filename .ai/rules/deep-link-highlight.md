@@ -33,6 +33,6 @@ The dashboard setup checklist (`StoreSetupChecklist.vue`) links every reason in 
   no checklist item links to them yet (`SettingsController::PAGES[...]['sections']`)
 - Google map (`google_map_api_key`), Currencies (`system_default_currency`) and General settings (`site_name`)
 - Website header (`header_logo`) and footer (`contact_email`, `contact_phone`)
-- Languages (`default_language`)
+- Languages (`default_language`, the default-language control: a select of active languages and a save button)
 
 The product, category and tax lists hold no single option to mark, so their links carry no highlight.

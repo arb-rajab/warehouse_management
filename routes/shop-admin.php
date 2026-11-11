@@ -402,6 +402,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/shipping_configuration/update', [ShippingConfigurationController::class, 'update'])->name('shipping_configuration.update');
     Route::get('/order-configuration', [OrderConfigurationController::class, 'index'])->name('order_configuration.index');
     Route::post('/order-configuration', [OrderConfigurationController::class, 'update'])->name('order_configuration.update');
+    Route::post('/order-configuration/delivery', [OrderConfigurationController::class, 'updateDelivery'])->name('order_configuration.delivery.update');
     Route::post('/order-configuration/representative', [OrderConfigurationController::class, 'updateRepresentative'])->name('order_configuration.representative.update');
     Route::get('/order-configuration/representatives', [OrderConfigurationController::class, 'representatives'])->name('order_configuration.representatives');
     Route::get('/product/search', [ProductSearchController::class, 'search'])->name('order_configuration.product-search');
@@ -428,6 +429,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/languages/create', [LanguageController::class, 'create'])->name('languages.create');
     Route::post('/languages', [LanguageController::class, 'store'])->name('languages.store');
     Route::post('/languages/update_rtl_status', [LanguageController::class, 'updateRtlStatus'])->name('languages.update_rtl_status');
+    Route::post('/languages/default', [LanguageController::class, 'updateDefault'])->name('languages.default.update');
     Route::post('/languages/update-status', [LanguageController::class, 'updateStatus'])->name('languages.update-status');
     Route::post('/languages/key_value_store', [LanguageController::class, 'storeTranslations'])->name('languages.key_value_store');
     Route::post('/languages/app-translations/import', [LanguageController::class, 'importAppTranslations'])->name('app-translations.import');

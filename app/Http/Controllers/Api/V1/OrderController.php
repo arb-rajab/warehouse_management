@@ -247,7 +247,8 @@ class OrderController extends Controller
 
     /**
      * The delivery date must be a real day, no earlier than today plus
-     * config('store.delivery.lead_days') and on one of the delivery weekdays
+     * StoreDeliverySettings::leadDays() (saved on the Order configuration page, else
+     * config('store.delivery.lead_days')) and on one of the delivery weekdays
      * (config/store.php). A blank date used to be stored as 1970-01-01. A valid
      * date is written back to the request as YYYY-MM-DD, the one format stored.
      *
@@ -261,7 +262,7 @@ class OrderController extends Controller
             return [__('api.order.delivery_date_required')];
         }
 
-        $timezone = config('store.delivery.timezone');
+        $timezone = \App\Support\StoreDeliverySettings::timezone();
         $date = null;
 
         foreach (['Y-m-d', 'd-m-Y'] as $format) {
@@ -278,7 +279,7 @@ class OrderController extends Controller
             return [__('api.order.delivery_date_invalid')];
         }
 
-        $earliest = CarbonImmutable::now($timezone)->startOfDay()->addDays(config('store.delivery.lead_days'));
+        $earliest = CarbonImmutable::now($timezone)->startOfDay()->addDays(\App\Support\StoreDeliverySettings::leadDays());
 
         if ($date->lt($earliest)) {
             return [__('api.order.delivery_date_too_soon', ['date' => $earliest->toDateString()])];

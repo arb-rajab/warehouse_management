@@ -19,6 +19,15 @@ paths:
   - 'resources/js/components/StoreSmtpTestForm.vue'
   - 'resources/js/lib/smtpSettings*'
   - 'config/mail.php'
+  - 'app/Support/StoreDeliverySettings.php'
+  - 'app/Support/StoreDefaultLanguage.php'
+  - 'app/Http/Requests/Store/Admin/{UpdateDeliverySettingsRequest,UpdateDefaultLanguageRequest}.php'
+  - 'app/Http/Controllers/Store/Admin/{OrderConfigurationController,LanguageController}.php'
+  - 'app/Http/Controllers/Api/V1/OrderController.php'
+  - 'resources/js/components/{StoreDeliverySettingsForm,StoreDefaultLanguageForm}.vue'
+  - 'resources/js/lib/{deliverySettings,defaultLanguage}*'
+  - 'resources/js/pages/Store/Admin/Setup/OrderConfiguration/**'
+  - 'resources/js/pages/Store/Admin/Languages/Index.vue'
 ---
 
 # A setting that only `.env` held may be saved in the admin: saved value first, `.env` as the fallback
@@ -27,7 +36,8 @@ Added 2026-11-11. The owner wants settings that could only be set in the server'
 `.env`, but that an admin can reasonably manage, to be editable in the store back
 office. SMTP was the first; the Google Maps key (`GoogleMapsKey`) already worked
 this way; the analytics, Facebook and reCAPTCHA IDs and keys followed the same
-day. A settings form still **never writes `.env`** (store-backoffice-migration.md §5):
+day. The delivery lead days and timezone and the default content language followed
+(2026-11-11). A settings form still **never writes `.env`** (store-backoffice-migration.md §5):
 the value is stored in `business_settings` and laid over the config at runtime.
 
 ## How
@@ -55,6 +65,26 @@ the value is stored in `business_settings` and laid over the config at runtime.
   (`StoreIntegrationIds::get()`, `StoreRecaptchaSettings::siteKey()`, as
   `GoogleMapsKey::get()` does). Use the config overlay below only when many
   consumers read config (mail).
+- **A public, non-secret value many places read goes through the config overlay
+  too, with a snapshot.** The default content language
+  (`StoreDefaultLanguage`) is read through `config('app.default_language')` at
+  about 80 sites, so `apply()` lays the effective code over it, from the same
+  `AppServiceProvider` hook (web requests and `JobProcessing`, never at console
+  boot). The singleton remembers the `.env` code before the first overlay, so
+  "from .env" stays right. Code that must be right outside a web request (the
+  Languages page and its guards, the setup checklist, the `default_language()`
+  helper, `LanguageResource`) reads `StoreDefaultLanguage::get()` instead; other
+  artisan commands and the scheduler see the `.env` value. The saved code is
+  cached under `business_settings:default_language` (10 minutes, forgotten by the
+  writer). Whether the language exists and is active is checked when it is chosen
+  (`UpdateDefaultLanguageRequest`) and by the setup checklist, not on every read.
+  Changing the default re-labels existing text (the default language's text lives
+  in the main columns), so the page warns and asks to confirm a change.
+- **A value only one consumer reads is a static support class.** The delivery
+  settings (`StoreDeliverySettings`, read by `Api\V1\OrderController` only) lay
+  nothing over config; a saved value out of range or not a PHP timezone identifier
+  reads as not saved. An invalid `STORE_DELIVERY_TIMEZONE` in `.env` is not guarded
+  (it fails the order API as before): fix the `.env`.
 - **Apply at runtime, never in the console.** `AppServiceProvider::applyStoreMailSettings()`
   applies `StoreMailSettings` on web requests and on `JobProcessing` (so a running
   queue worker picks up a save), never at console boot: `config:cache` and
@@ -94,6 +124,9 @@ the value is stored in `business_settings` and laid over the config at runtime.
 | Analytics page: Facebook pixel ID | `FACEBOOK_PIXEL_ID` | `facebook_pixel_id` |
 | Facebook chat page: Facebook page ID | `FACEBOOK_PAGE_ID` | `facebook_page_id` |
 | Facebook comments page: Facebook app ID | `FACEBOOK_APP_ID` | `facebook_app_id` |
+| Order configuration page: delivery lead days (whole days, 0 to 30) | `STORE_DELIVERY_LEAD_DAYS` | `delivery_lead_days` |
+| Order configuration page: delivery timezone (a PHP identifier, `DateTimeZone::listIdentifiers()`) | `STORE_DELIVERY_TIMEZONE` | `delivery_timezone` |
+| Languages page: default content language (an existing, active language) | `DEFAULT_LANGUAGE` | `default_language` |
 | reCAPTCHA page: site key and secret key (one pair) | `CAPTCHA_KEY`, `CAPTCHA_SECRET`: with a site key saved, both come from the admin and `CAPTCHA_SECRET` is not used | `recaptcha_site_key`, `recaptcha_secret_key_encrypted` (encrypted) |
 
 The IDs and the reCAPTCHA key are optional in the form (`.env` may hold them), so
@@ -105,6 +138,14 @@ and `UpdateIntegrationIdsRequest`/`UpdateRecaptchaSettingsRequest` are the code;
 the public business-settings endpoint hides only the encrypted secret row (the
 IDs and the site key are public by nature). The Facebook login keys
 (`FACEBOOK_CLIENT_ID`/`SECRET`) and the other social logins stay `.env` only.
+
+The delivery fields and the default language are optional too (an empty field uses
+`.env`), so no required mark or legend. The delivery weekdays (`store.delivery.weekdays`)
+stay in `config/store.php`. `StoreDeliverySettings`, `StoreDefaultLanguage`,
+`UpdateDeliverySettingsRequest`/`UpdateDefaultLanguageRequest` and the
+`StoreDeliverySettingsForm`/`StoreDefaultLanguageForm` components are the code. No
+setup checklist item reads the delivery settings; the language check reads the
+effective default.
 
 Still `.env` only: `MAIL_EHLO_DOMAIN`, `MAIL_LOG_CHANNEL`, `MAIL_SENDMAIL_PATH`, the
 other mailers' keys, and the from address of the health and backup notifications
@@ -125,7 +166,17 @@ other mailers' keys, and the from address of the health and backup notifications
   escaped IDs, the public API filter. Their parity tests
   (`IntegrationIdsClientValidationParityTest`,
   `RecaptchaSettingsClientValidationParityTest`) check the browser rules.
+- `tests/Feature/Store/Admin/DeliverySettingsTest.php` and
+  `DefaultLanguageSettingsTest.php`: save, precedence and `.env` fallback, clearing,
+  validation (an unknown timezone, lead days out of range, a nonexistent or inactive
+  language), authorization, the success flash, what the page sends, and that the
+  consumers read the effective value (the order API's delivery date; the helper, the
+  config overlay on a job and not on a console boot, the guards on the default).
+  Their parity tests (`DeliverySettingsClientValidationParityTest`,
+  `DefaultLanguageClientValidationParityTest`) check the browser rules.
 - `tests/Feature/Store/SetupChecklistTest.php`: the checklist reads the effective
-  settings.
+  settings, the language reasons name the code.
 - `resources/js/pages/Store/Admin/Settings/Smtp.test.ts`, `Analytics.test.ts` (also
   the chat and comments pages) and `Recaptcha.test.ts`: the pages.
+  `OrderConfiguration/Index.test.ts` (the delivery form) and
+  `components/StoreDefaultLanguageForm.test.ts` (with `Languages/Index.test.ts`).

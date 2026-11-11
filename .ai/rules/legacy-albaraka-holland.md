@@ -1812,8 +1812,9 @@ and [docs/backend-replies-20261104.md](../../docs/backend-replies-20261104.md);
 the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that follow from them:
 
 - `POST order/store` and `payments/pay/*` (all through `Api\V1\OrderController::store`) require a `delivery_date`:
-  `YYYY-MM-DD` (or `DD-MM-YYYY`, stored as `YYYY-MM-DD`), at least `store.delivery.lead_days` after today in
-  `store.delivery.timezone`, on a `store.delivery.weekdays` day. A refusal is 422 with `errors.delivery_date`.
+  `YYYY-MM-DD` (or `DD-MM-YYYY`, stored as `YYYY-MM-DD`), at least the lead days after today in the delivery
+  timezone (`StoreDeliverySettings`: saved on the Order configuration page, else `store.delivery.lead_days` /
+  `store.delivery.timezone`), on a `store.delivery.weekdays` day. A refusal is 422 with `errors.delivery_date`.
   Tests that place an order send `validDeliveryDate()` (tests/Pest.php).
 - An `Idempotency-Key` header (at most 128 characters) makes a placed order replay its answer for 24 hours per
   account; only a successful placement is remembered.

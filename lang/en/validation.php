@@ -358,6 +358,9 @@ return [
         'facebook_app_id' => 'Facebook app ID',
         'recaptcha_site_key' => 'reCAPTCHA site key',
         'recaptcha_secret_key' => 'reCAPTCHA secret key',
+        'delivery_lead_days' => 'delivery lead days',
+        'delivery_timezone' => 'delivery timezone',
+        'default_language' => 'default language',
     ],
 
 ];
