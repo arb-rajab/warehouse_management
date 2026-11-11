@@ -26,6 +26,11 @@ The dashboard setup checklist (`StoreSetupChecklist.vue`) links every reason in 
 - Features activation (`cash_payment`)
 - Shipping configuration (`shipping_type`, `flat_rate_shipping_cost`, `shipping_cost_admin`, `cities`, `carriers`)
 - the SMTP settings form's fields (`mail_mailer`, `mail_host`, and `mail_credentials`, the username and password pair) and the Firebase server status section (`firebase_server`)
+- The Analytics (`google_analytics`, `facebook_pixel`, `google_analytics_tracking_id`,
+  `facebook_pixel_id`), Facebook chat (`facebook_chat`, `facebook_page_id`), Facebook
+  comments (`facebook_comment`, `facebook_app_id`) and reCAPTCHA (`google_recaptcha`,
+  `recaptcha_site_key`, `recaptcha_secret_key`) pages mark their switch or field;
+  no checklist item links to them yet (`SettingsController::PAGES[...]['sections']`)
 - Google map (`google_map_api_key`), Currencies (`system_default_currency`) and General settings (`site_name`)
 - Website header (`header_logo`) and footer (`contact_email`, `contact_phone`)
 - Languages (`default_language`)

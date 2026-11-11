@@ -289,13 +289,18 @@ is an owner decision; removing one's own held permissions can still lock one out
   keys, **before any write**. `business_settings.update` is retired. Timezone is
   config-managed (`app.timezone`, UTC); a settings form accepts only the configured
   value and never writes `.env`. Settings writers forget only `business_settings`
-  (the SMTP writer also its own `business_settings:mail` entry).
+  (the SMTP writer also its own `business_settings:mail` entry, the reCAPTCHA writer its own `business_settings:recaptcha`).
 - A setting only `.env` held may become editable in the admin: it is stored in
   `business_settings`, the saved value wins and `.env` stays the fallback, secrets
   are encrypted and never sent back, and it is applied at runtime, never in the
   console ([admin-env-overrides.md](admin-env-overrides.md)). SMTP is managed on the
   SMTP settings page this way (2026-11-11, `StoreMailSettings`); the Google Maps key
-  already was (`GoogleMapsKey`). The README's Deployment section lists the
+  already was (`GoogleMapsKey`). So are the Analytics, Facebook chat and Facebook
+  comments IDs (`StoreIntegrationIds`) and the reCAPTCHA site key and secret
+  (`StoreRecaptchaSettings`, the secret encrypted and read through the class, never
+  laid over config). Those four pages are dedicated Inertia pages
+  (`Settings/{Analytics,FacebookChat,FacebookComments,Recaptcha}.vue`), not the
+  plain switch list. The README's Deployment section lists the
   superseded `.env` keys.
 - Website script fields remain plain code on the restricted compatibility endpoint
   with existing rendering, appearance gate and WAF behavior. New script policy,

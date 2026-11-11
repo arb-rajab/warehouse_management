@@ -4,10 +4,6 @@ import { TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import {
     updateActivation,
-    updateFacebookChat,
-    updateFacebookComments,
-    updateAnalytics,
-    updateRecaptcha,
     updateFirebase,
     updatePayments,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
@@ -22,15 +18,7 @@ import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreServerSettings } from '@/types/store';
 const props = defineProps<{
     section:
-        | 'activation'
-        | 'socialLogin'
-        | 'facebookChat'
-        | 'facebookComments'
-        | 'analytics'
-        | 'recaptcha'
-        | 'firebase'
-        | 'payments'
-        | 'filesystem';
+        'activation' | 'socialLogin' | 'firebase' | 'payments' | 'filesystem';
     settings: Record<string, boolean>;
     /** The option or section a button sent the admin here to change, if any. */
     highlight?: string | null;
@@ -38,27 +26,21 @@ const props = defineProps<{
     server?: StoreServerSettings | null;
 }>();
 // The read-only block of server values each page shows, by its deep-link key.
-// The SMTP page is its own component (Settings/Smtp.vue).
+// The SMTP, Analytics, Facebook chat, Facebook comments and reCAPTCHA pages are
+// their own components (Settings/Smtp.vue, Analytics.vue, FacebookChat.vue,
+// FacebookComments.vue, Recaptcha.vue): they edit values saved over `.env`.
 const serverAnchors = {
     firebase: 'firebase_server',
 } as const;
 const access = useStoreAccess();
 const actions = {
     activation: updateActivation,
-    facebookChat: updateFacebookChat,
-    facebookComments: updateFacebookComments,
-    analytics: updateAnalytics['/temp/admin/google-analytics'],
-    recaptcha: updateRecaptcha,
     firebase: updateFirebase,
     payments: updatePayments,
 };
 const permissions = {
     activation: 'features_activation',
     socialLogin: 'social_media_logins',
-    facebookChat: 'facebook_chat',
-    facebookComments: 'facebook_comment',
-    analytics: 'analytics_tools_configuration',
-    recaptcha: 'google_recaptcha_configuration',
     firebase: 'google_firebase_setting',
     payments: 'payment_methods_configurations',
     filesystem: 'file_system_&_cache_configuration',

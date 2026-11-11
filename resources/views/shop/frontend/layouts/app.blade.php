@@ -82,19 +82,22 @@
         }
     </script>
 
-@if (get_setting('google_analytics') == 1)
+{{-- The IDs are the effective ones (saved in the admin, else .env: App\Support\StoreIntegrationIds); a block whose switch is on but whose ID is empty prints nothing. --}}
+@php($trackingId = \App\Support\StoreIntegrationIds::get('google_analytics_tracking_id'))
+@if (get_setting('google_analytics') == 1 && $trackingId !== null)
     <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('services.google_analytics.tracking_id') }}"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($trackingId) }}"></script>
 
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', '{{ config('services.google_analytics.tracking_id') }}');
+        gtag('config', {{ \Illuminate\Support\Js::from($trackingId) }});
     </script>
 @endif
 
-@if (get_setting('facebook_pixel') == 1)
+@php($pixelId = \App\Support\StoreIntegrationIds::get('facebook_pixel_id'))
+@if (get_setting('facebook_pixel') == 1 && $pixelId !== null)
     <!-- Facebook Pixel Code -->
     <script>
         !function(f,b,e,v,n,t,s)
@@ -105,11 +108,11 @@
         t.src=v;s=b.getElementsByTagName(e)[0];
         s.parentNode.insertBefore(t,s)}(window, document,'script',
         'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '{{ config('services.facebook.pixel_id') }}');
+        fbq('init', {{ \Illuminate\Support\Js::from($pixelId) }});
         fbq('track', 'PageView');
     </script>
     <noscript>
-        <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ config('services.facebook.pixel_id') }}&ev=PageView&noscript=1"/>
+        <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ urlencode($pixelId) }}&ev=PageView&noscript=1"/>
     </noscript>
     <!-- End Facebook Pixel Code -->
 @endif
@@ -230,7 +233,8 @@
 
 
 
-    @if (get_setting('facebook_chat') == 1)
+    @php($facebookPageId = \App\Support\StoreIntegrationIds::get('facebook_page_id'))
+    @if (get_setting('facebook_chat') == 1 && $facebookPageId !== null)
         <script type="text/javascript">
             window.fbAsyncInit = function() {
                 FB.init({
@@ -251,7 +255,7 @@
         <!-- Your customer chat code -->
         <div class="fb-customerchat"
           attribution=setup_tool
-          page_id="{{ config('services.facebook.page_id') }}">
+          page_id="{{ $facebookPageId }}">
         </div>
     @endif
 

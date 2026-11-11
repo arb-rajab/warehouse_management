@@ -6,13 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\TestSmtpRequest;
+use App\Http\Requests\Store\Admin\UpdateIntegrationIdsRequest;
+use App\Http\Requests\Store\Admin\UpdateRecaptchaSettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateSmtpSettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateStoreSettingsRequest;
 use App\Mail\EmailManager;
 use App\Models\BusinessSetting;
 use App\Services\FcmPushService;
+use App\Support\StoreIntegrationIds;
 use App\Support\StoreLocale;
 use App\Support\StoreMailSettings;
+use App\Support\StoreRecaptchaSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -40,11 +44,14 @@ class SettingsController extends Controller implements HasMiddleware
     public const array SMTP_HIGHLIGHTS = ['mail_mailer', 'mail_host', 'mail_credentials'];
 
     /**
-     * `keys` are the page's switches; `sections` are read-only blocks a deep
-     * link may also highlight (the server values behind a setup check). The
-     * SMTP page is not one of these plain pages: it edits StoreMailSettings.
+     * `keys` are the page's switches; `sections` are the other fields or blocks
+     * a deep link may also highlight (the server values behind a setup check,
+     * the ID fields). `component` is a dedicated page that replaces the plain
+     * switch list; `ids` pairs a switch with the public ID it prints
+     * (StoreIntegrationIds). The SMTP page is not one of these pages: it edits
+     * StoreMailSettings.
      *
-     * @var array<string, array{permission: string, index: string, keys: list<string>, sections?: list<string>}>
+     * @var array<string, array{permission: string, index: string, keys: list<string>, sections?: list<string>, component?: string, ids?: array<string, string>}>
      */
     public const PAGES = [
         'activation' => [
@@ -117,10 +124,25 @@ class SettingsController extends Controller implements HasMiddleware
             ],
         ],
         'socialLogin' => ['permission' => 'social_media_logins', 'index' => 'social_login.index', 'keys' => []],
-        'facebookChat' => ['permission' => 'facebook_chat', 'index' => 'facebook_chat.index', 'keys' => ['facebook_chat']],
-        'facebookComments' => ['permission' => 'facebook_comment', 'index' => 'facebook-comment', 'keys' => ['facebook_comment']],
-        'analytics' => ['permission' => 'analytics_tools_configuration', 'index' => 'google_analytics.index', 'keys' => ['google_analytics', 'facebook_pixel']],
-        'recaptcha' => ['permission' => 'google_recaptcha_configuration', 'index' => 'google_recaptcha.index', 'keys' => ['google_recaptcha']],
+        'facebookChat' => [
+            'permission' => 'facebook_chat', 'index' => 'facebook_chat.index', 'keys' => ['facebook_chat'],
+            'sections' => ['facebook_page_id'], 'component' => 'Store/Admin/Settings/FacebookChat',
+            'ids' => ['facebook_chat' => 'facebook_page_id'],
+        ],
+        'facebookComments' => [
+            'permission' => 'facebook_comment', 'index' => 'facebook-comment', 'keys' => ['facebook_comment'],
+            'sections' => ['facebook_app_id'], 'component' => 'Store/Admin/Settings/FacebookComments',
+            'ids' => ['facebook_comment' => 'facebook_app_id'],
+        ],
+        'analytics' => [
+            'permission' => 'analytics_tools_configuration', 'index' => 'google_analytics.index', 'keys' => ['google_analytics', 'facebook_pixel'],
+            'sections' => ['google_analytics_tracking_id', 'facebook_pixel_id'], 'component' => 'Store/Admin/Settings/Analytics',
+            'ids' => ['google_analytics' => 'google_analytics_tracking_id', 'facebook_pixel' => 'facebook_pixel_id'],
+        ],
+        'recaptcha' => [
+            'permission' => 'google_recaptcha_configuration', 'index' => 'google_recaptcha.index', 'keys' => ['google_recaptcha'],
+            'sections' => ['recaptcha_site_key', 'recaptcha_secret_key'], 'component' => 'Store/Admin/Settings/Recaptcha',
+        ],
         'firebase' => ['permission' => 'google_firebase_setting', 'index' => 'google-firebase.index', 'keys' => ['google_firebase'], 'sections' => ['firebase_server']],
         'payments' => ['permission' => 'payment_methods_configurations', 'index' => 'payment_method.index', 'keys' => ['bkash_sandbox', 'sslcommerz_sandbox', 'aamarpay_sandbox', 'iyzico_sandbox', 'payhere_sandbox', 'voguepay_sandbox']],
         'filesystem' => ['permission' => 'file_system_&_cache_configuration', 'index' => 'file_system.index', 'keys' => []],
@@ -204,44 +226,62 @@ class SettingsController extends Controller implements HasMiddleware
         return $this->page('socialLogin');
     }
 
-    public function facebookChat(): Response
+    public function facebookChat(Request $request): Response
     {
-        return $this->page('facebookChat');
+        return $this->page('facebookChat', $request);
     }
 
-    public function updateFacebookChat(UpdateStoreSettingsRequest $request): RedirectResponse
+    public function updateFacebookChat(UpdateIntegrationIdsRequest $request): RedirectResponse
     {
         return $this->save($request, 'facebookChat');
     }
 
-    public function facebookComments(): Response
+    public function facebookComments(Request $request): Response
     {
-        return $this->page('facebookComments');
+        return $this->page('facebookComments', $request);
     }
 
-    public function updateFacebookComments(UpdateStoreSettingsRequest $request): RedirectResponse
+    public function updateFacebookComments(UpdateIntegrationIdsRequest $request): RedirectResponse
     {
         return $this->save($request, 'facebookComments');
     }
 
-    public function analytics(): Response
+    public function analytics(Request $request): Response
     {
-        return $this->page('analytics');
+        return $this->page('analytics', $request);
     }
 
-    public function updateAnalytics(UpdateStoreSettingsRequest $request): RedirectResponse
+    public function updateAnalytics(UpdateIntegrationIdsRequest $request): RedirectResponse
     {
         return $this->save($request, 'analytics');
     }
 
-    public function recaptcha(): Response
+    public function recaptcha(Request $request): Response
     {
-        return $this->page('recaptcha');
+        return $this->page('recaptcha', $request);
     }
 
-    public function updateRecaptcha(UpdateStoreSettingsRequest $request): RedirectResponse
+    /**
+     * The switch and the site key and secret pair. The secret is encrypted by
+     * StoreRecaptchaSettings and never leaves it; an empty secret keeps the
+     * saved one. A request without the pair (a switch-only post) leaves it alone.
+     */
+    public function updateRecaptcha(UpdateRecaptchaSettingsRequest $request, StoreRecaptchaSettings $recaptcha): RedirectResponse
     {
-        return $this->save($request, 'recaptcha');
+        DB::transaction(function () use ($request, $recaptcha): void {
+            $this->saveToggles($request->validated('settings'));
+
+            if ($request->has('recaptcha_site_key')) {
+                $recaptcha->save([
+                    'site_key' => $request->validated('recaptcha_site_key'),
+                    'secret' => $request->validated('recaptcha_secret_key'),
+                ], $request->boolean('recaptcha_secret_clear'));
+            }
+        });
+        Cache::forget('business_settings');
+        $this->flashSuccess('google_recaptcha_settings_have_been_updated_successfully');
+
+        return redirect()->route(self::PAGES['recaptcha']['index']);
     }
 
     public function firebase(Request $request): Response
@@ -307,14 +347,51 @@ class SettingsController extends Controller implements HasMiddleware
         $settings = BusinessSetting::query()->whereIn('type', self::PAGES[$page]['keys'])
             ->select(['type', 'value'])->pluck('value', 'type');
 
-        return Inertia::render('Store/Admin/Settings/Index', [
+        return Inertia::render(self::PAGES[$page]['component'] ?? 'Store/Admin/Settings/Index', [
             'section' => $page,
             'highlight' => $highlight,
             'settings' => collect(self::PAGES[$page]['keys'])->mapWithKeys(
                 fn (string $key): array => [$key => (string) $settings->get($key, '0') === '1']
             )->all(),
             'server' => $this->server($page),
+            ...$this->integration($page),
         ]);
+    }
+
+    /**
+     * What a dedicated page adds to its switches. The IDs are public and shown
+     * in full, each with the effective value and its source. The reCAPTCHA
+     * secret is never sent: only whether one is saved, readable and in effect.
+     *
+     * @return array<string, mixed>
+     */
+    private function integration(string $page): array
+    {
+        if ($page === 'recaptcha') {
+            $recaptcha = app(StoreRecaptchaSettings::class);
+            $stored = $recaptcha->stored();
+
+            return [
+                'recaptcha' => [
+                    'site_key' => $stored['site_key'],
+                    'secret_set' => $stored['secret'] !== null,
+                    'secret_unreadable' => $recaptcha->secretUnreadable(),
+                ],
+                'effective' => $recaptcha->effective(),
+            ];
+        }
+
+        $ids = self::PAGES[$page]['ids'] ?? null;
+
+        if ($ids === null) {
+            return [];
+        }
+
+        return ['ids' => collect($ids)->map(fn (string $field): array => [
+            'name' => $field,
+            'value' => StoreIntegrationIds::stored($field),
+            'effective' => StoreIntegrationIds::effective($field),
+        ])->all()];
     }
 
     /**
@@ -350,14 +427,25 @@ class SettingsController extends Controller implements HasMiddleware
         return null;
     }
 
-    private function save(UpdateStoreSettingsRequest $request, string $page): RedirectResponse
+    /** @param  array<string, mixed>  $settings  the validated `settings` switches */
+    private function saveToggles(array $settings): void
     {
-        DB::transaction(function () use ($request) {
-            foreach ($request->validated('settings') as $key => $value) {
-                $setting = BusinessSetting::query()->where('type', $key)->whereNull('lang')->first() ?? new BusinessSetting;
-                $setting->type = $key;
-                $setting->value = $value ? '1' : '0';
-                $setting->save();
+        foreach ($settings as $key => $value) {
+            $setting = BusinessSetting::query()->where('type', $key)->whereNull('lang')->first() ?? new BusinessSetting;
+            $setting->type = $key;
+            $setting->value = $value ? '1' : '0';
+            $setting->save();
+        }
+    }
+
+    private function save(UpdateStoreSettingsRequest|UpdateIntegrationIdsRequest $request, string $page): RedirectResponse
+    {
+        DB::transaction(function () use ($request, $page) {
+            $this->saveToggles($request->validated('settings'));
+
+            // The IDs a dedicated page edits; an ID the request did not carry is left alone.
+            if (isset(self::PAGES[$page]['ids'])) {
+                StoreIntegrationIds::save($request->safe()->only(array_values(self::PAGES[$page]['ids'])));
             }
         });
         Cache::forget('business_settings');
@@ -367,7 +455,6 @@ class SettingsController extends Controller implements HasMiddleware
             'facebookComments' => 'facebook_comments_settings_have_been_updated_successfully',
             'analytics' => 'google_analytics_settings_have_been_updated_successfully',
             'firebase' => 'google_firebase_settings_have_been_updated_successfully',
-            'recaptcha' => 'google_recaptcha_settings_have_been_updated_successfully',
             default => 'payment_method_settings_have_been_updated_successfully',
         });
 

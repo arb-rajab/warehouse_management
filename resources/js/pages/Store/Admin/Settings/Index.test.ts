@@ -4,10 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import {
     updateActivation,
-    updateFacebookChat,
-    updateFacebookComments,
-    updateAnalytics,
-    updateRecaptcha,
     updateFirebase,
     updatePayments,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
@@ -115,19 +111,6 @@ const pages = {
         ],
     },
     socialLogin: { permission: 'social_media_logins', keys: [] },
-    facebookChat: { permission: 'facebook_chat', keys: ['facebook_chat'] },
-    facebookComments: {
-        permission: 'facebook_comment',
-        keys: ['facebook_comment'],
-    },
-    analytics: {
-        permission: 'analytics_tools_configuration',
-        keys: ['google_analytics', 'facebook_pixel'],
-    },
-    recaptcha: {
-        permission: 'google_recaptcha_configuration',
-        keys: ['google_recaptcha'],
-    },
     firebase: {
         permission: 'google_firebase_setting',
         keys: ['google_firebase'],
@@ -148,10 +131,6 @@ const pages = {
 type Section = keyof typeof pages;
 const actions = {
     activation: updateActivation,
-    facebookChat: updateFacebookChat,
-    facebookComments: updateFacebookComments,
-    analytics: updateAnalytics['/temp/admin/google-analytics'],
-    recaptcha: updateRecaptcha,
     firebase: updateFirebase,
     payments: updatePayments,
 };
@@ -340,11 +319,11 @@ describe('Store settings', () => {
         formSlotPropsMock.mockReturnValue({
             errors: {
                 settings: 'Unknown keys',
-                'settings.google_recaptcha': 'Bad boolean',
+                'settings.google_firebase': 'Bad boolean',
             },
             processing: false,
         });
-        expect(mountPage('recaptcha').text()).toContain('Unknown keys');
-        expect(mountPage('recaptcha').text()).toContain('Bad boolean');
+        expect(mountPage('firebase').text()).toContain('Unknown keys');
+        expect(mountPage('firebase').text()).toContain('Bad boolean');
     });
 });

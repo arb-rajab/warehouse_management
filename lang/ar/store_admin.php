@@ -152,6 +152,7 @@ return [
     'products_have_been_deleted_successfully' => 'تم حذف المنتجات بنجاح',
     'products_have_been_imported_successfully' => 'تم استيراد المنتجات بنجاح',
     'profile_has_been_updated_successfully' => 'تم تحديث الملف الشخصي بنجاح',
+    'recaptcha_secret_must_be_entered' => 'أدخل المفتاح السري لـ reCAPTCHA: مطلوب عند إضافة مفتاح موقع جديد أو تغييره.',
     'reply_has_been_sent_successfully' => 'تم إرسال الرد بنجاح',
     'representative_has_been_created_successfully' => 'تمت إضافة المندوب بنجاح',
     'representative_package_has_been_assigned_successfully' => 'تم تعيين باقة المندوب بنجاح',

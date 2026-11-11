@@ -171,6 +171,13 @@ Some settings that used to live only in the server's `.env` can be saved in the 
 | | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | One group: with a host saved in the admin, all five come from the admin (the `.env` username and password are not used, and `MAIL_URL` is ignored); without one, all five come from `.env`. The password is stored encrypted with `APP_KEY`; after changing `APP_KEY` without `APP_PREVIOUS_KEYS`, enter it again. |
 | | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Each on its own. The health and backup notifications still read these from `.env`. |
 | Google map (`/temp/admin/google-map`) | `MAP_API_KEY` | |
+| Analytics (`/temp/admin/google-analytics`, permission `analytics_tools_configuration`) | `TRACKING_ID` | Google Analytics tracking ID (for example `G-XXXXXXXXXX`). Public, shown back in full; letters, digits and hyphens only. Empty uses `.env`. |
+| | `FACEBOOK_PIXEL_ID` | Facebook pixel ID (digits only). Empty uses `.env`. |
+| Facebook chat (`/temp/admin/facebook-chat`, permission `facebook_chat`) | `FACEBOOK_PAGE_ID` | Facebook page ID (digits only). Empty uses `.env`. |
+| Facebook comments (`/temp/admin/facebook-comment`, permission `facebook_comment`) | `FACEBOOK_APP_ID` | Facebook app ID (digits only). Empty uses `.env`. |
+| reCAPTCHA (`/temp/admin/google-recaptcha`, permission `google_recaptcha_configuration`) | `CAPTCHA_KEY`, `CAPTCHA_SECRET` | One pair: with a site key saved in the admin, the site key and the secret both come from the admin (`CAPTCHA_SECRET` is not used with it); without one, both come from `.env`. The secret is stored encrypted with `APP_KEY`, never shown or returned, and changing the site key asks for the secret again. |
+
+Each page warns, naming the field, when its switch is on but no ID or key is in effect; the storefront prints nothing for such a switch. The analytics, pixel, chat and comments IDs and the reCAPTCHA site key are public (every visitor's browser receives them), so the admin shows them in full; only the encrypted reCAPTCHA secret row is hidden from the public business-settings API. Social login keys (`FACEBOOK_CLIENT_ID` and the others) stay `.env` only.
 
 Still `.env` only: `MAIL_EHLO_DOMAIN`, `MAIL_LOG_CHANNEL`, `MAIL_SENDMAIL_PATH` and the other mailers' keys. Saved SMTP settings apply to web requests and queued jobs (a running worker picks up a save before its next job); they are never applied to other console commands, so `config:cache` never writes them into the cached config. The "Send test email" button sends at once and shows the mail server's refusal as an error.
 

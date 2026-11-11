@@ -352,6 +352,12 @@ return [
         'payment_option' => 'payment option',
         'delivery_date' => 'delivery date',
         'trade_license' => 'trade license',
+        'google_analytics_tracking_id' => 'Google Analytics tracking ID',
+        'facebook_pixel_id' => 'Facebook pixel ID',
+        'facebook_page_id' => 'Facebook page ID',
+        'facebook_app_id' => 'Facebook app ID',
+        'recaptcha_site_key' => 'reCAPTCHA site key',
+        'recaptcha_secret_key' => 'reCAPTCHA secret key',
     ],
 
 ];

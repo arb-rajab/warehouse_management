@@ -152,6 +152,7 @@ return [
     'products_have_been_deleted_successfully' => 'Products have been deleted successfully',
     'products_have_been_imported_successfully' => 'Products have been imported successfully',
     'profile_has_been_updated_successfully' => 'Profile has been updated successfully',
+    'recaptcha_secret_must_be_entered' => 'Enter the reCAPTCHA secret key: it is needed for a new or changed site key.',
     'reply_has_been_sent_successfully' => 'Reply has been sent successfully',
     'representative_has_been_created_successfully' => 'Representative has been created successfully',
     'representative_package_has_been_assigned_successfully' => 'Representative package has been assigned successfully',

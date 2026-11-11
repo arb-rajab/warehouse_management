@@ -28,7 +28,7 @@ dataset('writable settings pages', writableSettingsPages());
 
 test('each settings page can be rendered before any settings rows exist', function (string $section, string $route, string $permission) {
     actingAsStoreUser(createStoreStaff($permission));
-    $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Settings/Index'));
+    $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page->component(SettingsController::PAGES[$section]['component'] ?? 'Store/Admin/Settings/Index'));
 })->with('plain settings pages');
 
 test('WMS authentication alone never grants settings page access', function (string $section, string $route, string $permission) {
@@ -51,7 +51,7 @@ test('each settings page renders with only its boolean settings and no environme
     }
     $expected = array_fill_keys(SettingsController::PAGES[$section]['keys'], true);
     $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->component('Store/Admin/Settings/Index')->where('section', $section)->where('settings', $expected))
+        ->component(SettingsController::PAGES[$section]['component'] ?? 'Store/Admin/Settings/Index')->where('section', $section)->where('settings', $expected))
         ->assertDontSee('smtp-secret')->assertDontSee('social-secret')->assertDontSee('storage-secret')->assertDontSee('firebase-secret')->assertDontSee('private-setting');
 })->with('plain settings pages');
 

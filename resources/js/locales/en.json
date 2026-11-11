@@ -1477,6 +1477,67 @@
                     "credentials": "Credentials file (FIREBASE_CREDENTIALS)"
                 }
             },
+            "integrations": {
+                "intro": {
+                    "analytics": "Values saved here replace the server's .env values (TRACKING_ID, FACEBOOK_PIXEL_ID). Leave a field empty to use the server value.",
+                    "facebookChat": "A value saved here replaces the server's .env value (FACEBOOK_PAGE_ID). Leave the field empty to use the server value.",
+                    "facebookComments": "A value saved here replaces the server's .env value (FACEBOOK_APP_ID). Leave the field empty to use the server value."
+                },
+                "fields": {
+                    "google_analytics_tracking_id": {
+                        "label": "Google Analytics tracking ID",
+                        "help": "For example G-XXXXXXXXXX. Letters, digits and hyphens only. Empty uses the server value."
+                    },
+                    "facebook_pixel_id": {
+                        "label": "Facebook pixel ID",
+                        "help": "Digits only, 5 to 20. Empty uses the server value."
+                    },
+                    "facebook_page_id": {
+                        "label": "Facebook page ID",
+                        "help": "The page the chat widget opens, digits only, 5 to 20. Empty uses the server value."
+                    },
+                    "facebook_app_id": {
+                        "label": "Facebook app ID",
+                        "help": "Digits only, 5 to 20. Empty uses the server value."
+                    }
+                },
+                "missing": "{switch} is on but no {field} is set, so nothing is added to the storefront. Enter it below.",
+                "effective": {
+                    "title": "In use",
+                    "withSource": "{value} ({source})",
+                    "notSet": "Not set",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    }
+                }
+            },
+            "recaptcha": {
+                "intro": "Values saved here replace the server's .env reCAPTCHA keys (CAPTCHA_KEY, CAPTCHA_SECRET). The site key and the secret are a pair: with a site key saved here, the secret also comes from here. Leave both empty to use the server pair.",
+                "siteKey": "Site key",
+                "siteKeyHelp": "The public key the forms show the widget with. Letters, digits, hyphens and underscores only.",
+                "secretKey": "Secret key",
+                "secretKeep": "Leave empty to keep the saved secret",
+                "secretSaved": "A secret is saved. It is never shown.",
+                "secretNotSaved": "No secret is saved here.",
+                "secretUnreadable": "The saved secret can no longer be read (the application key changed). Enter it again.",
+                "secretHelp": "Enter the secret again when you add or change the site key.",
+                "removeSecret": "Remove the saved secret",
+                "missingSiteKey": "reCAPTCHA is on but no site key is set: the forms cannot show the widget. Enter the site key below.",
+                "missingSecret": "reCAPTCHA is on but no secret key is set: every form that shows it is refused. Enter the secret key below.",
+                "effective": {
+                    "title": "In use",
+                    "withSource": "{value} ({source})",
+                    "siteKey": "Site key",
+                    "secretKey": "Secret key",
+                    "notSet": "Not set",
+                    "set": "Set",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    }
+                }
+            },
             "smtp": {
                 "intro": "Values saved here replace the server's .env mail settings (MAIL_*). Leave a field empty to use the server value.",
                 "passwordUnreadable": "The saved password can no longer be read (the application key changed). Enter it again.",
@@ -3633,6 +3694,12 @@
             "tax_type.*": "tax type",
             "button": "publishing choice",
             "lang": "content language",
+            "google_analytics_tracking_id": "Google Analytics tracking ID",
+            "facebook_pixel_id": "Facebook pixel ID",
+            "facebook_page_id": "Facebook page ID",
+            "facebook_app_id": "Facebook app ID",
+            "recaptcha_site_key": "reCAPTCHA site key",
+            "recaptcha_secret_key": "reCAPTCHA secret key",
             "slug": "slug",
             "old_photo": "Otajer images",
             "purchase_price": "purchase price",

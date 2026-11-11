@@ -40,6 +40,19 @@ paths:
   - 'resources/js/pages/Store/Admin/Settings/Smtp.vue'
   - 'app/Http/Requests/Store/Admin/UpdateSmtpSettingsRequest.php'
   - 'tests/Feature/Store/Admin/SmtpSettingsClientValidationParityTest.php'
+  - 'resources/js/lib/integrationIdsForm.ts'
+  - 'resources/js/lib/integrationIdsRules.json'
+  - 'resources/js/lib/recaptchaSettingsForm.ts'
+  - 'resources/js/lib/recaptchaSettingsRules.json'
+  - 'resources/js/components/StoreIntegrationIdsForm.vue'
+  - 'resources/js/pages/Store/Admin/Settings/Analytics.vue'
+  - 'resources/js/pages/Store/Admin/Settings/FacebookChat.vue'
+  - 'resources/js/pages/Store/Admin/Settings/FacebookComments.vue'
+  - 'resources/js/pages/Store/Admin/Settings/Recaptcha.vue'
+  - 'app/Http/Requests/Store/Admin/UpdateIntegrationIdsRequest.php'
+  - 'app/Http/Requests/Store/Admin/UpdateRecaptchaSettingsRequest.php'
+  - 'tests/Feature/Store/Admin/IntegrationIdsClientValidationParityTest.php'
+  - 'tests/Feature/Store/Admin/RecaptchaSettingsClientValidationParityTest.php'
 ---
 
 # Forms validate in the browser first
@@ -63,6 +76,15 @@ errors no field shows (`nonFieldErrors`). The store SMTP settings form uses
 `lib/smtpSettingsRules.json`, checked by `SmtpSettingsClientValidationParityTest`;
 its `serverOnly` list holds `email:rfc` (the engine has no email rule), and the
 request's `after()` checks read the saved settings, so they stay on the server.
+The Analytics, Facebook chat and Facebook comments forms use
+`lib/integrationIdsRules.json` (one rule set per page, built by
+`UpdateIntegrationIdsRequest::rulesFor()`), checked by
+`IntegrationIdsClientValidationParityTest`; the reCAPTCHA form uses
+`lib/recaptchaSettingsRules.json`, checked by
+`RecaptchaSettingsClientValidationParityTest`. In both, the on/off switches
+(`settings`, `settings.*`) are selects that always post a value and sit on the
+file's `serverOnly` list, and the reCAPTCHA request's `after()` checks (the secret
+for a new or changed site key) stay on the server.
 
 ## The layer
 

@@ -1161,6 +1161,36 @@ export interface StoreSmtpEffectiveSettings {
     from_name: StoreSmtpEffectiveValue;
 }
 
+/** Where an effective integration value comes from: saved in the admin, or `.env`. */
+export type StoreIntegrationSource = 'admin' | 'env';
+
+/**
+ * A public ID a settings page edits (StoreIntegrationIds): what is saved in the
+ * admin (null when nothing is, so `.env` applies) and the effective value with
+ * its source. Public IDs are shown in full.
+ */
+export interface StoreIntegrationId {
+    name:
+        | 'google_analytics_tracking_id'
+        | 'facebook_pixel_id'
+        | 'facebook_page_id'
+        | 'facebook_app_id';
+    value: string | null;
+    effective: { value: string | null; source: StoreIntegrationSource };
+}
+
+/** The reCAPTCHA pair (StoreRecaptchaSettings). The secret is never sent. */
+export interface StoreRecaptchaSettings {
+    site_key: string | null;
+    secret_set: boolean;
+    secret_unreadable: boolean;
+}
+
+export interface StoreRecaptchaEffective {
+    site_key: { value: string | null; source: StoreIntegrationSource };
+    secret: { set: boolean; source: StoreIntegrationSource };
+}
+
 /** Only the items the signed-in staff member may fix; done/total count those. */
 export interface StoreSetupChecklist {
     items: StoreSetupChecklistItem[];
