@@ -50,6 +50,7 @@ const props = defineProps<{
     logs: Paginated<CellStatusLog>;
     filters: CellStatusLogFilters;
     filterOptions: CellStatusLogFilterOptions & WarehouseFilterOptions;
+    multipleWarehouses: boolean;
 }>();
 
 const filters = reactive({
@@ -501,6 +502,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                 <CellStatusLogRowCells
                     :log="log"
                     show-user-column
+                    :multiple-warehouses="multipleWarehouses"
                     @view-pallet-history="viewPalletHistory"
                 />
             </template>

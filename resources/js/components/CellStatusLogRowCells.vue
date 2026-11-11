@@ -10,6 +10,7 @@ import { cellStateLabel } from '@/lib/cellStateColor';
 import {
     acknowledgeFlags,
     cellLogActionLabel,
+    cellWarehouseName,
     hasUnacknowledgedFlags,
     transferPair,
 } from '@/lib/cellStatusLogDisplay';
@@ -38,6 +39,8 @@ const props = defineProps<{
     showUserColumn?: boolean;
     /** Where acknowledging a flag returns to; omit for the log listing itself. */
     returnTo?: 'user';
+    /** Name each side's warehouse under its slot — only when the system has several. */
+    multipleWarehouses?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -49,51 +52,71 @@ const pair = computed(() => transferPair(props.log));
 
 <template>
     <td class="px-4 py-2">
-        <div class="flex items-center gap-1">
-            <TableLink
-                class="font-mono"
-                :href="
-                    showRow(
-                        { letter: pair.from.row_letter },
-                        rowLinkOptions(pair.from.warehouse, {
-                            cell_number: pair.from.cell_number,
-                            flat_number: pair.from.flat_number,
-                        }),
-                    )
-                "
-            >
-                {{
-                    formatSlot(
-                        pair.from.row_letter,
-                        pair.from.cell_number,
-                        pair.from.flat_number,
-                    )
-                }}
-            </TableLink>
-            <template v-if="pair.to">
-                <ArrowRight
-                    class="h-3 w-3 shrink-0 text-muted rtl:rotate-180"
-                />
+        <div class="flex flex-wrap items-start gap-1">
+            <div class="min-w-0">
                 <TableLink
                     class="font-mono"
                     :href="
                         showRow(
-                            { letter: pair.to.row_letter },
-                            rowLinkOptions(pair.to.warehouse, {
-                                cell_number: pair.to.cell_number,
-                                flat_number: pair.to.flat_number,
+                            { letter: pair.from.row_letter },
+                            rowLinkOptions(pair.from.warehouse, {
+                                cell_number: pair.from.cell_number,
+                                flat_number: pair.from.flat_number,
                             }),
                         )
                     "
                 >
                     {{
                         formatSlot(
-                            pair.to.row_letter,
-                            pair.to.cell_number,
-                            pair.to.flat_number,
+                            pair.from.row_letter,
+                            pair.from.cell_number,
+                            pair.from.flat_number,
                         )
                     }}
                 </TableLink>
+                <div
+                    v-if="cellWarehouseName(pair.from, multipleWarehouses)"
+                    class="truncate text-xs text-muted"
+                    :title="cellWarehouseName(pair.from, multipleWarehouses) ?? undefined"
+                    data-testid="cell-warehouse"
+                >
+                    {{ cellWarehouseName(pair.from, multipleWarehouses) }}
+                </div>
+            </div>
+            <template v-if="pair.to">
+                <ArrowRight
+                    class="mt-1 h-3 w-3 shrink-0 text-muted rtl:rotate-180"
+                />
+                <div class="min-w-0">
+                    <TableLink
+                        class="font-mono"
+                        :href="
+                            showRow(
+                                { letter: pair.to.row_letter },
+                                rowLinkOptions(pair.to.warehouse, {
+                                    cell_number: pair.to.cell_number,
+                                    flat_number: pair.to.flat_number,
+                                }),
+                            )
+                        "
+                    >
+                        {{
+                            formatSlot(
+                                pair.to.row_letter,
+                                pair.to.cell_number,
+                                pair.to.flat_number,
+                            )
+                        }}
+                    </TableLink>
+                    <div
+                        v-if="cellWarehouseName(pair.to, multipleWarehouses)"
+                        class="truncate text-xs text-muted"
+                        :title="cellWarehouseName(pair.to, multipleWarehouses) ?? undefined"
+                        data-testid="cell-warehouse"
+                    >
+                        {{ cellWarehouseName(pair.to, multipleWarehouses) }}
+                    </div>
+                </div>
             </template>
         </div>
     </td>

@@ -34,7 +34,11 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountCells(
     log: CellStatusLog,
-    props: { showUserColumn?: boolean; returnTo?: 'user' } = {},
+    props: {
+        showUserColumn?: boolean;
+        returnTo?: 'user';
+        multipleWarehouses?: boolean;
+    } = {},
 ) {
     usePageMock.mockReturnValue({
         url: cellLogsIndex.url(),
@@ -94,6 +98,92 @@ describe('CellStatusLogRowCells', () => {
         expect(links).toHaveLength(2);
         expect(links[0].text()).toBe(formatSlot('A', 3, 2));
         expect(links[1].text()).toBe(formatSlot('B', 1, 4));
+    });
+
+    describe('warehouse name', () => {
+        const main = { id: 1, name: 'Main' };
+        const cold = { id: 2, name: 'Cold store' };
+        const transfer = (from: typeof main, to: typeof main) =>
+            cellLog({
+                action: 'transferred_out',
+                cell: {
+                    row_letter: 'A',
+                    cell_number: 3,
+                    flat_number: 2,
+                    warehouse: from,
+                },
+                related_cell: {
+                    row_letter: 'B',
+                    cell_number: 1,
+                    flat_number: 4,
+                    warehouse: to,
+                },
+            });
+        const names = (wrapper: ReturnType<typeof mountCells>) =>
+            wrapper
+                .findAll('[data-testid="cell-warehouse"]')
+                .map((node) => node.text());
+
+        it('hides the warehouse in a single-warehouse system', () => {
+            expect(names(mountCells(transfer(main, cold)))).toEqual([]);
+            expect(
+                names(
+                    mountCells(transfer(main, cold), {
+                        multipleWarehouses: false,
+                    }),
+                ),
+            ).toEqual([]);
+        });
+
+        it('names the warehouse under the slot of a normal row', () => {
+            const wrapper = mountCells(
+                cellLog({
+                    cell: {
+                        row_letter: 'A',
+                        cell_number: 3,
+                        flat_number: 2,
+                        warehouse: main,
+                    },
+                }),
+                { multipleWarehouses: true },
+            );
+
+            expect(names(wrapper)).toEqual(['Main']);
+        });
+
+        it('names both warehouses of a cross-warehouse transfer, source first', () => {
+            const wrapper = mountCells(transfer(main, cold), {
+                multipleWarehouses: true,
+            });
+
+            expect(names(wrapper)).toEqual(['Main', 'Cold store']);
+        });
+
+        it('names the warehouse on both sides of a same-warehouse transfer', () => {
+            const wrapper = mountCells(transfer(main, main), {
+                multipleWarehouses: true,
+            });
+
+            expect(names(wrapper)).toEqual(['Main', 'Main']);
+        });
+
+        it('puts the origin first for a transferred_in entry', () => {
+            const log = transfer(cold, main);
+            const wrapper = mountCells(
+                { ...log, action: 'transferred_in' },
+                { multipleWarehouses: true },
+            );
+
+            expect(names(wrapper)).toEqual(['Main', 'Cold store']);
+        });
+
+        it('shows nothing when the payload carries no warehouse', () => {
+            const wrapper = mountCells(cellLog(), {
+                multipleWarehouses: true,
+            });
+
+            expect(names(wrapper)).toEqual([]);
+        });
     });
 
     it('renders the action label and the from/to state transition', () => {

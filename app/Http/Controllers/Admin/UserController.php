@@ -14,6 +14,7 @@ use App\Http\Resources\UserResource;
 use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +75,7 @@ class UserController extends Controller
             'user' => new UserResource($user->loadMissing('roles:id,name')),
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
             'reports' => $this->paginated(CellVerificationReportResource::collection($reports)),
+            'multipleWarehouses' => Warehouse::hasMultiple(),
             'filters' => ['per_page' => $perPage, 'reports_per_page' => $reportsPerPage],
         ]);
     }

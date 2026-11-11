@@ -41,3 +41,25 @@ to flag acknowledgement. The shared handler posts `return_to` so the backend
 redirects explicitly to the right page; Referer/session history is unreliable.
 Extend the shared component/helper rather than reimplementing either in a new
 consumer. See [user history pagination](user-activity-history.md).
+
+## Warehouse name under the slot
+
+A slot letter repeats across warehouses and pallets can be transferred between
+them, so a cross-warehouse transfer would look like a local move. When the system
+has more than one warehouse, `CellStatusLogRowCells` names each cell's warehouse
+in small muted text under its slot (`cellWarehouseName()` in
+`cellStatusLogDisplay.ts`, `data-testid="cell-warehouse"`), on BOTH sides of a
+transfer, including a same-warehouse transfer (never collapsed to one label).
+A single-warehouse system renders nothing extra.
+
+- The flag is the `multipleWarehouses` page prop, `Warehouse::hasMultiple()` (two
+  ids at most, once per page, never per row). Both consumers, `CellStatusLogs/Index`
+  and `Users/Show`, pass it as `:multiple-warehouses`; any new consumer must too.
+  There is no separate pallet-history dialog: it is the log list filtered by pallet.
+- The name comes from the cell's `warehouse` in the resource
+  (`toLocationWithWarehouseArray`); every listing must eager-load
+  `CellStatusLog::WITH_WAREHOUSES` (a Pest test asserts a constant query count).
+- `sameCellLocation()` also compares the warehouse id, so equal letters in two
+  warehouses never merge unrelated rows. Layout: each side is a `min-w-0` block
+  that truncates with a `title`; the pair wraps on narrow screens and the arrow
+  keeps `rtl:rotate-180`.
