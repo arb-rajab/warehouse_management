@@ -48,7 +48,7 @@ class ReceiptSeeder extends Seeder
     {
         $this->refuseInProduction();
 
-        $products = Product::query()->inRandomOrder()->limit(40)->get();
+        $products = Product::query()->with('setting')->inRandomOrder()->limit(40)->get();
         $warehouses = Warehouse::query()->orderBy('id')->get();
         $user = User::query()->orderBy('id')->first();
 
