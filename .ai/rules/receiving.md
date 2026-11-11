@@ -294,3 +294,7 @@ API only.
   `AdminReceiptResource` (its `files` presented by `AdminReceiptFileResource`,
   which overrides `ReceiptFileResource::downloadUrl()`) makes the payload's
   `url` this session-authenticated route instead of the bearer one. The storage path never leaves the model.
+
+## Demo data
+
+`ReceiptSeeder` (see [seeders](seeders.md)) seeds drafts, finalized receipts, placed and unplaced pallets through `ReceiptService` and `PalletActionService::place()`; it refuses production.
