@@ -161,18 +161,17 @@ test.describe('desktop', () => {
         const filters = await page.locator('.wms-filters').boundingBox();
         const actions = await page.locator('.wms-actions').boundingBox();
         const search = await page.locator('.wms-search').boundingBox();
-        const chips = page.locator('.wms-chips .wms-chip');
+        const chips = await page.locator('.wms-chips').boundingBox();
 
         expect(filters!.x + filters!.width).toBeLessThanOrEqual(actions!.x);
         expect(search!.width).toBeGreaterThanOrEqual(150);
 
-        for (const chip of await chips.all()) {
-            const box = await chip.boundingBox();
-
-            if (box && box.width > 0) {
-                expect(box.x).toBeLessThan(actions!.x);
-            }
-        }
+        // The chips scroll inside the filter bar (overflow-x: auto), so a chip
+        // past the visible edge is clipped, not drawn under the actions. The
+        // brand now also holds the warehouse switcher, which narrows the bar
+        // beside an open sidebar; what must hold is that the scroller itself
+        // ends before the actions, not that every chip sits left of them.
+        expect(chips!.x + chips!.width).toBeLessThanOrEqual(actions!.x);
 
         await page.reload();
         await expect.poll(() => sidebarWidth(page, 'admin-sidebar')).toBe(256);

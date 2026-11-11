@@ -207,7 +207,9 @@ test.describe('desktop', () => {
             await page.locator('.wms-warehouses__apply').click();
 
             await expect(page).toHaveURL(
-                new RegExp(`warehouse_ids(%5B%5D|\\[\\])=${depotId}`),
+                // Inertia serializes the array with an index (warehouse_ids[0]=6);
+                // the server accepts that and the empty-bracket form alike
+                new RegExp(`warehouse_ids(%5B\\d*%5D|\\[\\d*\\])=${depotId}`),
             );
             await expect(trigger).toHaveText('E2E Map Depot');
             await expect(page.locator('.wms-tile')).toHaveCount(1);
@@ -216,9 +218,10 @@ test.describe('desktop', () => {
             ).toBeVisible();
             // loaded in place: the search is still there
             await expect(search).toHaveValue('zz');
-            await expect(page.locator('.wms-hint')).toContainText(
-                'E2E Map Depot',
-            );
+            // the touch hint shares the class, so pick the status line
+            await expect(
+                page.locator('.wms-hint:not(.wms-hint--touch)'),
+            ).toContainText('E2E Map Depot');
 
             await page.reload();
             await expect(trigger).toHaveText('E2E Map Depot');
