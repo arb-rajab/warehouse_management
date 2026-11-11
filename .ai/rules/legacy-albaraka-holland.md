@@ -152,7 +152,10 @@ prefix. That is the single point every storefront asset URL goes through.
   settings writer, .ai/archive/store-backoffice/changes-20261013.md §20), `env_key_update` refuses, and the two activation toggles
   that lived in `.env` (`FORCE_HTTPS`, `FILESYSTEM_DRIVER`) report failure.
   Credentials the screens used to save (SMTP, social login, analytics, gateway
-  keys) are now set in the server `.env` by whoever deploys.
+  keys) are now set in the server `.env` by whoever deploys. **Since 2026-11-11
+  SMTP is managed again in the store admin** (SMTP settings page), stored in
+  `business_settings` with the password encrypted and `.env` as the fallback,
+  never by writing `.env` (.ai/rules/admin-env-overrides.md).
   `LegacyEnvFileProtectionTest` covers staff, customer and vendor-admin
   callers against a scratch `.env`. **Permission gap, fixed 2026-10-01 for writes:** the same
   `permission:`-list gap left 173 of the store admin's write routes (store,

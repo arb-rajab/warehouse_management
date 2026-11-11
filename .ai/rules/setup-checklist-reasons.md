@@ -23,6 +23,7 @@ A setup checklist item, readiness check or similar "is this configured?" signal 
 - **The page must show what the check reads.** A check may only fail on data the admin can see on the linked page:
   - Never default an unsaved value to something that looks set, such as `0` or the first option. Send null and show it empty or "Choose ...".
   - Show a server value (env, a credentials file) as read-only set/not set status (`StoreServerSettingsStatus`, never the value).
+  - A setting the admin can save over `.env` ([admin-env-overrides.md](admin-env-overrides.md)) is checked on its **effective** value (saved, else `.env`), and the page shows that value with its source. The SMTP check reads `StoreMailSettings::effective()`: `smtp.mailer_log` (the mailer is `log`, emails are only logged) highlights `mail_mailer`, `smtp.host` highlights `mail_host`, and `smtp.username_and_password` (both empty; either one set counts) highlights the `mail_credentials` pair on the SMTP form.
   - Read the same row the page writes (the `lang IS NULL` row first).
   - Keep a record the check needs editable. The inactive default language can be switched back on.
 - **Authorization.** A check is listed only for staff holding every permission its pages need (`SetupChecklist::PERMISSIONS`). Pick a page they may open: a missing category falls back to the product list without `view_product_categories`.

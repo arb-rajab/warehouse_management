@@ -35,6 +35,11 @@ paths:
   - 'resources/js/components/PalletTransferDialog.vue'
   - 'resources/js/components/PalletActionsDialog.vue'
   - 'tests/Feature/Admin/TransferPalletClientValidationParityTest.php'
+  - 'resources/js/lib/smtpSettingsForm.ts'
+  - 'resources/js/lib/smtpSettingsRules.json'
+  - 'resources/js/pages/Store/Admin/Settings/Smtp.vue'
+  - 'app/Http/Requests/Store/Admin/UpdateSmtpSettingsRequest.php'
+  - 'tests/Feature/Store/Admin/SmtpSettingsClientValidationParityTest.php'
 ---
 
 # Forms validate in the browser first
@@ -54,7 +59,10 @@ server, and `return_to`/`warehouse_ids` have no control. Those dialogs are not
 `ResourceFormPage`s: they call `useFormValidation` themselves (its handlers on
 the `<form>`, `onBefore()` before `form.submit`, `onStart` on the visit) and
 read inline errors through `errorsFor(form.errors)`; the banner shows only the
-errors no field shows (`nonFieldErrors`).
+errors no field shows (`nonFieldErrors`). The store SMTP settings form uses
+`lib/smtpSettingsRules.json`, checked by `SmtpSettingsClientValidationParityTest`;
+its `serverOnly` list holds `email:rfc` (the engine has no email rule), and the
+request's `after()` checks read the saved settings, so they stay on the server.
 
 ## The layer
 

@@ -379,6 +379,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/activation', [SettingsController::class, 'activation'])->name('activation.index');
     Route::post('/activation', [SettingsController::class, 'updateActivation'])->name('business_settings.update.activation');
     Route::get('/smtp-settings', [SettingsController::class, 'smtp'])->name('smtp_settings.index');
+    Route::post('/smtp-settings', [SettingsController::class, 'updateSmtp'])->name('smtp_settings.update');
     Route::get('/social-login', [SettingsController::class, 'socialLogin'])->name('social_login.index');
     Route::get('/facebook-chat', [SettingsController::class, 'facebookChat'])->name('facebook_chat.index');
     Route::post('/facebook-chat', [SettingsController::class, 'updateFacebookChat'])->name('facebook_chat.update');

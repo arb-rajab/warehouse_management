@@ -48,6 +48,7 @@ function setupChecklistDone(string $key, ?StoreUser $user = null): ?bool
 
 beforeEach(function () {
     config([
+        'mail.default' => 'smtp', 'mail.mailers.smtp.host' => '127.0.0.1',
         'mail.mailers.smtp.username' => null, 'mail.mailers.smtp.password' => null,
         'services.google_maps.key' => null,
         'services.fcm.firebase_credentials' => null, 'services.fcm.firebase_project' => null, 'services.fcm.project_id' => null,
@@ -493,6 +494,51 @@ test('site basics are listed only for staff who can open all three of their page
     'general settings and header' => [['general_settings', 'header_setup'], false],
     'all three' => [['general_settings', 'header_setup', 'footer_setup'], true],
 ]);
+
+test('smtp reads the settings saved on the SMTP page before the server values', function () {
+    config(['mail.mailers.smtp.username' => null, 'mail.mailers.smtp.password' => null]);
+    storeSetting('mail_host', 'smtp.example.com');
+    storeSetting('mail_port', '587');
+    storeSetting('mail_username', 'shop@example.com');
+
+    expect(setupChecklistReasons('smtp'))->toBe([]);
+});
+
+test('smtp never mixes a saved host with the server credentials', function () {
+    config(['mail.mailers.smtp.username' => 'env-user', 'mail.mailers.smtp.password' => 'env-password']);
+    storeSetting('mail_host', 'smtp.example.com');
+    storeSetting('mail_port', '587');
+
+    expect(setupChecklistReasons('smtp'))->toBe(['smtp.username_and_password']);
+});
+
+test('smtp is not done while emails are only logged, whether the server or the admin chose it', function (string $where) {
+    config(['mail.mailers.smtp.username' => 'user']);
+    if ($where === 'server') {
+        config(['mail.default' => 'log']);
+    } else {
+        storeSetting('mail_mailer', 'log');
+    }
+
+    expect(setupChecklistReasons('smtp'))->toBe(['smtp.mailer_log']);
+})->with(['server', 'admin']);
+
+test('smtp names an empty host', function () {
+    config(['mail.mailers.smtp.host' => '', 'mail.mailers.smtp.username' => 'user']);
+
+    expect(setupChecklistReasons('smtp'))->toBe(['smtp.host']);
+});
+
+test('each smtp reason highlights its own field on the SMTP page', function () {
+    config(['mail.default' => 'log', 'mail.mailers.smtp.host' => null]);
+    $smtp = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))->firstWhere('key', 'smtp');
+
+    expect($smtp['reasons'])->toBe([
+        ['key' => 'smtp.mailer_log', 'route' => 'smtp_settings.index', 'highlight' => 'mail_mailer'],
+        ['key' => 'smtp.host', 'route' => 'smtp_settings.index', 'highlight' => 'mail_host'],
+        ['key' => 'smtp.username_and_password', 'route' => 'smtp_settings.index', 'highlight' => 'mail_credentials'],
+    ]);
+});
 
 test('the payment check is listed for staff who can switch payment methods on, not for payment gateway configuration alone', function () {
     $checklist = app(SetupChecklist::class);

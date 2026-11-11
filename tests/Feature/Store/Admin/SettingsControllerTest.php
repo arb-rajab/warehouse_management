@@ -68,13 +68,16 @@ test('the activation page passes on only a highlight key it holds', function () 
         ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
 });
 
-test('the SMTP page says whether each mail credential is set, never its value, and passes on its section highlight', function () {
+test('the SMTP page says whether each server mail credential is set, never its value, and passes on its field highlight', function () {
     actingAsStoreUser(createStoreStaff('smtp_settings'));
     config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'mail.example.com', 'mail.mailers.smtp.username' => 'smtp-user-secret', 'mail.mailers.smtp.password' => null]);
 
     $this->get(route('smtp_settings.index', ['highlight' => 'mail_credentials']))->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'mail_credentials')
-            ->where('server', ['mailer' => 'smtp', 'host' => 'mail.example.com', 'username_set' => true, 'password_set' => false]))
+        ->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Settings/Smtp')->where('highlight', 'mail_credentials')
+            ->where('effective.mailer', ['value' => 'smtp', 'source' => 'env'])
+            ->where('effective.host', ['value' => 'mail.example.com', 'source' => 'env'])
+            ->where('effective.username', ['set' => true, 'source' => 'env'])
+            ->where('effective.password', ['set' => false, 'source' => 'env']))
         ->assertDontSee('smtp-user-secret');
     $this->get(route('smtp_settings.index', ['highlight' => 'cash_payment']))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
@@ -184,21 +187,21 @@ test('SMTP testing requires both permissions and validates the recipient', funct
     Mail::fake();
     actingAsStoreUser(createStoreStaff('smtp_settings', 'send_newsletter'));
     $this->postJson(route('test.smtp'), ['email' => 'invalid'])->assertUnprocessable()->assertJsonValidationErrors('email');
-    Mail::assertNothingQueued();
+    Mail::assertNothingOutgoing();
     $this->post(route('test.smtp'), ['email' => 'recipient@example.com'])->assertRedirectToRoute('smtp_settings.index');
-    Mail::assertQueued(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('recipient@example.com'));
+    Mail::assertSent(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('recipient@example.com'));
 });
 
 test('SMTP testing refuses unauthorized callers without sending', function (string $caller) {
     Mail::fake();
     actingAsRefusedStoreCaller($caller);
     assertStoreCallerRefused($this->post(route('test.smtp'), ['email' => 'recipient@example.com']), $caller);
-    Mail::assertNothingQueued();
+    Mail::assertNothingOutgoing();
 })->with('refused store admin callers');
 
 test('SMTP testing refuses callers holding only one of its permissions', function (string $permission) {
     Mail::fake();
     actingAsStoreUser(createStoreStaff($permission));
     $this->post(route('test.smtp'), ['email' => 'recipient@example.com'])->assertForbidden();
-    Mail::assertNothingQueued();
+    Mail::assertNothingOutgoing();
 })->with(['smtp_settings', 'send_newsletter']);

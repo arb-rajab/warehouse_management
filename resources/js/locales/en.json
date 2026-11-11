@@ -1471,17 +1471,60 @@
                 "notSet": "Not set",
                 "found": "Found",
                 "notFound": "Not found",
-                "smtp": {
-                    "title": "Mail server (set on the server)",
-                    "mailer": "Mailer (MAIL_MAILER)",
-                    "host": "SMTP host (MAIL_HOST)",
-                    "username": "SMTP username (MAIL_USERNAME)",
-                    "password": "SMTP password (MAIL_PASSWORD)"
-                },
                 "firebase": {
                     "title": "Push notifications (set on the server)",
                     "project": "Firebase project (FIREBASE_PROJECT)",
                     "credentials": "Credentials file (FIREBASE_CREDENTIALS)"
+                }
+            },
+            "smtp": {
+                "intro": "Values saved here replace the server's .env mail settings (MAIL_*). Leave a field empty to use the server value.",
+                "passwordUnreadable": "The saved password can no longer be read (the application key changed). Enter it again.",
+                "mailer": "Mailer",
+                "mailerServer": "Use the server setting (.env: {mailer})",
+                "mailerHelp": "Log only writes emails to the server log: customers receive nothing.",
+                "mailers": {
+                    "smtp": "SMTP: send through the mail server below",
+                    "log": "Log only: emails are not sent"
+                },
+                "host": "SMTP host",
+                "hostHelp": "The host, port, encryption, username and password belong together: with no host here, all five come from the server's .env. A port, username or password needs a host.",
+                "port": "Port",
+                "portHelp": "Usually 587 (STARTTLS) or 465 (SSL/TLS). Required with a host.",
+                "scheme": "Encryption",
+                "schemeAutomatic": "Automatic (SSL/TLS on port 465, otherwise STARTTLS when offered)",
+                "schemes": {
+                    "smtps": "SSL/TLS (smtps)",
+                    "smtp": "STARTTLS when offered (smtp)"
+                },
+                "username": "Username",
+                "password": "Password",
+                "passwordKeep": "Leave empty to keep the saved password",
+                "passwordSaved": "A password is saved. It is never shown.",
+                "passwordNotSaved": "No password is saved here.",
+                "passwordHelp": "Enter the password again when you change the host or username.",
+                "removePassword": "Remove the saved password",
+                "fromAddress": "From address",
+                "fromName": "From name",
+                "fromHelp": "An empty from address or name uses the server's MAIL_FROM_ADDRESS or MAIL_FROM_NAME.",
+                "testTitle": "Send a test email",
+                "testHelp": "Sent at once with the saved settings; if the mail server refuses it, the error shows here.",
+                "effective": {
+                    "title": "Mail is sent with",
+                    "withSource": "{value} ({source})",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    },
+                    "automatic": "Automatic",
+                    "mailer": "Mailer",
+                    "host": "SMTP host",
+                    "port": "Port",
+                    "scheme": "Encryption",
+                    "username": "Username",
+                    "password": "Password",
+                    "from_address": "From address",
+                    "from_name": "From name"
                 }
             }
         },
@@ -2808,7 +2851,9 @@
                 "fixReason": "Fix: {reason}",
                 "reasons": {
                     "smtp": {
-                        "username_and_password": "MAIL_USERNAME and MAIL_PASSWORD are both empty on the server, so the store cannot send emails."
+                        "mailer_log": "The mailer is \"Log only\", so emails are only written to the server log and never reach anyone.",
+                        "host": "No SMTP host is saved in the admin or set on the server (MAIL_HOST), so the store cannot send emails.",
+                        "username_and_password": "No SMTP username or password is saved in the admin or set on the server (MAIL_USERNAME, MAIL_PASSWORD), so the store cannot send emails."
                     },
                     "paymentMethod": {
                         "none_enabled": "No payment method is switched on in Features activation, so customers cannot place an order in the app."
@@ -3593,7 +3638,8 @@
             "purchase_price": "purchase price",
             "file": "product file",
             "code": "code",
-            "address": "address"
+            "address": "address",
+            "password": "password"
         }
     },
     "warehouses": {

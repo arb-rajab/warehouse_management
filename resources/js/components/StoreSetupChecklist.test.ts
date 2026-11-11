@@ -52,6 +52,22 @@ const KEYS: StoreSetupChecklistKey[] = [
 const REASONS: [StoreSetupChecklistReason, RouteDefinition<'get'>][] = [
     [
         {
+            key: 'smtp.mailer_log',
+            route: 'smtp_settings.index',
+            highlight: 'mail_mailer',
+        },
+        smtp({ query: { highlight: 'mail_mailer' } }),
+    ],
+    [
+        {
+            key: 'smtp.host',
+            route: 'smtp_settings.index',
+            highlight: 'mail_host',
+        },
+        smtp({ query: { highlight: 'mail_host' } }),
+    ],
+    [
+        {
             key: 'smtp.username_and_password',
             route: 'smtp_settings.index',
             highlight: 'mail_credentials',

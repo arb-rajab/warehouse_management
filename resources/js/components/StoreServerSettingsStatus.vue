@@ -8,13 +8,13 @@ import type { StoreServerSettings } from '@/types/store';
 
 /**
  * Whether each server value a setup check reads is there (never the value of
- * a secret): the SMTP credentials on the SMTP page, FIREBASE_PROJECT and the
- * credentials file on the Firebase page. Only the server environment sets
- * them, so the list is read-only; a setup checklist link highlights it
- * (.ai/rules/setup-checklist-reasons.md).
+ * a secret): FIREBASE_PROJECT and the credentials file on the Firebase page.
+ * Only the server environment sets them, so the list is read-only; a setup
+ * checklist link highlights it (.ai/rules/setup-checklist-reasons.md). The
+ * SMTP page edits its settings instead (Settings/Smtp.vue).
  */
 const props = defineProps<{
-    section: 'smtp' | 'firebase';
+    section: 'firebase';
     server: StoreServerSettings;
     /** The deep-link key this block answers to. */
     anchor: string;
@@ -28,22 +28,7 @@ function presence(set: boolean, yes: string, no: string): string {
 const rows = computed(() => {
     const server = props.server;
 
-    if (props.section === 'smtp' && 'username_set' in server) {
-        return [
-            { key: 'mailer', value: server.mailer },
-            { key: 'host', value: server.host },
-            {
-                key: 'username',
-                value: presence(server.username_set, 'set', 'notSet'),
-            },
-            {
-                key: 'password',
-                value: presence(server.password_set, 'set', 'notSet'),
-            },
-        ];
-    }
-
-    if (props.section === 'firebase' && 'project_set' in server) {
+    if (props.section === 'firebase') {
         return [
             {
                 key: 'project',

@@ -14,6 +14,7 @@ use App\Models\StoreUser;
 use App\Models\Tax;
 use App\Services\FcmPushService;
 use App\Support\GoogleMapsKey;
+use App\Support\StoreMailSettings;
 
 /**
  * The setup checklist of the store back office dashboard: every setting the
@@ -63,6 +64,8 @@ class SetupChecklist
      * @var array<string, array{0: string, 1: string|null}>
      */
     public const array TARGETS = [
+        'smtp.mailer_log' => ['smtp_settings.index', 'mail_mailer'],
+        'smtp.host' => ['smtp_settings.index', 'mail_host'],
         'smtp.username_and_password' => ['smtp_settings.index', 'mail_credentials'],
         'paymentMethod.none_enabled' => ['activation.index', 'cash_payment'],
         'cashOnDeliveryProducts.no_product_allows_cod' => ['products.all', null],
@@ -216,22 +219,30 @@ class SetupChecklist
     }
 
     /**
-     * Not done only while both the SMTP username and password are empty (what
-     * the dashboard's SMTP warning has always tested): one of them set counts
-     * as configured. Both come from the server environment (MAIL_USERNAME,
-     * MAIL_PASSWORD); the SMTP page shows whether each is set.
+     * The effective mail settings (StoreMailSettings: saved on the SMTP page,
+     * else the server's MAIL_* values), each reason highlighting its field:
      *
-     * Known limitation, kept on purpose: `MAIL_MAILER` is not consulted, so a
-     * shop sending through a mailer that needs no SMTP credentials (ses,
-     * postmark) stays not done, and one on the `log` mailer with a username
-     * set counts as done although no email leaves the server.
+     * - mailer_log: the mailer is `log`, so emails are only written to the log;
+     * - host: the SMTP host is empty;
+     * - username_and_password: both the SMTP username and password are empty
+     *   (what the dashboard's SMTP warning has always tested): one of them set
+     *   counts as configured.
+     *
+     * Known limitation, kept on purpose: a mailer that needs no SMTP
+     * credentials (ses, postmark, set only by MAIL_MAILER) still needs a
+     * username or password to count as done.
      *
      * @return list<string>
      */
     private function smtp(): array
     {
-        return config('mail.mailers.smtp.username') == null && config('mail.mailers.smtp.password') == null
-            ? ['username_and_password'] : [];
+        $mail = app(StoreMailSettings::class)->effective();
+
+        return array_values(array_filter([
+            $mail['mailer']['value'] === 'log' ? 'mailer_log' : null,
+            blank($mail['host']['value']) ? 'host' : null,
+            blank($mail['username']['value']) && blank($mail['password']['value']) ? 'username_and_password' : null,
+        ]));
     }
 
     /**

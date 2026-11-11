@@ -10,7 +10,6 @@ import {
     updateRecaptcha,
     updateFirebase,
     updatePayments,
-    testSmtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
@@ -115,7 +114,6 @@ const pages = {
             'apple_login',
         ],
     },
-    smtp: { permission: 'smtp_settings', keys: [] },
     socialLogin: { permission: 'social_media_logins', keys: [] },
     facebookChat: { permission: 'facebook_chat', keys: ['facebook_chat'] },
     facebookComments: {
@@ -276,22 +274,6 @@ describe('Store settings', () => {
     });
     it.each([
         [
-            'smtp',
-            {
-                mailer: 'smtp',
-                host: 'mail.example.com',
-                username_set: false,
-                password_set: true,
-            },
-            'mail_credentials',
-            [
-                ['mailer', 'smtp'],
-                ['host', 'mail.example.com'],
-                ['username', 'store.settings.server.notSet'],
-                ['password', 'store.settings.server.set'],
-            ],
-        ],
-        [
             'firebase',
             { project_set: true, credentials_found: false },
             'firebase_server',
@@ -354,33 +336,15 @@ describe('Store settings', () => {
             pageForms(mountPage('activation', ['features_activation'])),
         ).toHaveLength(1);
     });
-    it('renders SMTP testing only with both permissions and mirrors recipient validation', () => {
-        const wrapper = mountPage('smtp', ['smtp_settings', 'send_newsletter']);
-        expect(pageForms(wrapper)[0].props('action')).toEqual(testSmtp());
-        expect(wrapper.get('#email').attributes()).toMatchObject({
-            type: 'email',
-            maxlength: '255',
-            required: '',
-        });
-        expect(wrapper.text()).toContain(t('store.settings.testEmail'));
-        expect(wrapper.text()).toContain(t('store.settings.sendTest'));
-        expect(pageForms(mountPage('smtp', ['send_newsletter']))).toHaveLength(
-            0,
-        );
-    });
-    it('displays server validation errors for settings and SMTP', () => {
+    it('displays server validation errors for settings', () => {
         formSlotPropsMock.mockReturnValue({
             errors: {
                 settings: 'Unknown keys',
                 'settings.google_recaptcha': 'Bad boolean',
-                email: 'Invalid email',
             },
             processing: false,
         });
         expect(mountPage('recaptcha').text()).toContain('Unknown keys');
         expect(mountPage('recaptcha').text()).toContain('Bad boolean');
-        expect(
-            mountPage('smtp', ['smtp_settings', 'send_newsletter']).text(),
-        ).toContain('Invalid email');
     });
 });

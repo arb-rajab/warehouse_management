@@ -1111,14 +1111,55 @@ export interface StoreSetupChecklistItem {
 }
 
 /** Whether each server value a setup check reads is set (never the value). */
-export type StoreServerSettings =
-    | {
-          mailer: string;
-          host: string | null;
-          username_set: boolean;
-          password_set: boolean;
-      }
-    | { project_set: boolean; credentials_found: boolean };
+export type StoreServerSettings = {
+    project_set: boolean;
+    credentials_found: boolean;
+};
+
+/**
+ * The SMTP settings saved on the SMTP page (StoreMailSettings); null where
+ * nothing is saved and the server's `.env` value applies. The saved password
+ * is never sent: only whether one is saved and whether it can be read.
+ */
+export interface StoreSmtpSettings {
+    mailer: 'smtp' | 'log' | null;
+    host: string | null;
+    port: number | null;
+    scheme: 'smtp' | 'smtps' | null;
+    username: string | null;
+    from_address: string | null;
+    from_name: string | null;
+    password_set: boolean;
+    password_unreadable: boolean;
+    /** MAIL_MAILER, offered as "use the server setting". */
+    environment_mailer: string;
+}
+
+/** Where an effective mail value comes from: saved in the admin, or `.env`. */
+export type StoreSmtpSource = 'admin' | 'env';
+
+export interface StoreSmtpEffectiveValue {
+    value: string | null;
+    source: StoreSmtpSource;
+}
+
+/** A secret: only whether it is set. */
+export interface StoreSmtpEffectivePresence {
+    set: boolean;
+    source: StoreSmtpSource;
+}
+
+/** The values mail is sent with, each with its source. */
+export interface StoreSmtpEffectiveSettings {
+    mailer: StoreSmtpEffectiveValue;
+    host: StoreSmtpEffectiveValue;
+    port: StoreSmtpEffectiveValue;
+    scheme: StoreSmtpEffectiveValue;
+    username: StoreSmtpEffectivePresence;
+    password: StoreSmtpEffectivePresence;
+    from_address: StoreSmtpEffectiveValue;
+    from_name: StoreSmtpEffectiveValue;
+}
 
 /** Only the items the signed-in staff member may fix; done/total count those. */
 export interface StoreSetupChecklist {

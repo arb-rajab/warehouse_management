@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Addon;
 use App\Models\BusinessSetting;
 use App\Models\Language;
+use App\Support\StoreMailSettings;
 use Illuminate\Http\Request;
 use stdClass;
 
@@ -26,7 +27,10 @@ class ConfigController extends Controller
 
     public function business_settings(Request $request)
     {
-        $business_settings = BusinessSetting::whereIn('type', explode(',', $request->keys))->get()->toArray();
+        // Public and unauthenticated: the SMTP settings saved in the store
+        // admin (the server, username and encrypted password) are never listed.
+        $business_settings = BusinessSetting::whereIn('type', explode(',', $request->keys))
+            ->whereNotIn('type', array_values(StoreMailSettings::KEYS))->get()->toArray();
 
         // $language_object = new stdClass();
         // $language_object->id = -123123;

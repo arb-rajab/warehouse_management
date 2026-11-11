@@ -6,20 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\TestSmtpRequest;
+use App\Http\Requests\Store\Admin\UpdateSmtpSettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateStoreSettingsRequest;
 use App\Mail\EmailManager;
 use App\Models\BusinessSetting;
 use App\Services\FcmPushService;
 use App\Support\StoreLocale;
+use App\Support\StoreMailSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class SettingsController extends Controller implements HasMiddleware
 {
@@ -27,8 +32,17 @@ class SettingsController extends Controller implements HasMiddleware
     use ReadsHighlight;
 
     /**
+     * The SMTP page's fields a setup checklist link may highlight: the mailer,
+     * the host and the username/password pair (SetupChecklist::TARGETS).
+     *
+     * @var list<string>
+     */
+    public const array SMTP_HIGHLIGHTS = ['mail_mailer', 'mail_host', 'mail_credentials'];
+
+    /**
      * `keys` are the page's switches; `sections` are read-only blocks a deep
-     * link may also highlight (the server values behind a setup check).
+     * link may also highlight (the server values behind a setup check). The
+     * SMTP page is not one of these plain pages: it edits StoreMailSettings.
      *
      * @var array<string, array{permission: string, index: string, keys: list<string>, sections?: list<string>}>
      */
@@ -102,7 +116,6 @@ class SettingsController extends Controller implements HasMiddleware
                 'apple_login',
             ],
         ],
-        'smtp' => ['permission' => 'smtp_settings', 'index' => 'smtp_settings.index', 'keys' => [], 'sections' => ['mail_credentials']],
         'socialLogin' => ['permission' => 'social_media_logins', 'index' => 'social_login.index', 'keys' => []],
         'facebookChat' => ['permission' => 'facebook_chat', 'index' => 'facebook_chat.index', 'keys' => ['facebook_chat']],
         'facebookComments' => ['permission' => 'facebook_comment', 'index' => 'facebook-comment', 'keys' => ['facebook_comment']],
@@ -118,7 +131,7 @@ class SettingsController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:features_activation', only: ['activation', 'updateActivation']),
-            new Middleware('permission:smtp_settings', only: ['smtp', 'testSmtp']),
+            new Middleware('permission:smtp_settings', only: ['smtp', 'updateSmtp', 'testSmtp']),
             new Middleware('permission:social_media_logins', only: ['socialLogin']),
             new Middleware('permission:facebook_chat', only: ['facebookChat', 'updateFacebookChat']),
             new Middleware('permission:facebook_comment', only: ['facebookComments', 'updateFacebookComments']),
@@ -141,9 +154,49 @@ class SettingsController extends Controller implements HasMiddleware
         return $this->save($request, 'activation');
     }
 
-    public function smtp(Request $request): Response
+    /**
+     * The SMTP settings form and where each effective value comes from. The
+     * saved password and the `.env` username and password are never sent:
+     * only whether each is set.
+     */
+    public function smtp(Request $request, StoreMailSettings $mail): Response
     {
-        return $this->page('smtp', $request);
+        $stored = $mail->stored();
+        $effective = $mail->effective();
+
+        return Inertia::render('Store/Admin/Settings/Smtp', [
+            'highlight' => $this->highlight($request, self::SMTP_HIGHLIGHTS),
+            'smtp' => [
+                'mailer' => $stored['mailer'],
+                'host' => $stored['host'],
+                'port' => $stored['port'] === null ? null : (int) $stored['port'],
+                'scheme' => $stored['scheme'],
+                'username' => $stored['username'],
+                'from_address' => $stored['from_address'],
+                'from_name' => $stored['from_name'],
+                'password_set' => $stored['password'] !== null,
+                'password_unreadable' => $mail->passwordUnreadable(),
+                'environment_mailer' => $mail->environmentMailer(),
+            ],
+            'effective' => [
+                'mailer' => $this->shown($effective['mailer']),
+                'host' => $this->shown($effective['host']),
+                'port' => $this->shown($effective['port']),
+                'scheme' => $this->shown($effective['scheme']),
+                'username' => ['set' => filled($effective['username']['value']), 'source' => $effective['username']['source']],
+                'password' => ['set' => filled($effective['password']['value']), 'source' => $effective['password']['source']],
+                'from_address' => $this->shown($effective['from_address']),
+                'from_name' => $this->shown($effective['from_name']),
+            ],
+        ]);
+    }
+
+    public function updateSmtp(UpdateSmtpSettingsRequest $request, StoreMailSettings $mail): RedirectResponse
+    {
+        $mail->save($request->safe()->except(['password_clear']), $request->boolean('password_clear'));
+        $this->flashSuccess('smtp_settings_have_been_updated_successfully');
+
+        return redirect()->route('smtp_settings.index');
     }
 
     public function socialLogin(): Response
@@ -216,15 +269,26 @@ class SettingsController extends Controller implements HasMiddleware
         return $this->page('filesystem');
     }
 
+    /**
+     * Sent at once, not queued, so a wrong host, port or login shows on the
+     * page. The error names no setting value: the mail server's reply can
+     * quote the username, and only the exception class is logged.
+     */
     public function testSmtp(TestSmtpRequest $request): RedirectResponse
     {
-        Mail::to($request->validated('email'))->queue(new EmailManager([
-            'view' => 'shop.emails.newsletter',
-            'subject_key' => 'delivery.mail.smtp_subject',
-            'locale' => StoreLocale::documentLocale(),
-            'from' => config('mail.from.address'),
-            'content_key' => 'delivery.mail.smtp_body',
-        ]));
+        try {
+            Mail::to($request->validated('email'))->send(new EmailManager([
+                'view' => 'shop.emails.newsletter',
+                'subject_key' => 'delivery.mail.smtp_subject',
+                'locale' => StoreLocale::documentLocale(),
+                'from' => config('mail.from.address'),
+                'content_key' => 'delivery.mail.smtp_body',
+            ]));
+        } catch (TransportExceptionInterface $exception) {
+            Log::warning('The SMTP test email could not be sent.', ['exception' => $exception::class]);
+
+            throw ValidationException::withMessages(['email' => __('store_admin.test_email_could_not_be_sent')]);
+        }
         $this->flashSuccess('test_email_has_been_sent_successfully');
 
         return redirect()->route('smtp_settings.index');
@@ -254,24 +318,25 @@ class SettingsController extends Controller implements HasMiddleware
     }
 
     /**
-     * Whether each server value a setup check reads is there, never the value
-     * itself: the SMTP credentials (MAIL_USERNAME, MAIL_PASSWORD) and Firebase
-     * push (FIREBASE_PROJECT, the FIREBASE_CREDENTIALS file). Only the server
-     * environment sets them, so the page shows them read-only.
+     * A non-secret effective mail value and where it comes from.
      *
-     * @return array<string, string|bool|null>|null
+     * @param  array{value: mixed, source: 'admin'|'env'}  $value
+     * @return array{value: string|null, source: 'admin'|'env'}
+     */
+    private function shown(array $value): array
+    {
+        return ['value' => filled($value['value']) ? (string) $value['value'] : null, 'source' => $value['source']];
+    }
+
+    /**
+     * Whether each server value a setup check reads is there, never the value
+     * itself: Firebase push (FIREBASE_PROJECT, the FIREBASE_CREDENTIALS file).
+     * Only the server environment sets them, so the page shows them read-only.
+     *
+     * @return array<string, bool>|null
      */
     private function server(string $page): ?array
     {
-        if ($page === 'smtp') {
-            return [
-                'mailer' => (string) config('mail.default'),
-                'host' => filled(config('mail.mailers.smtp.host')) ? (string) config('mail.mailers.smtp.host') : null,
-                'username_set' => config('mail.mailers.smtp.username') != null,
-                'password_set' => config('mail.mailers.smtp.password') != null,
-            ];
-        }
-
         if ($page === 'firebase') {
             $push = app(FcmPushService::class);
             $path = $push->credentialsPath();

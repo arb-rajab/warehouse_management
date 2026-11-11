@@ -161,6 +161,19 @@ Box counts are set per product from the products screen at `/admin/products` —
 
 A freshly deployed catalog therefore needs someone to walk the list and set the real counts; there is nothing to import them from.
 
+### Settings managed in the admin (they supersede `.env`)
+
+Some settings that used to live only in the server's `.env` can be saved in the store admin. A value saved there **wins**; with nothing saved, the `.env` value is used, so a fresh deploy behaves exactly as its `.env` says. Nothing in the admin ever writes `.env`. Each page shows every effective value with "saved in admin" or "from .env" (secrets only as set / not set). Details: [.ai/rules/admin-env-overrides.md](.ai/rules/admin-env-overrides.md).
+
+| Admin page | Superseded `.env` keys | Notes |
+| --- | --- | --- |
+| SMTP settings (`/temp/admin/smtp-settings`, permission `smtp_settings`) | `MAIL_MAILER` | The admin offers `smtp`, `log` or "use the server setting". |
+| | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | One group: with a host saved in the admin, all five come from the admin (the `.env` username and password are not used, and `MAIL_URL` is ignored); without one, all five come from `.env`. The password is stored encrypted with `APP_KEY`; after changing `APP_KEY` without `APP_PREVIOUS_KEYS`, enter it again. |
+| | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Each on its own. The health and backup notifications still read these from `.env`. |
+| Google map (`/temp/admin/google-map`) | `MAP_API_KEY` | |
+
+Still `.env` only: `MAIL_EHLO_DOMAIN`, `MAIL_LOG_CHANNEL`, `MAIL_SENDMAIL_PATH` and the other mailers' keys. Saved SMTP settings apply to web requests and queued jobs (a running worker picks up a save before its next job); they are never applied to other console commands, so `config:cache` never writes them into the cached config. The "Send test email" button sends at once and shows the mail server's refusal as an error.
+
 ## Contributing / conventions
 
 See the [documentation map](.ai/README.md) for warehouse and integrated-store
