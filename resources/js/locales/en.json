@@ -1200,7 +1200,8 @@
                 "password": "Password",
                 "newPassword": "New password",
                 "confirmPassword": "Confirm password",
-                "passwordPlaceholder": "Leave blank to keep current password"
+                "passwordPlaceholder": "Leave blank to keep current password",
+                "roleSensitive": "{name} (sensitive: can read all outgoing email)"
             }
         },
         "roles": {
@@ -1211,7 +1212,9 @@
                 "columnActions": "Actions",
                 "empty": "No roles yet.",
                 "edit": "Edit",
-                "delete": "Delete"
+                "delete": "Delete",
+                "sensitiveBadge": "Sensitive",
+                "sensitiveBadgeHint": "Includes a permission only a Super Admin can grant: it can read all outgoing email."
             },
             "create": {
                 "title": "Add role",
@@ -1227,7 +1230,9 @@
             "fields": {
                 "name": "Name",
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
-                "permissions": "Permissions"
+                "permissions": "Permissions",
+                "sensitive": "Sensitive",
+                "sensitiveWarning": "Can read all outgoing email, password-reset emails included. Only a Super Admin can grant it."
             }
         },
         "reference": {
@@ -1586,6 +1591,8 @@
                 "fromAddress": "From address",
                 "fromName": "From name",
                 "fromHelp": "An empty from address or name uses the server's MAIL_FROM_ADDRESS or MAIL_FROM_NAME.",
+                "currentPassword": "Your current password",
+                "currentPasswordHelp": "Enter the password you sign in with to save. Whoever controls these settings can read every email the shop sends, password-reset emails included.",
                 "testTitle": "Send a test email",
                 "testHelp": "Sent at once with the saved settings; if the mail server refuses it, the error shows here.",
                 "effective": {
@@ -1604,6 +1611,24 @@
                     "password": "Password",
                     "from_address": "From address",
                     "from_name": "From name"
+                },
+                "audit": {
+                    "title": "Recent changes",
+                    "help": "The last 10 saves and refused passwords on this page. Values are never recorded.",
+                    "when": "When",
+                    "who": "Staff member",
+                    "ip": "IP address",
+                    "what": "What changed",
+                    "empty": "No SMTP changes have been recorded yet.",
+                    "passwordFailed": "Wrong current password, nothing saved",
+                    "deletedUser": "Account #{id} no longer exists",
+                    "fieldChange": "{field} ({change})",
+                    "separator": ", ",
+                    "kinds": {
+                        "set": "set",
+                        "changed": "changed",
+                        "removed": "removed"
+                    }
                 }
             }
         },
@@ -3741,7 +3766,8 @@
             "file": "product file",
             "code": "code",
             "address": "address",
-            "password": "password"
+            "password": "password",
+            "current_password": "current password"
         }
     },
     "warehouses": {

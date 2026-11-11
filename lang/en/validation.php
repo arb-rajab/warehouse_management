@@ -328,6 +328,7 @@ return [
         'phone' => 'phone',
         'password' => 'password',
         'password_confirmation' => 'password confirmation',
+        'current_password' => 'current password',
         'code' => 'code',
         'company_name' => 'company name',
         'company_address' => 'company address',

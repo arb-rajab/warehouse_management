@@ -184,6 +184,8 @@ Each page warns, naming the field, when its switch is on but no ID or key is in 
 
 Still `.env` only: `MAIL_EHLO_DOMAIN`, `MAIL_LOG_CHANNEL`, `MAIL_SENDMAIL_PATH` and the other mailers' keys. Saved SMTP settings apply to web requests and queued jobs (a running worker picks up a save before its next job); they are never applied to other console commands, so `config:cache` never writes them into the cached config. The "Send test email" button sends at once and shows the mail server's refusal as an error.
 
+**Who can change SMTP.** Whoever controls the SMTP settings can read every email the shop sends, password-reset emails included, so `smtp_settings` is a sensitive permission: only a Super Admin can give it to a role (or take it off one), or give a role that carries it; the role form warns on it and the Roles list badges such roles. Existing grants are not revoked; to see who holds it, run the query in [.ai/rules/admin-env-overrides.md](.ai/rules/admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail). Saving the SMTP page asks for the staff member's own current password (5 wrong ones per 15 minutes lock the field). Every change is written to `admin_audit_logs` (who, when, IP, field names only, never values) and listed on the page, and every active Super Admin, plus the previous from-address when the from address changed, is mailed at once through the settings as they were before the change.
+
 ## Contributing / conventions
 
 See the [documentation map](.ai/README.md) for warehouse and integrated-store

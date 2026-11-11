@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { updateSmtp } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
+import DataTable from '@/components/DataTable.vue';
 import DetailItem from '@/components/DetailItem.vue';
 import DetailList from '@/components/DetailList.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -9,6 +10,7 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreSmtpTestForm from '@/components/StoreSmtpTestForm.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
+import { formatDateTime } from '@/lib/date';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { smtpSettingsValidation } from '@/lib/smtpSettingsForm';
@@ -17,6 +19,7 @@ import type {
     StoreSmtpEffectivePresence,
     StoreSmtpEffectiveSettings,
     StoreSmtpEffectiveValue,
+    StoreSmtpAuditEntry,
     StoreSmtpSettings,
 } from '@/types/store';
 
@@ -26,13 +29,23 @@ import type {
  * .ai/rules/admin-env-overrides.md). The host, port, encryption, username and
  * password are one group: without a host all five come from `.env`. The saved
  * password is never sent here; an empty password field keeps it.
+ *
+ * Saving asks for the staff member's own current password (whoever controls
+ * these settings can read every email the shop sends); it and the SMTP
+ * password are emptied after every submit. The recent changes below are
+ * AdminAuditLog rows: who, when, the IP and which fields, never a value.
  */
 const props = defineProps<{
     smtp: StoreSmtpSettings;
     effective: StoreSmtpEffectiveSettings;
     /** The field a setup checklist link sent the admin here to fix. */
     highlight?: string | null;
+    /** The last 10 saves and refused current passwords, newest first. */
+    auditEntries?: StoreSmtpAuditEntry[];
 }>();
+
+/** Emptied after every submit: never left in the page. */
+const secretFields = ['current_password', 'password'];
 
 const mailers = ['smtp', 'log'] as const;
 const schemes = ['smtps', 'smtp'] as const;
@@ -71,6 +84,21 @@ function presence(entry: StoreSmtpEffectivePresence): string {
     );
 }
 
+function auditWhat(entry: StoreSmtpAuditEntry): string {
+    if (entry.action === 'smtp_settings.password_failed') {
+        return t('store.settings.smtp.audit.passwordFailed');
+    }
+
+    return Object.entries(entry.changed_fields)
+        .map(([field, kind]) =>
+            t('store.settings.smtp.audit.fieldChange', {
+                field: t(`store.settings.smtp.effective.${field}`),
+                change: t(`store.settings.smtp.audit.kinds.${kind}`),
+            }),
+        )
+        .join(t('store.settings.smtp.audit.separator'));
+}
+
 const rows = computed(() => {
     const effective = props.effective;
     const none = t('store.settings.server.notSet');
@@ -102,6 +130,8 @@ const rows = computed(() => {
         :submitting-label="t('store.settings.saving')"
         :layout="StoreAdminLayout"
         :validation="smtpSettingsValidation"
+        :reset-on-success="secretFields"
+        :reset-on-error="secretFields"
         wide
     >
         <template #default="{ errors }">
@@ -284,6 +314,25 @@ const rows = computed(() => {
                     {{ t('store.settings.smtp.fromHelp') }}
                 </p>
             </div>
+            <div
+                class="max-w-sm border-t border-line pt-4"
+                data-section="current_password"
+            >
+                <FormField
+                    id="current_password"
+                    type="password"
+                    :label="t('store.settings.smtp.currentPassword')"
+                    :error="errors.current_password"
+                    autocomplete="current-password"
+                    maxlength="255"
+                    dir="ltr"
+                    aria-describedby="current_password_help"
+                    required
+                />
+                <p id="current_password_help" class="mt-1 text-sm text-muted">
+                    {{ t('store.settings.smtp.currentPasswordHelp') }}
+                </p>
+            </div>
         </template>
         <template #after-form>
             <div class="mt-6" data-section="mail_effective">
@@ -296,6 +345,67 @@ const rows = computed(() => {
                     />
                 </DetailList>
             </div>
+            <section class="mt-6 space-y-2" data-section="smtp_audit">
+                <h2 class="text-lg font-semibold">
+                    {{ t('store.settings.smtp.audit.title') }}
+                </h2>
+                <p class="text-sm text-muted">
+                    {{ t('store.settings.smtp.audit.help') }}
+                </p>
+                <DataTable
+                    :columns="[
+                        t('store.settings.smtp.audit.when'),
+                        t('store.settings.smtp.audit.who'),
+                        t('store.settings.smtp.audit.ip'),
+                        t('store.settings.smtp.audit.what'),
+                    ]"
+                    :rows="auditEntries ?? []"
+                    :empty-message="t('store.settings.smtp.audit.empty')"
+                >
+                    <template #row="{ row: entry }">
+                        <td class="px-4 py-2">
+                            {{
+                                entry.created_at
+                                    ? formatDateTime(entry.created_at)
+                                    : '-'
+                            }}
+                        </td>
+                        <td class="px-4 py-2 whitespace-normal">
+                            <span class="font-medium text-ink">{{
+                                entry.user_name ?? '-'
+                            }}</span>
+                            <span
+                                v-if="entry.user_email"
+                                class="block text-muted"
+                                dir="ltr"
+                                >{{ entry.user_email }}</span
+                            >
+                            <span
+                                v-if="entry.user_deleted"
+                                class="block text-muted"
+                                >{{
+                                    t('store.settings.smtp.audit.deletedUser', {
+                                        id: entry.user_id,
+                                    })
+                                }}</span
+                            >
+                        </td>
+                        <td class="px-4 py-2" dir="ltr">
+                            {{ entry.ip_address ?? '-' }}
+                        </td>
+                        <td
+                            class="px-4 py-2 whitespace-normal"
+                            :class="{
+                                'text-danger':
+                                    entry.action ===
+                                    'smtp_settings.password_failed',
+                            }"
+                        >
+                            {{ auditWhat(entry) }}
+                        </td>
+                    </template>
+                </DataTable>
+            </section>
             <StoreSmtpTestForm v-if="access.can('send_newsletter')" />
         </template>
     </ResourceFormPage>

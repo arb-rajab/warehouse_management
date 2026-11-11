@@ -295,6 +295,7 @@ return [
         'phone' => 'رقم الهاتف',
         'password' => 'كلمة المرور',
         'password_confirmation' => 'تأكيد كلمة المرور',
+        'current_password' => 'كلمة المرور الحالية',
         'code' => 'الرمز',
         'company_name' => 'اسم الشركة',
         'company_address' => 'عنوان الشركة',

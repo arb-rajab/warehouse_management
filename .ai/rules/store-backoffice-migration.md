@@ -283,6 +283,12 @@ preserves permissions the editor does not hold. Super Admin remains unrestricted
 Super Admin role/account invariants still apply. Who receives staff-edit powers
 is an owner decision; removing one's own held permissions can still lock one out.
 
+Sensitive permissions (`StorePermissions::SENSITIVE`, today `smtp_settings`, which
+can read all outgoing mail) only a Super Admin grants: anyone else neither adds
+nor removes them on a role nor gives a role carrying one, even when holding it
+(2026-11-11, [admin-env-overrides.md](admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail)).
+Existing grants are never revoked by a migration; the owner reviews the holders.
+
 ## 5. Conflict decisions and retained work
 
 - Typed settings writers reject unknown/foreign/reserved keys, including localized
@@ -294,7 +300,9 @@ is an owner decision; removing one's own held permissions can still lock one out
   `business_settings`, the saved value wins and `.env` stays the fallback, secrets
   are encrypted and never sent back, and it is applied at runtime, never in the
   console ([admin-env-overrides.md](admin-env-overrides.md)). SMTP is managed on the
-  SMTP settings page this way (2026-11-11, `StoreMailSettings`); the Google Maps key
+  SMTP settings page this way (2026-11-11, `StoreMailSettings`): a save needs the
+  staff member's current password, is written to `admin_audit_logs` (field names
+  only) and mailed to the Super Admins through the previous settings; the Google Maps key
   already was (`GoogleMapsKey`). So are the Analytics, Facebook chat and Facebook
   comments IDs (`StoreIntegrationIds`) and the reCAPTCHA site key and secret
   (`StoreRecaptchaSettings`, the secret encrypted and read through the class, never

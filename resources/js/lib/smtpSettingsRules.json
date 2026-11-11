@@ -25,9 +25,11 @@
             "max:255",
             "regex:/^[^\\r\\n]*$/D"
         ],
-        "from_name": ["nullable", "string", "max:255", "regex:/^[^\\r\\n]*$/D"]
+        "from_name": ["nullable", "string", "max:255", "regex:/^[^\\r\\n]*$/D"],
+        "current_password": ["required", "string"]
     },
     "serverOnly": {
-        "from_address": ["email:rfc"]
+        "from_address": ["email:rfc"],
+        "current_password": ["current_password:store"]
     }
 }

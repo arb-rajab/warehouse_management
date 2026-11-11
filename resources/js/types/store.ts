@@ -22,6 +22,11 @@ export interface StoreSharedProps {
 export interface StoreRole {
     id: number;
     name: string;
+    /**
+     * Whether the role carries a permission only a Super Admin may grant
+     * (StorePermissions::SENSITIVE); sent by the Roles list and the staff forms.
+     */
+    sensitive?: boolean;
 }
 
 /** StaffResource: a store back-office account. */
@@ -39,7 +44,8 @@ export interface StaffMember {
 export interface PermissionGroup {
     section: string;
     label: string;
-    permissions: { id: number; label: string }[];
+    /** `sensitive`: only a Super Admin may grant it; the form warns. */
+    permissions: { id: number; label: string; sensitive?: boolean }[];
 }
 
 /** A store language a role name can be translated into. */
@@ -1149,6 +1155,26 @@ export interface StoreSmtpEffectiveValue {
 export interface StoreSmtpEffectivePresence {
     set: boolean;
     source: StoreSmtpSource;
+}
+
+/** How an audited field changed (AdminAuditLog::CHANGE_KINDS). */
+export type StoreAuditChangeKind = 'set' | 'changed' | 'removed';
+
+/**
+ * One row of the SMTP page's recent changes (AdminAuditLog): who, when, from
+ * which IP and which fields; never a value or the user agent.
+ */
+export interface StoreSmtpAuditEntry {
+    id: number;
+    action: 'smtp_settings.updated' | 'smtp_settings.password_failed';
+    changed_fields: Record<string, StoreAuditChangeKind>;
+    user_name: string | null;
+    user_email: string | null;
+    /** The account no longer exists: the name and email are the snapshot. */
+    user_deleted: boolean;
+    user_id: number;
+    ip_address: string | null;
+    created_at: string | null;
 }
 
 /** The values mail is sent with, each with its source. */

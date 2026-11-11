@@ -28,6 +28,17 @@ paths:
   - 'resources/js/lib/{deliverySettings,defaultLanguage}*'
   - 'resources/js/pages/Store/Admin/Setup/OrderConfiguration/**'
   - 'resources/js/pages/Store/Admin/Languages/Index.vue'
+  - 'app/Services/Store/SmtpSettingsChangeNotifier.php'
+  - 'app/Mail/SmtpSettingsChangedMail.php'
+  - 'resources/views/shop/emails/smtp_settings_changed.blade.php'
+  - 'resources/views/shop/emails/plain/smtp_settings_changed.blade.php'
+  - 'app/Models/AdminAuditLog.php'
+  - 'database/migrations/*admin_audit_logs*'
+  - 'app/Support/StorePermissions.php'
+  - 'app/Support/StaffPrivileges.php'
+  - 'resources/js/components/{StoreRoleFormFields,StoreStaffFormFields}.vue'
+  - 'resources/js/pages/Store/Admin/Staff/Roles/Index.vue'
+  - 'database/seeders/StoreAccountFilterSeeder.php'
 ---
 
 # A setting that only `.env` held may be saved in the admin: saved value first, `.env` as the fallback
@@ -112,6 +123,75 @@ the value is stored in `business_settings` and laid over the config at runtime.
   "saved in admin" or "from .env"; secrets only as set / not set.
 - **Document the superseded keys** in the README's Deployment section.
 
+## Security: the SMTP settings are a way to read all mail
+
+Added 2026-11-11 (owner-approved). Whoever chooses the mail server can redirect,
+and so read, every email the shop sends, password-reset emails included. Three
+mitigations hold together; keep all three when touching the SMTP page.
+
+- **A sensitive permission.** `StorePermissions::SENSITIVE` (`smtp_settings`)
+  only a Super Admin grants. `StaffPrivileges::grantablePermissionIds()` leaves
+  it out for everyone else, so they cannot tick it onto a new or edited role
+  (`messages.role_permission_super_admin_only`), cannot take it off a role (the
+  form does not offer it and the edit keeps it), and cannot give a role that
+  carries it (`canAssign()`, the staff form's role list). A staff member keeps
+  their own existing role when someone else edits their other fields. The role
+  form shows it to a Super Admin with a "Sensitive" warning; the Roles list badges
+  such roles (`Role::withSensitiveFlag()`, `RoleResource` `sensitive`), and the
+  staff form labels them. No seeder gives it to a role other than Super Admin
+  (`StoreAccountFilterSeeder`'s demo role excludes it); **existing grants are
+  never revoked by a migration**: the owner decides. To list the holders:
+
+  ```sql
+  SELECT r.name AS holder, 'role' AS via FROM wms_permissions p
+    JOIN wms_role_has_permissions rp ON rp.permission_id = p.id JOIN wms_roles r ON r.id = rp.role_id
+    WHERE p.name = 'smtp_settings' AND p.guard_name = 'store'
+  UNION ALL
+  SELECT CONCAT('store user #', mp.model_id), 'direct' FROM wms_permissions p
+    JOIN wms_model_has_permissions mp ON mp.permission_id = p.id
+    WHERE p.name = 'smtp_settings' AND p.guard_name = 'store';
+  ```
+
+  The Super Admin holds it through `Gate::before()`, not through a row.
+- **The staff member's own password.** `UpdateSmtpSettingsRequest` requires
+  `current_password` (`current_password:store`), with a field error. Wrong ones
+  are counted per account (`passwordLimiterKey()`, 5 per 15 minutes): a
+  locked-out account is refused in `prepareForValidation()`, before the password
+  is checked (`store_admin.smtp_current_password_throttled`). A counted failure is
+  logged (user id and IP) and written to the audit log as
+  `smtp_settings.password_failed`, only while the count is within the limit, so a
+  flood adds at most 5 rows per account per window. The password is never saved,
+  logged or flashed (`dontFlash`, Telescope's hidden parameters); the page empties
+  it and the SMTP password after every submit (`ResourceFormPage`'s
+  `resetOnSuccess`/`resetOnError`). The browser copy requires it; the check itself
+  is `serverOnly`. The test email needs no password.
+- **An audit row and a mail on every change.** `StoreMailSettings::save()` returns
+  field => `set`/`changed`/`removed` (the password compared decrypted) and writes
+  the `smtp_settings.updated` row of `admin_audit_logs` (`AdminAuditLog::record()`)
+  in the save's own transaction. The row holds the user id (no foreign key, so it
+  outlives the account), a name and email snapshot, the field names and kinds, IP
+  and user agent; never a value. A save that changes nothing writes and mails
+  nothing (the success flash still shows). Removing the password and clearing the
+  server group are changes like any other. The page lists the last 10 saves and
+  refused passwords (`auditEntries`, a `DataTable` without the user agent).
+  `SmtpSettingsChangeNotifier` then mails every active Super Admin (role, back-office
+  `user_type`, not banned, with an email) and, only when the from address changed,
+  the previous from-address unless it is one of theirs; one mail each, in the
+  recipient's language (`SmtpSettingsChangedMail`, `delivery.mail.smtp_changed.*`):
+  who, when (UTC), IP and the field names, never a value.
+- **Which mailer sends that mail, and why.** At once (not queued), through the
+  settings **as they were before** the save: someone who points the mail at their
+  own server must not be able to swallow the alert, so it goes over the server the
+  shop used until then. A queued mail would leave with the new settings (a worker
+  applies the saved ones), and queueing the old ones would put the decrypted
+  password into the job payload. For a previous `smtp` mailer a runtime-only mailer
+  `smtp_before_change` is built from the snapshot (`effective()` read before the
+  save, 10-second timeout) and dropped afterwards; any other previous mailer (`log`,
+  a `.env` `ses`) is untouched by this page and used as it is (a `.env`
+  `failover`/`roundrobin`'s `smtp` leg already has the new values). The `.env`
+  mailer gets no extra copy. A mail that fails is logged by exception class only
+  and never undoes or fails the save.
+
 ## Superseded `.env` keys today
 
 | Admin setting | `.env` fallback | Stored as |
@@ -159,6 +239,14 @@ other mailers' keys, and the from address of the health and backup notifications
   unreadable table or password, authorization, validation (header injection), the
   immediate test email and the public API filter.
 - `SmtpSettingsClientValidationParityTest`: the browser copy of the rules.
+- `tests/Feature/Store/Admin/SmtpSettingsSecurityTest.php`: the current password
+  (missing, wrong, another account's, never flashed), the throttle and its capped
+  audit rows, the audit row (kinds, no values, same transaction), no-op saves,
+  password removal and group clearing, the notification (recipients, the previous
+  mailer, the previous from-address, no secrets, failure does not block, language)
+  and the page's recent entries. `SensitivePermissionTest.php`: seeding, the role
+  and staff forms, the Roles list flag. `Models/AdminAuditLogTest.php`,
+  `Models/RoleTest.php`, `Database/CreateAdminAuditLogsTableTest.php`.
 - `tests/Feature/Store/Admin/IntegrationIdsTest.php` and
   `RecaptchaSettingsTest.php`: save, precedence and the pair, `.env` fallback,
   keep / change / clear, encryption at rest, the secret never in a response,

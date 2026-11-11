@@ -84,8 +84,10 @@ the `<form>`, `onBefore()` before `form.submit`, `onStart` on the visit) and
 read inline errors through `errorsFor(form.errors)`; the banner shows only the
 errors no field shows (`nonFieldErrors`). The store SMTP settings form uses
 `lib/smtpSettingsRules.json`, checked by `SmtpSettingsClientValidationParityTest`;
-its `serverOnly` list holds `email:rfc` (the engine has no email rule), and the
-request's `after()` checks read the saved settings, so they stay on the server.
+its `serverOnly` list holds `email:rfc` (the engine has no email rule) and
+`current_password:store` (the staff member's own password, checked and throttled
+on the server; the browser only requires it), and the request's `after()` checks
+read the saved settings, so they stay on the server.
 The Analytics, Facebook chat and Facebook comments forms use
 `lib/integrationIdsRules.json` (one rule set per page, built by
 `UpdateIntegrationIdsRequest::rulesFor()`), checked by

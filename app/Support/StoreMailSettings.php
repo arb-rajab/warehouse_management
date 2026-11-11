@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\BusinessSetting;
+use Closure;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -169,13 +170,24 @@ final class StoreMailSettings
      * `.env` value applies again; an empty password keeps the saved one. With
      * no host the whole server group is removed, the password included.
      *
+     * Returns what changed, field => `set` (nothing was saved before),
+     * `changed` or `removed` (the `.env` value applies again): names and kinds
+     * only, never a value. The password counts as changed only when the
+     * decrypted value differs. `$whenChanged` runs inside the same transaction
+     * when something changed (the audit row), so the settings and their record
+     * are saved together or not at all.
+     *
      * @param  array<string, mixed>  $data  validated UpdateSmtpSettingsRequest input
+     * @param  (Closure(array<string, string>): mixed)|null  $whenChanged
+     * @return array<string, string>
      */
-    public function save(array $data, bool $clearPassword): void
+    public function save(array $data, bool $clearPassword, ?Closure $whenChanged = null): array
     {
         $server = filled($data['host'] ?? null);
 
-        DB::transaction(function () use ($data, $server, $clearPassword): void {
+        $changes = DB::transaction(function () use ($data, $server, $clearPassword, $whenChanged): array {
+            $before = $this->read();
+
             foreach (self::KEYS as $field => $type) {
                 if ($field === 'password') {
                     if (! $server || $clearPassword) {
@@ -190,10 +202,60 @@ final class StoreMailSettings
                 $value = $this->clean($data[$field] ?? null);
                 $this->write($type, in_array($field, self::SERVER_FIELDS, true) && ! $server ? null : $value);
             }
+
+            $changes = $this->changes($before, $this->read());
+            if ($changes !== [] && $whenChanged !== null) {
+                $whenChanged($changes);
+            }
+
+            return $changes;
         });
 
         $this->forget();
         $this->apply();
+
+        return $changes;
+    }
+
+    /**
+     * Field => `set`, `changed` or `removed` between two readings of the saved
+     * rows. A password that cannot be decrypted any more counts as changed
+     * when a new one is saved.
+     *
+     * @param  array<string, string|null>  $before
+     * @param  array<string, string|null>  $after
+     * @return array<string, string>
+     */
+    private function changes(array $before, array $after): array
+    {
+        $changes = [];
+
+        foreach (array_keys(self::KEYS) as $field) {
+            $old = $before[$field];
+            $new = $after[$field];
+
+            if ($old === $new) {
+                continue;
+            }
+
+            if ($old === null || $new === null) {
+                $changes[$field] = $old === null ? 'set' : 'removed';
+
+                continue;
+            }
+
+            if ($field === 'password') {
+                $oldPassword = $this->decrypt($old);
+                $newPassword = $this->decrypt($new);
+                if ($oldPassword !== null && $newPassword !== null && hash_equals($oldPassword, $newPassword)) {
+                    continue;
+                }
+            }
+
+            $changes[$field] = 'changed';
+        }
+
+        return $changes;
     }
 
     /** Settings writers forget `business_settings`; this one also its own entry. */

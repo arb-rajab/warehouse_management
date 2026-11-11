@@ -76,10 +76,10 @@ test('custom permission sections labels assignments and role content remain data
         ->where('locale', 'ar')
         ->where('permissionGroups', fn (Collection $groups) => collect($groups)->contains(fn (array $group) => $group === [
             'section' => 'custom_logistics', 'label' => 'لوجستيات مخصصة',
-            'permissions' => [['id' => $custom->id, 'label' => 'اعتماد الشحنة المخصصة']],
+            'permissions' => [['id' => $custom->id, 'label' => 'اعتماد الشحنة المخصصة', 'sensitive' => false]],
         ])));
     $this->get(route('roles.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('roles.data.0', ['id' => $role->id, 'name' => 'منسق مخصص']));
+        ->where('roles.data.0', ['id' => $role->id, 'name' => 'منسق مخصص', 'sensitive' => false]));
     expect($role->fresh()->hasPermissionTo('approve_custom_shipment'))->toBeTrue()
         ->and($custom->fresh()->name)->toBe('approve_custom_shipment')->and($custom->fresh()->section)->toBe('custom_logistics');
 });

@@ -189,6 +189,7 @@ return [
     'seller_verification_form_has_been_updated_successfully' => 'Seller verification form has been updated successfully',
     'sellers_have_been_deleted_successfully' => 'Sellers have been deleted successfully',
     'shipping_configuration_has_been_updated_successfully' => 'Shipping configuration has been updated successfully',
+    'smtp_current_password_throttled' => 'Too many wrong passwords. Try again in :seconds seconds.',
     'smtp_password_must_be_entered_again' => 'Enter the SMTP password again when you change the host or username, or remove the saved password.',
     'smtp_settings_have_been_updated_successfully' => 'SMTP settings have been updated successfully',
     'staff_has_been_created_successfully' => 'Staff member has been created successfully',

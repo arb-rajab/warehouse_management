@@ -189,6 +189,7 @@ return [
     'seller_verification_form_has_been_updated_successfully' => 'تم تحديث نموذج التحقق من البائع بنجاح',
     'sellers_have_been_deleted_successfully' => 'تم حذف البائعين بنجاح',
     'shipping_configuration_has_been_updated_successfully' => 'تم تحديث إعدادات الشحن بنجاح',
+    'smtp_current_password_throttled' => 'تم إدخال كلمة مرور خاطئة مرات كثيرة. حاول مرة أخرى بعد :seconds ثانية.',
     'smtp_password_must_be_entered_again' => 'أدخل كلمة مرور SMTP مرة أخرى عند تغيير الخادم أو اسم المستخدم، أو احذف كلمة المرور المحفوظة.',
     'smtp_settings_have_been_updated_successfully' => 'تم تحديث إعدادات SMTP بنجاح',
     'staff_has_been_created_successfully' => 'تمت إضافة الموظف بنجاح',

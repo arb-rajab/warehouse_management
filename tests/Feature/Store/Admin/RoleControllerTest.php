@@ -43,7 +43,8 @@ describe('index', function () {
                 ->has('roles.data', 1)
                 ->has('roles.data.0', fn (Assert $listed) => $listed
                     ->where('id', $role->id)
-                    ->where('name', 'Shop clerk'))
+                    ->where('name', 'Shop clerk')
+                    ->where('sensitive', false))
         );
     });
 
@@ -98,28 +99,29 @@ describe('create', function () {
                                     'delete_uploads' => 'Delete Uploads',
                                     'delete_all_uploads' => 'Delete All Uploads',
                                 },
+                                'sensitive' => false,
                             ])->all(),
                     ],
                     [
                         'section' => 'offers_catalog',
                         'label' => 'Offers Catalog',
                         'permissions' => [
-                            ['id' => Permission::findByName('view_offers_catalog', 'store')->id, 'label' => 'View Offers Catalog'],
-                            ['id' => Permission::findByName('add_offers_catalog', 'store')->id, 'label' => 'Add Offers Catalog'],
-                            ['id' => Permission::findByName('delete_offers_catalog', 'store')->id, 'label' => 'Delete Offers Catalog'],
+                            ['id' => Permission::findByName('view_offers_catalog', 'store')->id, 'label' => 'View Offers Catalog', 'sensitive' => false],
+                            ['id' => Permission::findByName('add_offers_catalog', 'store')->id, 'label' => 'Add Offers Catalog', 'sensitive' => false],
+                            ['id' => Permission::findByName('delete_offers_catalog', 'store')->id, 'label' => 'Delete Offers Catalog', 'sensitive' => false],
                         ],
                     ],
                     [
                         'section' => 'price_changes',
                         'label' => 'Price Changes',
-                        'permissions' => [['id' => $approve->id, 'label' => 'Approve Bulk Price Changes']],
+                        'permissions' => [['id' => $approve->id, 'label' => 'Approve Bulk Price Changes', 'sensitive' => false]],
                     ],
                     [
                         'section' => '',
                         'label' => '',
                         'permissions' => [
-                            ['id' => $unsorted->id, 'label' => 'Export Everything'],
-                            ['id' => $ownPermission->id, 'label' => 'Add Staff Role'],
+                            ['id' => $unsorted->id, 'label' => 'Export Everything', 'sensitive' => false],
+                            ['id' => $ownPermission->id, 'label' => 'Add Staff Role', 'sensitive' => false],
                         ],
                     ],
                 ])

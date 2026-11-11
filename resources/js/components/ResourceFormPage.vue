@@ -52,12 +52,21 @@ const props = withDefaults(
          * server's appear; the native bubbles give way (`novalidate`).
          */
         validation?: ValidationSchema;
+        /**
+         * Forwarded to the Inertia `<Form>`: the fields (or all, with `true`)
+         * emptied after a successful or a failed submit, such as a password
+         * asked to confirm a change (Settings/Smtp.vue's current password).
+         */
+        resetOnSuccess?: boolean | string[];
+        resetOnError?: boolean | string[];
     }>(),
     {
         transform: (data: Record<string, FormDataConvertible>) => data,
         layout: () => AdminLayout,
         wide: false,
         requiredLegend: true,
+        resetOnSuccess: false,
+        resetOnError: false,
     },
 );
 
@@ -87,6 +96,8 @@ const validator = useFormValidation(
                 ref="formComponent"
                 :action="action"
                 :transform="transform"
+                :reset-on-success="resetOnSuccess"
+                :reset-on-error="resetOnError"
                 :novalidate="validation ? true : undefined"
                 :on-before="validation ? validator.onBefore : undefined"
                 :on-start="validation ? validator.onStart : undefined"

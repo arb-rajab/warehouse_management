@@ -52,6 +52,8 @@ function smtpForm(array $overrides = []): array
         'password' => SMTP_SETTINGS_SECRET,
         'from_address' => 'shop@example.com',
         'from_name' => 'Albaraka Holland',
+        // The signed-in staff member's own password (createStoreUser's default).
+        'current_password' => 'correct-password',
         ...$overrides,
     ];
 }
@@ -202,7 +204,7 @@ test('the server group is never mixed: a saved host never gets the .env username
 
 test('without a saved host the whole server group comes from .env, the mailer and sender from the admin', function () {
     actingAsStoreUser(createStoreStaff('smtp_settings'));
-    $this->post(route('smtp_settings.update'), ['mailer' => 'smtp', 'from_name' => 'Admin Shop'])->assertSessionHasNoErrors();
+    $this->post(route('smtp_settings.update'), ['mailer' => 'smtp', 'from_name' => 'Admin Shop', 'current_password' => 'correct-password'])->assertSessionHasNoErrors();
 
     expect(config('mail.default'))->toBe('smtp')
         ->and(config('mail.from.name'))->toBe('Admin Shop')
@@ -314,7 +316,7 @@ test('emptying a field falls back to .env, and emptying the host removes the who
     actingAsStoreUser(createStoreStaff('smtp_settings'));
     saveSmtp();
 
-    $this->post(route('smtp_settings.update'), ['password_clear' => '1'])->assertSessionHasNoErrors();
+    $this->post(route('smtp_settings.update'), ['password_clear' => '1', 'current_password' => 'correct-password'])->assertSessionHasNoErrors();
 
     expect(smtpRows())->toBe([])
         ->and(config('mail.default'))->toBe('array')

@@ -22,10 +22,12 @@ class UpdateStaffRequest extends FormRequest
         /** @var Staff $staff */
         $staff = $this->route('staff');
 
-        // Nobody changes their own role; for anyone else, only a role within the editor's permissions.
+        // Nobody changes their own role; for anyone else, only a role within the
+        // editor's permissions, or the one the account already has (keeping a
+        // role with a sensitive permission grants nothing new).
         $allowed = $staff->user_id === $this->user('store')?->id
             ? [$staff->role_id]
-            : (new StaffPrivileges($this->user('store')))->assignableRoles()->modelKeys();
+            : [...(new StaffPrivileges($this->user('store')))->assignableRoles()->modelKeys(), $staff->role_id];
 
         return $this->staffRules(editedUserId: $staff->user_id, passwordRequired: false, allowedRoleIds: $allowed);
     }

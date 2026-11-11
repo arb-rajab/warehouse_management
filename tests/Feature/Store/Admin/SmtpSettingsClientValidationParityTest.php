@@ -10,8 +10,10 @@ use Illuminate\Support\Facades\Lang;
  * with the messages in resources/js/locales/{en,ar}.json under `validation`
  * (.ai/rules/client-side-validation.md). The server stays the authority; these
  * tests fail as soon as the copy and the server disagree. `email:rfc` is listed
- * as server-only (the engine has no email rule); the request's after() checks
- * read the saved settings and are server-only by construction.
+ * as server-only (the engine has no email rule), and so is
+ * `current_password:store` (the staff member's own password, checked and
+ * throttled on the server); the request's after() checks read the saved
+ * settings and are server-only by construction.
  */
 
 /** @return array<string, mixed> */
@@ -43,8 +45,16 @@ test('the SMTP form\'s client rules mirror the server rules, in order', function
     }
 });
 
-test('only the from address\'s email:rfc rule is left to the server', function () {
-    expect(smtpClientRulesFile()['serverOnly'])->toBe(['from_address' => ['email:rfc']]);
+test('only the from address\'s email:rfc rule and the current password check are left to the server', function () {
+    expect(smtpClientRulesFile()['serverOnly'])->toBe([
+        'from_address' => ['email:rfc'],
+        'current_password' => ['current_password:store'],
+    ]);
+});
+
+test('the current password is required in the browser too, and checked on the store guard', function () {
+    expect(smtpServerRules()['current_password'])->toBe(['required', 'string', 'current_password:store'])
+        ->and(smtpClientRulesFile()['rules']['current_password'])->toBe(['required', 'string']);
 });
 
 test('every client rule token is one the browser engine checks', function () {
@@ -63,7 +73,7 @@ test('the browser messages repeat the server wording for the SMTP fields', funct
     $mirror = json_decode((string) file_get_contents(resource_path("js/locales/{$locale}.json")), true, flags: JSON_THROW_ON_ERROR)['validation'];
     $attributes = Lang::get('validation.attributes', [], $locale) + Lang::get('validation.attributes', [], 'en');
 
-    foreach (['required_with', 'string', 'integer', 'boolean', 'in', 'regex', 'min.numeric', 'max.numeric', 'max.string'] as $key) {
+    foreach (['required', 'required_with', 'string', 'integer', 'boolean', 'in', 'regex', 'min.numeric', 'max.numeric', 'max.string'] as $key) {
         expect(Arr::get($mirror['messages'], $key))->toBe(Lang::get("validation.{$key}", [], $locale), "validation.{$key} ({$locale})");
     }
 

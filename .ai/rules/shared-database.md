@@ -589,6 +589,9 @@ The remaining tables (`rows`, `cells`, `pallets`, `warehouses`, `receipts`,
 `cell_verification_reports`, `mobile_app_version_requirements`) keep bare names:
 they were specific enough to this domain that the store app had nothing like
 them — verified name-by-name against the store's 107 tables at the time.
+`admin_audit_logs` (2026-11-11, `AdminAuditLog`) is a store back-office table
+created by this app with a bare name like the store's own tables; its `user_id`
+is a store `users.id` with no foreign key on purpose (a row outlives the account).
 `tests/Feature/SharedDatabaseTableNamesTest.php` pins that inventory, and still
 should: it is what keeps the prefixed and bare sets from drifting by accident.
 A new bare-named table fails the suite until it is added there. Telescope,

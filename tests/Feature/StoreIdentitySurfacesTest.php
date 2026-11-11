@@ -135,6 +135,11 @@ dataset('identity mails', function () {
         'conversation' => ['shop.emails.conversation', fn (string $l) => ['mailLocale' => $l, 'content' => 'New message', 'sender' => 'Alice', 'details' => 'Hello', 'link' => 'https://shop.example.test/c/1']],
         'auction bid' => ['shop.emails.auction_bid', fn (string $l) => ['mailLocale' => $l, 'content' => 'You were outbid', 'link' => 'https://shop.example.test/a/1']],
         'newsletter' => ['shop.emails.newsletter', fn (string $l) => ['mailLocale' => $l, 'array' => ['content' => '<p>Offers</p>']]],
+        'SMTP settings changed' => ['shop.emails.smtp_settings_changed', fn (string $l) => [
+            'mailLocale' => $l, 'array' => ['locale' => $l], 'subjectLine' => 'SMTP settings were changed', 'actorName' => 'Alice',
+            'actorEmail' => 'alice@example.test', 'changedAt' => '2026-11-11 10:00 UTC', 'ip' => '203.0.113.7',
+            'fields' => ['Host (changed)'], 'link' => 'https://shop.example.test/temp/admin/smtp-settings',
+        ]],
     ];
 });
 

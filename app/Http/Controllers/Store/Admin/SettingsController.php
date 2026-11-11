@@ -11,8 +11,11 @@ use App\Http\Requests\Store\Admin\UpdateRecaptchaSettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateSmtpSettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateStoreSettingsRequest;
 use App\Mail\EmailManager;
+use App\Models\AdminAuditLog;
 use App\Models\BusinessSetting;
+use App\Models\StoreUser;
 use App\Services\FcmPushService;
+use App\Services\Store\SmtpSettingsChangeNotifier;
 use App\Support\StoreIntegrationIds;
 use App\Support\StoreLocale;
 use App\Support\StoreMailSettings;
@@ -179,7 +182,9 @@ class SettingsController extends Controller implements HasMiddleware
     /**
      * The SMTP settings form and where each effective value comes from. The
      * saved password and the `.env` username and password are never sent:
-     * only whether each is set.
+     * only whether each is set. `auditEntries` are the last 10 SMTP saves and
+     * refused current passwords (AdminAuditLog): who, when, the IP and the
+     * field names with how each changed; never a value or the user agent.
      */
     public function smtp(Request $request, StoreMailSettings $mail): Response
     {
@@ -210,12 +215,46 @@ class SettingsController extends Controller implements HasMiddleware
                 'from_address' => $this->shown($effective['from_address']),
                 'from_name' => $this->shown($effective['from_name']),
             ],
+            'auditEntries' => AdminAuditLog::recent([AdminAuditLog::SMTP_SETTINGS_UPDATED, AdminAuditLog::SMTP_SETTINGS_PASSWORD_FAILED])
+                ->map(fn (AdminAuditLog $entry): array => [
+                    'id' => $entry->id,
+                    'action' => $entry->action,
+                    'changed_fields' => (object) $entry->changed_fields,
+                    'user_name' => $entry->user?->name ?? $entry->user_name,
+                    'user_email' => $entry->user?->email ?? $entry->user_email,
+                    'user_deleted' => $entry->user === null,
+                    'user_id' => $entry->user_id,
+                    'ip_address' => $entry->ip_address,
+                    'created_at' => $entry->created_at?->toIso8601String(),
+                ])
+                ->all(),
         ]);
     }
 
-    public function updateSmtp(UpdateSmtpSettingsRequest $request, StoreMailSettings $mail): RedirectResponse
+    /**
+     * Saves the page once the staff member's own password checked out
+     * (UpdateSmtpSettingsRequest). When a field changed, the audit row is
+     * written in the save's transaction, then every Super Admin (and the
+     * previous from-address when that changed) is mailed through the settings
+     * as they were before; a mail that fails is logged and never undoes the
+     * save. A save that changes nothing records and mails nothing.
+     */
+    public function updateSmtp(UpdateSmtpSettingsRequest $request, StoreMailSettings $mail, SmtpSettingsChangeNotifier $notifier): RedirectResponse
     {
-        $mail->save($request->safe()->except(['password_clear']), $request->boolean('password_clear'));
+        /** @var StoreUser $actor */
+        $actor = $request->user('store');
+        $previous = $mail->effective();
+
+        $changes = $mail->save(
+            $request->safe()->except(['password_clear', 'current_password']),
+            $request->boolean('password_clear'),
+            fn (array $changes) => AdminAuditLog::record($actor, AdminAuditLog::SMTP_SETTINGS_UPDATED, $changes, $request),
+        );
+
+        if ($changes !== []) {
+            $notifier->notify($actor, $changes, $previous, $request->ip(), now());
+        }
+
         $this->flashSuccess('smtp_settings_have_been_updated_successfully');
 
         return redirect()->route('smtp_settings.index');

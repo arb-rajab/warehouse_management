@@ -9,6 +9,7 @@ import { i18n, t } from '@/lib/i18n';
 import { storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type {
+    StoreSmtpAuditEntry,
     StoreSmtpEffectiveSettings,
     StoreSmtpSettings,
 } from '@/types/store';
@@ -74,12 +75,30 @@ function effective(): StoreSmtpEffectiveSettings {
     };
 }
 
+function auditEntry(
+    overrides: Partial<StoreSmtpAuditEntry> = {},
+): StoreSmtpAuditEntry {
+    return {
+        id: 1,
+        action: 'smtp_settings.updated',
+        changed_fields: { host: 'changed', password: 'removed' },
+        user_name: 'Store Admin',
+        user_email: 'store-admin@example.com',
+        user_deleted: false,
+        user_id: 5,
+        ip_address: '203.0.113.7',
+        created_at: '2026-11-11T14:32:00+00:00',
+        ...overrides,
+    };
+}
+
 function mountPage(
     smtp: StoreSmtpSettings = saved(),
     options: {
         permissions?: string[];
         highlight?: string | null;
         attach?: boolean;
+        auditEntries?: StoreSmtpAuditEntry[];
     } = {},
 ) {
     usePageMock.mockReturnValue({
@@ -96,6 +115,7 @@ function mountPage(
             smtp,
             effective: effective(),
             highlight: options.highlight ?? null,
+            auditEntries: options.auditEntries ?? [],
         },
         attachTo: options.attach ? document.body : undefined,
     });
@@ -268,6 +288,13 @@ describe('SMTP settings page', () => {
         ) as () => boolean;
 
         expect(settingsForm(wrapper).attributes('novalidate')).toBeDefined();
+        // The current password is required on every save.
+        expect(onBefore()).toBe(false);
+        await wrapper.vm.$nextTick();
+        expect(
+            wrapper.get('#current_password').element.parentElement?.textContent,
+        ).toContain('The current password field is required.');
+        await wrapper.get('#current_password').setValue('my-own-password');
         expect(onBefore()).toBe(true);
 
         await wrapper.get('#host').setValue('smtp://evil.example.com/x');
@@ -299,13 +326,105 @@ describe('SMTP settings page', () => {
             errors: {
                 password: 'Enter the SMTP password again.',
                 from_name: 'The from name field format is invalid.',
+                current_password: 'The password is incorrect.',
             },
             processing: false,
         });
-        const text = mountPage().text();
+        const wrapper = mountPage();
+        const text = wrapper.text();
 
         expect(text).toContain('Enter the SMTP password again.');
         expect(text).toContain('The from name field format is invalid.');
+        expect(
+            wrapper.get('#current_password').element.parentElement?.textContent,
+        ).toContain('The password is incorrect.');
+    });
+
+    it('asks for the current password, required, never filled in, and empties it and the SMTP password after every submit', () => {
+        const wrapper = mountPage();
+        const field = wrapper.get('#current_password');
+
+        expect(field.attributes()).toMatchObject({
+            type: 'password',
+            name: 'current_password',
+            autocomplete: 'current-password',
+            required: '',
+            'aria-describedby': 'current_password_help',
+        });
+        expect((field.element as HTMLInputElement).value).toBe('');
+        expect(wrapper.get('label[for="current_password"]').text()).toContain(
+            t('store.settings.smtp.currentPassword'),
+        );
+        expect(wrapper.get('#current_password_help').text()).toBe(
+            t('store.settings.smtp.currentPasswordHelp'),
+        );
+        expect(wrapper.text()).toContain(t('common.requiredLegend'));
+        expect(settingsForm(wrapper).props('resetOnSuccess')).toEqual([
+            'current_password',
+            'password',
+        ]);
+        expect(settingsForm(wrapper).props('resetOnError')).toEqual([
+            'current_password',
+            'password',
+        ]);
+    });
+
+    it('lists the recent changes: when, who, the IP and which fields, never a value', () => {
+        const wrapper = mountPage(saved(), {
+            auditEntries: [
+                auditEntry(),
+                auditEntry({
+                    id: 2,
+                    action: 'smtp_settings.password_failed',
+                    changed_fields: {},
+                    ip_address: '198.51.100.4',
+                }),
+                auditEntry({
+                    id: 3,
+                    user_name: 'Former Admin',
+                    user_email: 'former@example.com',
+                    user_deleted: true,
+                    user_id: 12,
+                    changed_fields: { from_address: 'set' },
+                    ip_address: null,
+                }),
+            ],
+        });
+        const section = wrapper.get('[data-section="smtp_audit"]');
+
+        expect(section.get('h2').text()).toBe(
+            t('store.settings.smtp.audit.title'),
+        );
+        expect(section.findAll('th').map((th) => th.text())).toEqual([
+            t('store.settings.smtp.audit.when'),
+            t('store.settings.smtp.audit.who'),
+            t('store.settings.smtp.audit.ip'),
+            t('store.settings.smtp.audit.what'),
+        ]);
+        const rows = section.findAll('tbody tr');
+        expect(rows).toHaveLength(3);
+        expect(rows[0].text()).toContain('Store Admin');
+        expect(rows[0].text()).toContain('store-admin@example.com');
+        expect(rows[0].text()).toContain('203.0.113.7');
+        expect(rows[0].text()).toContain(
+            'SMTP host (changed), Password (removed)',
+        );
+        expect(rows[1].text()).toContain(
+            t('store.settings.smtp.audit.passwordFailed'),
+        );
+        expect(rows[2].text()).toContain('Former Admin');
+        expect(rows[2].text()).toContain(
+            t('store.settings.smtp.audit.deletedUser', { id: 12 }),
+        );
+        expect(rows[2].text()).toContain('From address (set)');
+        expect(rows[2].findAll('td')[2].text()).toBe('-');
+        expect(section.text()).not.toContain('Pest browser');
+    });
+
+    it('says when no change has been recorded yet', () => {
+        expect(mountPage().get('[data-section="smtp_audit"]').text()).toContain(
+            t('store.settings.smtp.audit.empty'),
+        );
     });
 
     it('offers the test email only to staff who may also send newsletters', () => {
@@ -358,6 +477,22 @@ describe('SMTP settings page', () => {
             'fromAddress',
             'fromName',
             'fromHelp',
+            'currentPassword',
+            'currentPasswordHelp',
+            'audit.title',
+            'audit.help',
+            'audit.when',
+            'audit.who',
+            'audit.ip',
+            'audit.what',
+            'audit.empty',
+            'audit.passwordFailed',
+            'audit.deletedUser',
+            'audit.fieldChange',
+            'audit.separator',
+            'audit.kinds.set',
+            'audit.kinds.changed',
+            'audit.kinds.removed',
             'testTitle',
             'testHelp',
             'effective.title',

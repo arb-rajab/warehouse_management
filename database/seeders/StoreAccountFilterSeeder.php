@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\StoreUser;
+use App\Support\StorePermissions;
 use Database\Seeders\Concerns\RefusesProduction;
 use Database\Seeders\Support\StoreFilterSeedData;
 use Database\Seeders\Support\StoreSeedExamples;
@@ -57,7 +58,11 @@ class StoreAccountFilterSeeder extends Seeder
                 }
             }
             $role = $data->row('wms_roles', 'fixture-admin-role', ['name' => 'Demonstration Store Administrator', 'guard_name' => 'store']);
-            $permissions = DB::table('wms_permissions')->where('guard_name', 'store')->pluck('id');
+            // Every store permission but the sensitive ones, which only a Super
+            // Admin grants (StorePermissions::SENSITIVE). A database seeded before
+            // keeps its grant: this seeder never revokes.
+            $permissions = DB::table('wms_permissions')->where('guard_name', 'store')
+                ->whereNotIn('name', StorePermissions::SENSITIVE)->pluck('id');
             foreach ($permissions as $permission) {
                 DB::table('wms_role_has_permissions')->insertOrIgnore(['permission_id' => $permission, 'role_id' => $role]);
             }
