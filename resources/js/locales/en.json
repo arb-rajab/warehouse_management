@@ -465,6 +465,12 @@
         "searchPh": "Search products…",
         "productsLabel": "Filter by product",
         "productsAll": "All products",
+        "warehouseLabel": "Warehouse",
+        "warehousesAll": "All warehouses",
+        "warehousesCount": "{count} warehouse | {count} warehouses",
+        "warehouseSwitch": "Choose warehouses",
+        "warehouseApply": "Apply",
+        "warehouseShowing": "Showing {name}",
         "productsSearchPh": "Find a product…",
         "productsSelected": "Selected",
         "productsDeselectAll": "Deselect all",
@@ -970,6 +976,13 @@
             "sharing": {
                 "heading": "Sharing a location",
                 "body": "Open a rack and press “Copy link”: the link ends in #slot=B5-2 and opens the 3D view in front of that slot. The T key (or the small tab at the top edge) hides the toolbars."
+            },
+            "warehouses": {
+                "heading": "Switching warehouse",
+                "body": "When there is more than one warehouse, the map's top bar shows which warehouses are on the map next to its title (on a phone, the warehouse icon). Open it, tick \"All warehouses\" or one or more warehouses, then press Apply or simply close the menu. The map reloads only those rows and keeps your view, search, filters, floor and open rack where they still exist. The choice is part of the page address, so reloading, Back and a shared link keep it.",
+                "exampleMain": "Main warehouse",
+                "exampleAnnex": "Annex",
+                "exampleCold": "Cold store"
             }
         },
         "warehouses": {

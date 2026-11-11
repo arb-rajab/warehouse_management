@@ -164,18 +164,33 @@ test('a mobile app user cannot read the warehouse map rows', function () {
     $this->getJson('/admin/warehouse-map/rows')->assertForbidden();
 });
 
-test('the warehouse map screen carries the warehouse filter and the selected warehouse labels', function () {
+test('the warehouse map screen carries the warehouse filter and every warehouse for its switcher', function () {
     actingAsAdmin();
-    $north = Warehouse::factory()->create(['name' => 'North']);
+    $default = Warehouse::firstOrCreateDefault();
+    $north = Warehouse::factory()->create(['name' => 'North', 'code' => 'NTH', 'address' => 'Dock 4']);
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $everyWarehouse = [
+        ['id' => $annex->id, 'name' => 'Annex'],
+        ['id' => $default->id, 'name' => Warehouse::DEFAULT_NAME],
+        ['id' => $north->id, 'name' => 'North'],
+    ];
 
-    $this->get("/admin/warehouse-map?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+    $this->get("/admin/warehouse-map?warehouse_ids[]={$north->id}&warehouse_ids[]={$annex->id}")->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Admin/WarehouseMap/Index')
-            ->where('filters', ['warehouse_ids' => [$north->id]])
-            ->where('filterOptions', ['warehouses' => [['id' => $north->id, 'name' => 'North']]])
+            ->where('filters', ['warehouse_ids' => [$north->id, $annex->id]])
+            ->where('warehouses', $everyWarehouse)
+            ->missing('filterOptions')
     );
     $this->get('/admin/warehouse-map')->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('filters', ['warehouse_ids' => null])->where('filterOptions', ['warehouses' => []])
+        fn (Assert $page) => $page->where('filters', ['warehouse_ids' => null])->where('warehouses', $everyWarehouse)
     );
+});
+
+test('the warehouse map screen refuses a warehouse filter that names no warehouse', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/warehouse-map?warehouse_ids[]=999999')->assertSessionHasErrors('warehouse_ids.0');
+    $this->get('/admin/warehouse-map?warehouse_ids=north')->assertSessionHasErrors('warehouse_ids');
 });
 
 test('the warehouse map rows can be narrowed to the selected warehouses, each row naming its warehouse', function () {

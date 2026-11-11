@@ -8,6 +8,7 @@ import type { ProductPicker } from './ProductPicker';
 import type { SearchBox } from './SearchBox';
 import type { Translator } from './SliceView';
 import type { StateChips } from './StateChips';
+import type { WarehouseSwitcher } from './WarehouseSwitcher';
 
 export interface ToolbarState {
     view: ViewKind;
@@ -26,9 +27,11 @@ export interface ToolbarIntents {
 }
 
 /**
- * The top bar: brand, the product search, the product picker and the chips, the 2D | 3D toggle
- * and the legend / help / theme / language buttons. On a phone the search
- * folds behind a button so the bar never wraps over the content.
+ * The top bar: brand (with the warehouse switcher when the host offers more
+ * than one warehouse), the product search, the product picker and the chips,
+ * the 2D | 3D toggle and the legend / help / theme / language buttons. On a
+ * phone the search folds behind a button so the bar never wraps over the
+ * content, and the switcher keeps only its icon.
  */
 export class Toolbar extends View {
     readonly element = el('div', {
@@ -85,6 +88,7 @@ export class Toolbar extends View {
         private readonly chips: StateChips,
         private readonly products: ProductPicker,
         private readonly helpUrl?: string,
+        private readonly warehouses?: WarehouseSwitcher,
     ) {
         super();
         this.state = slice.get();
@@ -93,9 +97,17 @@ export class Toolbar extends View {
     mount(): void {
         const brand = el(
             'div',
-            { class: 'wms-pill wms-bar wms-brand' },
+            {
+                class: `wms-pill wms-bar wms-brand${this.warehouses ? ' has-warehouses' : ''}`,
+            },
             icon('warehouse', 'wms-brand__logo'),
-            el('div', {}, this.title, this.subtitle),
+            el('div', { class: 'wms-brand__text' }, this.title, this.subtitle),
+            ...(this.warehouses
+                ? [
+                      el('span', { class: 'wms-brand__sep' }),
+                      this.warehouses.element,
+                  ]
+                : []),
         );
         const filters = el(
             'div',
@@ -149,9 +161,11 @@ export class Toolbar extends View {
         this.search.mount();
         this.products.mount();
         this.chips.mount();
+        this.warehouses?.mount();
         this.own(() => this.search.dispose());
         this.own(() => this.products.dispose());
         this.own(() => this.chips.dispose());
+        this.own(() => this.warehouses?.dispose());
 
         if (this.helpUrl) {
             this.guideLink.setAttribute('href', this.helpUrl);

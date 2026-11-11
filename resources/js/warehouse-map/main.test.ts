@@ -444,6 +444,226 @@ describe('mountWarehouseMap', () => {
         );
     });
 
+    describe('warehouses', () => {
+        const options = [
+            { id: 1, name: 'Main' },
+            { id: 2, name: 'Annex' },
+            { id: 3, name: 'Cold store' },
+        ];
+        /** Rows A and B of the four, as a filter on their warehouse loads them. */
+        const fewer = makeWarehouse(2, 6, 3);
+        const repositoryOf = (
+            result: Promise<{ warehouse: typeof warehouse; changed: boolean }>,
+        ): WarehouseRepository => ({ load: vi.fn(() => result) });
+
+        it('shows a switcher only with more than one warehouse, naming the ones shown', async () => {
+            const { container } = await mount({
+                warehouses: { options, selectedIds: [2], select: vi.fn() },
+            });
+
+            expect(
+                container.querySelector('.wms-brand .wms-warehouses__trigger')
+                    ?.textContent,
+            ).toBe('Annex');
+            handle?.dispose();
+
+            const single = await mount({
+                warehouses: {
+                    options: [options[0]],
+                    selectedIds: null,
+                    select: vi.fn(),
+                },
+            });
+
+            expect(
+                single.container.querySelector('.wms-warehouses'),
+            ).toBeNull();
+        });
+
+        it('hands the ticked warehouses to the host, which owns the URL', async () => {
+            const select = vi.fn();
+            const { container } = await mount({
+                warehouses: { options, selectedIds: [1], select },
+            });
+
+            container
+                .querySelector<HTMLButtonElement>('.wms-warehouses__trigger')!
+                .click();
+            container
+                .querySelector<HTMLButtonElement>(
+                    '.wms-warehouses__option[data-warehouse-id="3"]',
+                )!
+                .click();
+            container
+                .querySelector<HTMLButtonElement>('.wms-warehouses__apply')!
+                .click();
+
+            expect(select).toHaveBeenCalledWith([1, 3]);
+            // the map waits for the host: nothing is loaded yet
+            expect(repository.load).toHaveBeenCalledTimes(1);
+        });
+
+        it('loads the rows of other warehouses in place, keeping the search, the chips and the view', async () => {
+            vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+            const createRepository = vi.fn(() =>
+                repositoryOf(
+                    Promise.resolve({ warehouse: fewer, changed: true }),
+                ),
+            );
+            const { container, root } = await mount({
+                warehouses: { options, selectedIds: null, select: vi.fn() },
+                createRepository,
+            });
+            const input =
+                container.querySelector<HTMLInputElement>(
+                    '.wms-search__input',
+                )!;
+
+            input.value = 'rice';
+            input.dispatchEvent(new Event('input'));
+            vi.advanceTimersByTime(300);
+            container
+                .querySelectorAll<HTMLButtonElement>('.wms-chips .wms-chip')[1]
+                .click(); // full
+
+            await handle!.showWarehouses([2], '/rows?warehouse_ids[]=2');
+
+            expect(createRepository).toHaveBeenCalledWith(
+                '/rows?warehouse_ids[]=2',
+            );
+            expect(container.querySelectorAll('.wms-tile')).toHaveLength(12);
+            expect(input.value).toBe('rice');
+            expect(
+                container.querySelector('.wms-floors.has-filter'),
+            ).not.toBeNull();
+            expect(root.dataset.view).toBe('2d');
+            expect(
+                container.querySelector('.wms-warehouses__trigger')
+                    ?.textContent,
+            ).toBe('Annex');
+            expect(container.querySelector('.wms-hint')?.textContent).toContain(
+                'warehouseShowing',
+            );
+            expect(handle!.snapshot()).toMatchObject({
+                warehouseIds: [2],
+                query: 'rice',
+                filter: { terms: ['rice'], state: 'full' },
+            });
+        });
+
+        it('keeps the newest of two quick switches', async () => {
+            let resolveFirst: (value: {
+                warehouse: typeof warehouse;
+                changed: boolean;
+            }) => void = () => undefined;
+            const first = new Promise<{
+                warehouse: typeof warehouse;
+                changed: boolean;
+            }>((resolve) => (resolveFirst = resolve));
+            const createRepository = vi
+                .fn()
+                .mockReturnValueOnce(repositoryOf(first))
+                .mockReturnValueOnce(
+                    repositoryOf(
+                        Promise.resolve({ warehouse: fewer, changed: true }),
+                    ),
+                );
+            const { container } = await mount({
+                warehouses: { options, selectedIds: null, select: vi.fn() },
+                createRepository,
+            });
+
+            const slow = handle!.showWarehouses([1], '/rows?one');
+
+            await handle!.showWarehouses([2], '/rows?two');
+            resolveFirst({ warehouse: makeWarehouse(4, 8, 3), changed: true });
+            await slow;
+
+            expect(container.querySelectorAll('.wms-tile')).toHaveLength(12);
+            expect(handle!.snapshot().warehouseIds).toEqual([2]);
+        });
+
+        it('covers the old rows with a retry when the new ones cannot be loaded', async () => {
+            const retried = vi
+                .fn()
+                .mockResolvedValue({ warehouse: fewer, changed: true });
+            const createRepository = vi.fn(() => ({
+                load: vi
+                    .fn()
+                    .mockRejectedValueOnce(new Error('offline'))
+                    .mockImplementation(retried),
+            }));
+            const { container } = await mount({
+                warehouses: { options, selectedIds: null, select: vi.fn() },
+                createRepository,
+            });
+
+            await handle!.showWarehouses([2], '/rows?two');
+
+            expect(
+                container.querySelector('.wms-load.is-failed'),
+            ).not.toBeNull();
+            expect(
+                container
+                    .querySelector('.wms-load')
+                    ?.classList.contains('is-hidden'),
+            ).toBe(false);
+
+            container
+                .querySelector<HTMLButtonElement>('.wms-load button')!
+                .click();
+            await vi.waitFor(() =>
+                expect(container.querySelectorAll('.wms-tile')).toHaveLength(
+                    12,
+                ),
+            );
+            expect(
+                container
+                    .querySelector('.wms-load')
+                    ?.classList.contains('is-hidden'),
+            ).toBe(true);
+        });
+
+        it('carries what an earlier mount held into a new one (Back to other warehouses)', async () => {
+            const { container } = await mount({
+                warehouses: { options, selectedIds: [1], select: vi.fn() },
+                carry: {
+                    warehouseIds: [2],
+                    query: 'rice',
+                    filter: {
+                        terms: ['rice'],
+                        state: 'all',
+                        expiring: false,
+                        productIds: [],
+                    },
+                    floor: 2,
+                    targetId: null,
+                    selectedId: null,
+                    rack: null,
+                    rackSlotIds: [],
+                    drawerOpen: false,
+                },
+            });
+
+            expect(
+                container.querySelector<HTMLInputElement>('.wms-search__input')!
+                    .value,
+            ).toBe('rice');
+            expect(
+                container.querySelectorAll('.wms-tile.is-match').length,
+            ).toBeGreaterThan(0);
+            expect(handle!.snapshot()).toMatchObject({
+                warehouseIds: [1],
+                query: 'rice',
+                floor: 2,
+            });
+            expect(container.querySelector('.wms-hint')?.textContent).toContain(
+                'warehouseShowing',
+            );
+        });
+    });
+
     it('removes everything on dispose', async () => {
         const { container } = await mount();
 

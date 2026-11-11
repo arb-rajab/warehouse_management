@@ -100,6 +100,12 @@ export interface SlotFilter {
     productIds: readonly number[];
 }
 
+/** A warehouse the toolbar's switcher offers (`{id, name}` from the host). */
+export interface WarehouseOption {
+    id: number;
+    name: string;
+}
+
 /** One product the warehouse currently holds, as the product picker lists it. */
 export interface ProductOption {
     id: number;

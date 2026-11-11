@@ -1,36 +1,52 @@
+<script lang="ts">
+const MAP_COMPONENT = 'Admin/WarehouseMap/Index';
+
+/**
+ * What the map held when this page was last left (its `snapshot()`, a
+ * `MapCarry`). Back / Forward between two sets of warehouses mounts the page
+ * afresh (Inertia swaps history entries without keeping state), so the next
+ * mount of the map carries it over; a visit to any other page forgets it.
+ * Module scope, so it outlives the component; typed in the setup block,
+ * which owns the map's imports.
+ */
+let carried: unknown = null;
+</script>
+
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     index as warehouseMapIndex,
     rows as warehouseMapRows,
 } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import { update as updateLocale } from '@/actions/App/Http/Controllers/LocaleController';
-import FilterWarehouseSelect from '@/components/FilterWarehouseSelect.vue';
 import PalletTransferDialog from '@/components/PalletTransferDialog.vue';
 import type { PalletTransferDialogTarget } from '@/components/PalletTransferDialog.vue';
 import SuccessBanner from '@/components/SuccessBanner.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
-import { selectedCountLabel } from '@/lib/filters';
 import { i18n, isSupportedLocale, t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { productName } from '@/lib/productName';
 import type {
     PalletTransferTargets,
-    WarehouseFilterOptions,
     WarehouseFilters,
+    WarehouseSummary,
 } from '@/types/admin';
 import { mountWarehouseMap } from '@/warehouse-map/main';
 import type {
+    MapCarry,
     PalletTransferRequest,
     WarehouseMapHandle,
+    WarehouseSelection,
 } from '@/warehouse-map/main';
 import '../../../../css/warehouse-map/index.css';
 
 const props = defineProps<{
+    /** The URL's `warehouse_ids[]`: the one source of the warehouses shown. */
     filters: WarehouseFilters;
-    filterOptions: WarehouseFilterOptions;
+    /** Every warehouse, for the map's switcher. */
+    warehouses: WarehouseSummary[];
     /** Sent only on the partial reload the transfer dialog asks for. */
     transferTargets?: PalletTransferTargets;
 }>();
@@ -51,17 +67,31 @@ function rowsUrl(): string {
 }
 
 /**
- * A different selection is a different warehouse: the page is visited again
- * without keeping its state, so the map is mounted afresh on the new rows
- * rather than patched.
+ * The map's switcher asks for other warehouses: the page is visited again
+ * with them in `warehouse_ids[]` (a new history entry, so Back returns to
+ * the previous ones) and the view's fragment (`#2d` / `#3d`, which the map
+ * writes; a slot or products link is not carried to other warehouses). The
+ * page keeps its state; the changed prop then tells the map to load the new
+ * rows in place.
  */
-function onWarehouseIdsChange(ids: string[]): void {
+function visitWarehouses(ids: WarehouseSelection): void {
+    const viewHash = /^#[23]d$/.test(window.location.hash)
+        ? window.location.hash
+        : '';
+
     router.get(
-        warehouseMapIndex().url,
-        { warehouse_ids: ids },
-        { preserveState: false },
+        warehouseMapIndex.url({
+            query: ids ? { warehouse_ids: [...ids] } : {},
+        }) + viewHash,
+        {},
+        { preserveState: true, preserveScroll: true },
     );
 }
+
+watch(
+    () => (props.filters.warehouse_ids ?? []).join(','),
+    () => void map?.showWarehouses(props.filters.warehouse_ids, rowsUrl()),
+);
 
 const transferOpen = ref(false);
 const transferTarget = ref<PalletTransferDialogTarget | null>(null);
@@ -130,6 +160,9 @@ onMounted(() => {
     const current = String(i18n.global.locale.value);
     const locale = isSupportedLocale(current) ? current : 'en';
 
+    const carry = carried as MapCarry | null;
+
+    carried = null;
     map = mountWarehouseMap(container.value as HTMLElement, {
         rowsUrl: rowsUrl(),
         helpUrl: helpIndex.url(),
@@ -138,12 +171,28 @@ onMounted(() => {
         fallbackMessages: messagesOf('en'),
         switchLocale,
         transferPallet: openTransfer,
+        warehouses: {
+            options: props.warehouses,
+            selectedIds: props.filters.warehouse_ids,
+            select: visitWarehouses,
+        },
+        carry,
     });
 });
 
 onBeforeUnmount(() => {
+    carried = map?.snapshot() ?? null;
     map?.dispose();
     map = null;
+
+    // kept only for the map page itself (Back / Forward between warehouses)
+    const stop = router.on('navigate', (event) => {
+        if (event.detail.page.component !== MAP_COMPONENT) {
+            carried = null;
+        }
+
+        stop();
+    });
 });
 </script>
 
@@ -152,23 +201,14 @@ onBeforeUnmount(() => {
 
     <AdminLayout full-bleed>
         <div class="absolute inset-0 flex flex-col">
+            <!-- The shell shows no banner on a full-bleed page; a transfer's
+                 success message shows in this bar, which takes no room
+                 without one (the warehouses are switched inside the map). -->
             <div
-                class="flex shrink-0 flex-wrap items-end justify-end gap-x-4 gap-y-2 border-b border-line bg-surface px-4 py-2"
+                class="shrink-0 border-b border-line bg-surface px-4 py-2 empty:hidden [&>p]:mb-0"
+                data-testid="warehouse-map-bar"
             >
-                <!-- The shell shows no banner on a full-bleed page; a
-                     transfer's success message shows here. -->
-                <div class="min-w-0 flex-1 [&>p]:mb-0">
-                    <SuccessBanner />
-                </div>
-                <FilterWarehouseSelect
-                    id="warehouse-map-warehouse"
-                    :model-value="(filters.warehouse_ids ?? []).map(String)"
-                    :label="t('warehouses.filters.label')"
-                    :all-label="t('cellLog.filters.all')"
-                    :selected-count-label="selectedCountLabel"
-                    :selected="filterOptions.warehouses"
-                    @update:model-value="onWarehouseIdsChange"
-                />
+                <SuccessBanner />
             </div>
             <div
                 ref="container"

@@ -13,6 +13,14 @@
     .wms-brand {
         padding-inline: 12px;
     }
+
+    .wms-brand.has-warehouses {
+        padding-inline-end: 6px;
+    }
+
+    .wms-brand__sep {
+        display: none;
+    }
 }
 
 @container wms (max-width: 860px) {
@@ -48,6 +56,46 @@
 
     .wms-brand {
         padding-inline-end: 8px;
+    }
+
+    /* no room for a name: the switcher's own icon replaces the logo and opens the menu across the bar */
+    .wms-brand.has-warehouses {
+        gap: 0;
+        padding-inline: 4px;
+    }
+
+    .wms-brand.has-warehouses .wms-brand__logo,
+    .wms-brand.has-warehouses .wms-brand__text {
+        display: none;
+    }
+
+    .wms-warehouses {
+        position: static;
+    }
+
+    .wms-warehouses__trigger {
+        height: 40px;
+        border-radius: 20px;
+        gap: 4px;
+        padding-inline: 10px 8px;
+    }
+
+    .wms-warehouses__icon {
+        display: block;
+    }
+
+    .wms-warehouses__label {
+        display: none;
+    }
+
+    .wms-warehouses__panel {
+        inset-inline: 0;
+        top: calc(100% + 8px);
+        width: auto;
+    }
+
+    .wms-warehouses__option {
+        min-height: 48px;
     }
 
     .wms-search-toggle {
