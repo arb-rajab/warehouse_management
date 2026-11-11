@@ -209,9 +209,13 @@ test('commission settings retain numeric boundaries and the two compatibility sw
             type: key,
             value: 1,
         });
-        await expect(page.getByRole('status')).toHaveText(
-            'Activation setting saved.',
-        );
+        // A flash banner from the previous save can still be on screen, so
+        // match the activation message itself, not any status element.
+        await expect(
+            page
+                .getByRole('status')
+                .filter({ hasText: 'Activation setting saved.' }),
+        ).toHaveText('Activation setting saved.');
     }
 
     await page.reload();
