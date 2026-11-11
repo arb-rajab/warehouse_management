@@ -119,7 +119,9 @@
 
 
 @section('script')
-    @php($facebookAppId = \App\Support\StoreIntegrationIds::get('facebook_app_id'))
+    @php
+        $facebookAppId = \App\Support\StoreIntegrationIds::get('facebook_app_id');
+    @endphp
     @if (get_setting('facebook_comment') == 1 && $facebookAppId !== null)
         <div id="fb-root"></div>
         <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v9.0&appId={{ urlencode($facebookAppId) }}&autoLogAppEvents=1" nonce="ji6tXwgZ"></script>

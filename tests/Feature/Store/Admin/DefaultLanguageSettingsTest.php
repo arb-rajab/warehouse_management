@@ -215,7 +215,7 @@ test('the provider applies it before a queued job but not when it boots in the c
     expect(app()->runningInConsole())->toBeTrue()
         ->and(config('app.default_language'))->toBe('en');
 
-    event(new JobProcessing('database', Mockery::mock(Job::class)));
+    event(new JobProcessing('database', Mockery::mock(Job::class)->shouldIgnoreMissing()));
 
     expect(config('app.default_language'))->toBe('ar');
 });
@@ -230,11 +230,13 @@ test('consumers of the default language read the effective code', function () {
 
     // The store API's language negotiation falls back to the default only without an App-Language header.
     $seen = [];
-    $handle = fn (Request $request) => (new AppLanguage)->handle($request, function () use (&$seen) {
-        $seen[] = app()->getLocale();
+    $handle = function (Request $request) use (&$seen) {
+        return (new AppLanguage)->handle($request, function () use (&$seen) {
+            $seen[] = app()->getLocale();
 
-        return response('ok');
-    });
+            return response('ok');
+        });
+    };
     $handle(Request::create('/api/v1/store/anything'));
     $explicit = Request::create('/api/v1/store/anything');
     $explicit->headers->set('App-Language', 'en');

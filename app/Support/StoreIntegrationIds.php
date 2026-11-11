@@ -63,9 +63,11 @@ final class StoreIntegrationIds
     /** The ID saved in the admin, if any and well formed. */
     public static function stored(string $field): ?string
     {
-        $value = self::clean(get_setting($field));
+        $value = get_setting($field);
 
-        return $value !== null && preg_match(self::PATTERNS[$field], $value) === 1 ? $value : null;
+        // Not trimmed: a saved value with a stray line break or space is
+        // malformed, however the row got there, and reads as not saved.
+        return is_string($value) && preg_match(self::PATTERNS[$field], $value) === 1 ? $value : null;
     }
 
     /** The `.env` value (`TRACKING_ID`, `FACEBOOK_PIXEL_ID`, ...), if any. */

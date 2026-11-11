@@ -53,7 +53,7 @@ test('every client pattern is the one the server reads a saved ID with', functio
 
     foreach ($file['sections'] as $fields) {
         foreach ($fields as $field => $rules) {
-            expect($rules)->toContain('regex:'.StoreIntegrationIds::PATTERNS[$field], "{$field}: pattern");
+            expect(in_array('regex:'.StoreIntegrationIds::PATTERNS[$field], $rules, true))->toBeTrue("{$field}: pattern");
         }
     }
 });
@@ -66,7 +66,7 @@ test('every client rule token is one the browser engine checks', function () {
     foreach (integrationClientRulesFile()['sections'] as $section => $fields) {
         foreach ($fields as $field => $rules) {
             foreach ($rules as $rule) {
-                expect($tokens[1])->toContain(explode(':', $rule, 2)[0], "{$section}.{$field}: {$rule}");
+                expect(in_array(explode(':', $rule, 2)[0], $tokens[1], true))->toBeTrue("{$section}.{$field}: {$rule}");
             }
         }
     }

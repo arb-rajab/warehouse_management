@@ -676,5 +676,10 @@ test('the whole checklist reads its settings in one query', function () {
     $queries = collect(DB::getQueryLog());
     DB::disableQueryLog();
 
-    expect($queries->filter(fn (array $q): bool => str_contains($q['query'], 'from "business_settings"')))->toHaveCount(1);
+    // The checklist's own settings come in one query. The SMTP and default-language checks read their effective
+    // values through StoreMailSettings and StoreDefaultLanguage, each with its own single read.
+    $own = $queries->filter(fn (array $q): bool => str_contains($q['query'], 'from "business_settings"') && in_array('wallet_system', $q['bindings'], true));
+
+    expect($own)->toHaveCount(1)
+        ->and($queries->filter(fn (array $q): bool => str_contains($q['query'], 'from "business_settings"')))->toHaveCount(3);
 });

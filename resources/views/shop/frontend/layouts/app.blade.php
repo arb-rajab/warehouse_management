@@ -83,7 +83,9 @@
     </script>
 
 {{-- The IDs are the effective ones (saved in the admin, else .env: App\Support\StoreIntegrationIds); a block whose switch is on but whose ID is empty prints nothing. --}}
-@php($trackingId = \App\Support\StoreIntegrationIds::get('google_analytics_tracking_id'))
+@php
+    $trackingId = \App\Support\StoreIntegrationIds::get('google_analytics_tracking_id');
+@endphp
 @if (get_setting('google_analytics') == 1 && $trackingId !== null)
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($trackingId) }}"></script>
@@ -96,7 +98,9 @@
     </script>
 @endif
 
-@php($pixelId = \App\Support\StoreIntegrationIds::get('facebook_pixel_id'))
+@php
+    $pixelId = \App\Support\StoreIntegrationIds::get('facebook_pixel_id');
+@endphp
 @if (get_setting('facebook_pixel') == 1 && $pixelId !== null)
     <!-- Facebook Pixel Code -->
     <script>
@@ -233,7 +237,9 @@
 
 
 
-    @php($facebookPageId = \App\Support\StoreIntegrationIds::get('facebook_page_id'))
+    @php
+        $facebookPageId = \App\Support\StoreIntegrationIds::get('facebook_page_id');
+    @endphp
     @if (get_setting('facebook_chat') == 1 && $facebookPageId !== null)
         <script type="text/javascript">
             window.fbAsyncInit = function() {

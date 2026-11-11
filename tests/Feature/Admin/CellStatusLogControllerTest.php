@@ -807,6 +807,8 @@ test('the cell log loads the warehouses of its cells without a query per row', f
     };
 
     $makeLog();
+    // The first request also loads the signed-in user's roles; count from the second.
+    $countQueries();
     $few = $countQueries();
     foreach (range(1, 4) as $_) {
         $makeLog();

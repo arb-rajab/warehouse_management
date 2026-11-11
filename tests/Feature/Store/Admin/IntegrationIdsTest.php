@@ -188,16 +188,24 @@ test('an ID with a character real IDs never hold is refused before any write', f
     'double quote in the tracking ID' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', 'G-AB"12'],
     'angle brackets in the tracking ID' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', 'G-</script>'],
     'a newline in the tracking ID' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', "G-AB12CD34\nEF"],
-    'a trailing newline in the tracking ID' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', "G-AB12CD34EF\n"],
+    'a carriage return in the tracking ID' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', "G-AB12\rCD34EF"],
     'a space in the tracking ID' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', 'G-AB 12'],
     'a tracking ID with no prefix' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', 'AB12CD34EF'],
     'a too long tracking ID' => ['google_analytics.update', 'analytics_tools_configuration', 'google_analytics', 'google_analytics_tracking_id', 'G-'.str_repeat('A', 40)],
     'letters in the pixel ID' => ['google_analytics.update', 'analytics_tools_configuration', 'facebook_pixel', 'facebook_pixel_id', '12345abc'],
     'quotes in the pixel ID' => ['google_analytics.update', 'analytics_tools_configuration', 'facebook_pixel', 'facebook_pixel_id', "123456'"],
     'a pixel ID that is too short' => ['google_analytics.update', 'analytics_tools_configuration', 'facebook_pixel', 'facebook_pixel_id', '1234'],
-    'a newline after the page ID' => ['facebook_chat.update', 'facebook_chat', 'facebook_chat', 'facebook_page_id', "1234567890\n"],
+    'a newline inside the page ID' => ['facebook_chat.update', 'facebook_chat', 'facebook_chat', 'facebook_page_id', "12345\n67890"],
     'a negative app ID' => ['facebook-comment.update', 'facebook_comment', 'facebook_comment', 'facebook_app_id', '-123456'],
 ]);
+
+test('a trailing line break is trimmed away before validation, so only the clean ID is saved', function () {
+    actingAsStoreUser(createStoreStaff('analytics_tools_configuration'));
+
+    $this->post(route('google_analytics.update'), ['settings' => ['google_analytics' => 1], 'google_analytics_tracking_id' => "G-AB12CD34EF\n"])->assertSessionHasNoErrors();
+
+    expect(integrationRows())->toBe(['google_analytics_tracking_id' => 'G-AB12CD34EF']);
+});
 
 test('a page refuses another page\'s ID and unknown fields', function (string $update, string $permission, string $toggle, string $foreign) {
     $this->withoutMiddleware(BlockMaliciousRequests::class);

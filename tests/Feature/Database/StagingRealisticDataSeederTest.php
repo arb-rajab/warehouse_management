@@ -92,7 +92,8 @@ test('resizing keeps every pallet and every logged cell instead of discarding hi
         ->whereNotIn('id', CellVerificationReport::query()->select('cell_id'))
         ->pluck('id');
 
-    $palletIdsBefore = Pallet::pluck('id', 'cell_id');
+    // Received but unplaced pallets (ReceiptSeeder) have no cell; only the placed ones are compared.
+    $palletIdsBefore = Pallet::whereNotNull('cell_id')->pluck('id', 'cell_id');
 
     (new StagingRealisticDataSeeder)->run();
 

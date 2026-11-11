@@ -53,7 +53,7 @@ test('every client rule token is one the browser engine checks', function () {
 
     foreach (recaptchaClientRulesFile()['rules'] as $field => $rules) {
         foreach ($rules as $rule) {
-            expect($tokens[1])->toContain(explode(':', $rule, 2)[0], "{$field}: {$rule}");
+            expect(in_array(explode(':', $rule, 2)[0], $tokens[1], true))->toBeTrue("{$field}: {$rule}");
         }
     }
 });

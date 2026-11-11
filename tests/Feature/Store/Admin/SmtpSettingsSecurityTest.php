@@ -354,7 +354,7 @@ test('the previous from-address is mailed only when the from address changed, fr
     Mail::assertSent(SmtpSettingsChangedMail::class, 1);
 
     Mail::fake();
-    $this->post(route('smtp_settings.update'), secureSmtpForm(['from_address' => 'new@example.com']))->assertSessionHasNoErrors();
+    $this->post(route('smtp_settings.update'), secureSmtpForm(['from_name' => 'Renamed', 'from_address' => 'new@example.com']))->assertSessionHasNoErrors();
     Mail::assertSent(SmtpSettingsChangedMail::class, fn (SmtpSettingsChangedMail $mail) => $mail->hasTo('shop@example.com')
         && $mail->array['from_address'] === 'shop@example.com' && $mail->array['changes'] === ['from_address' => 'changed']);
 });

@@ -133,7 +133,10 @@ final class StoreDefaultLanguage
 
     private function read(): ?string
     {
-        return $this->clean(BusinessSetting::query()->where('type', self::KEY)->whereNull('lang')->orderBy('id')->value('value'));
+        $value = BusinessSetting::query()->where('type', self::KEY)->whereNull('lang')->orderBy('id')->value('value');
+
+        // Not trimmed: a saved code with a stray line break is malformed (valid()).
+        return is_string($value) && $value !== '' ? $value : null;
     }
 
     private function valid(string $value): ?string
