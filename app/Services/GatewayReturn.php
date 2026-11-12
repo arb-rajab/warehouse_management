@@ -93,11 +93,19 @@ class GatewayReturn
     /**
      * Credit `$pending` once, when the gateway's server reported exactly the
      * converted amount recorded at the start, to the cent, in its currency. A
-     * mismatch leaves the row pending (the reference is not used up).
+     * mismatch leaves the row pending (the reference is not used up). A gateway
+     * that reports no currency at all (`$reportedCurrency` null or blank) is
+     * compared in the recorded currency; a reported one must equal it.
      */
-    public function complete(GatewayPayment $pending, float $reportedAmount, string $reportedCurrency, ?string $details): RedirectResponse
+    public function complete(GatewayPayment $pending, float $reportedAmount, ?string $reportedCurrency, ?string $details): RedirectResponse
     {
-        if (strtoupper(trim($reportedCurrency)) !== (string) $pending->gateway_currency
+        $reportedCurrency = trim((string) $reportedCurrency);
+
+        if ($reportedCurrency === '') {
+            $reportedCurrency = (string) $pending->gateway_currency;
+        }
+
+        if (strtoupper($reportedCurrency) !== (string) $pending->gateway_currency
             || ! self::sameCents($reportedAmount, (float) $pending->gateway_amount)) {
             return $this->refuse('amount_mismatch', $pending->gateway, $pending->reference, $pending);
         }

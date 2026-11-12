@@ -170,11 +170,15 @@ function amOrder(StoreUser $customer, float $total): CombinedOrder
     return $combined;
 }
 
-function amSearchServer(string $amount, string $status = 'Successful', string $tranId = 'WEB-TRAN-1', string $currency = 'BDT'): void
+/** `$currency` null leaves the currency field out of aamarpay's answer altogether. */
+function amSearchServer(string $amount, string $status = 'Successful', string $tranId = 'WEB-TRAN-1', ?string $currency = 'BDT'): void
 {
     Http::swap(new Factory);
     Http::preventStrayRequests();
-    Http::fake(['*trxcheck/request.php*' => Http::response(['pay_status' => $status, 'mer_txnid' => $tranId, 'amount' => $amount, 'currency' => $currency])]);
+    Http::fake(['*trxcheck/request.php*' => Http::response(array_filter(
+        ['pay_status' => $status, 'mer_txnid' => $tranId, 'amount' => $amount, 'currency' => $currency],
+        fn ($value) => $value !== null,
+    ))]);
 }
 
 /** @return list<string> */
@@ -221,6 +225,54 @@ test('a payment that is not the recorded converted amount, not in its currency, 
     'a cent over' => ['3915.01', 'Successful', 'BDT'],
     'the right figure in another currency' => ['3915.00', 'Successful', 'USD'],
     'the right figure, not paid' => ['3915.00', 'Failed', 'BDT'],
+]);
+
+test('an answer with no currency field is compared in the recorded currency and credits the exact amount once', function () {
+    amCurrencies(130.5);
+    $customer = createStoreUser('customer');
+    $combined = amOrder($customer, 30);
+    pendingGatewayReturn('aamarpay', 'WEB-TRAN-1', $customer, 'cart_payment', 30, 3915.0, 'BDT', $combined->id);
+    amSearchServer('3915.00', currency: null);
+
+    amReturn($this)->assertStatus(303);
+    amReturn($this)->assertStatus(303);
+
+    expect(amStatuses($combined))->toBe(['paid'])
+        ->and(GatewayPayment::query()->whereNotNull('completed_at')->count())->toBe(1);
+});
+
+test('an answer with no currency field still has to carry the recorded amount, and the reference stays pending', function (string $amount) {
+    amCurrencies(130.5);
+    $customer = createStoreUser('customer');
+    $combined = amOrder($customer, 30);
+    pendingGatewayReturn('aamarpay', 'WEB-TRAN-1', $customer, 'cart_payment', 30, 3915.0, 'BDT', $combined->id);
+    amSearchServer($amount, currency: null);
+
+    amReturn($this)->assertRedirect(route('gateway_payment.outcome', ['outcome' => 'unverified']));
+
+    expect(amStatuses($combined))->toBe(['unpaid'])
+        ->and(GatewayPayment::query()->whereNull('completed_at')->count())->toBe(1);
+})->with([
+    'the unconverted 30.00' => ['30.00'],
+    'a cent short' => ['3914.99'],
+    'a cent over' => ['3915.01'],
+]);
+
+test('a currency_merchant field is read when currency is absent, and must be the recorded currency', function (string $currency, string $expected) {
+    amCurrencies(130.5);
+    $customer = createStoreUser('customer');
+    $combined = amOrder($customer, 30);
+    pendingGatewayReturn('aamarpay', 'WEB-TRAN-1', $customer, 'cart_payment', 30, 3915.0, 'BDT', $combined->id);
+    Http::swap(new Factory);
+    Http::preventStrayRequests();
+    Http::fake(['*trxcheck/request.php*' => Http::response(['pay_status' => 'Successful', 'mer_txnid' => 'WEB-TRAN-1', 'amount' => '3915.00', 'currency_merchant' => $currency])]);
+
+    amReturn($this);
+
+    expect(amStatuses($combined))->toBe([$expected]);
+})->with([
+    'the recorded currency' => ['BDT', 'paid'],
+    'another currency' => ['USD', 'unpaid'],
 ]);
 
 test('a wallet top-up is credited the recorded amount in the store currency, once', function () {

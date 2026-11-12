@@ -118,8 +118,9 @@ class AamarpayController extends Controller
      * route runs without one: routes/shop-gateway-returns.php), and the post used to be trusted
      * for everything: the payment type, the order (`opt_b`) and the top-up amount (`opt_c`).
      * Only `mer_txnid` is read now: it must name a pending aamarpay payment pay() recorded,
-     * aamarpay's search API must report it paid, and the reported amount and currency must be
-     * the recorded converted amount to the cent. The recorded payer is credited, once.
+     * aamarpay's search API must report it paid, and the reported amount must be the recorded
+     * converted amount to the cent, in the recorded currency (the reported one, when it reports one). The recorded payer is
+     * credited, once.
      */
     public function success(Request $request){
         $returns = app(GatewayReturn::class);
@@ -144,8 +145,12 @@ class AamarpayController extends Controller
             return $returns->refuse('not_verified', 'aamarpay', $tran_id, $pending);
         }
 
-        // The search API names the charge currency `currency` (`currency_merchant` on some accounts).
-        $reportedCurrency = (string) ($transaction['currency'] ?? $transaction['currency_merchant'] ?? '');
+        // The search API may name the charge currency `currency` (`currency_merchant` on some
+        // accounts); it is unconfirmed that it does. A reported currency must be the recorded one;
+        // none at all is compared in the recorded currency (aamarpay settles in BDT only), and
+        // the amount must still be the recorded one to the cent.
+        $reportedCurrency = $transaction['currency'] ?? $transaction['currency_merchant'] ?? null;
+        $reportedCurrency = is_scalar($reportedCurrency) ? (string) $reportedCurrency : null;
 
         return $returns->complete($pending, (float) ($transaction['amount'] ?? 0), $reportedCurrency, json_encode($transaction));
     }
