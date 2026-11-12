@@ -2,8 +2,10 @@
 
 use App\Models\Category;
 use App\Models\ManualPaymentMethod;
+use App\Models\PaymentGatewaySetting;
 use App\Models\StoreUser;
 use App\Services\Store\SetupChecklist;
+use App\Support\StorePaymentGateways;
 use App\Support\StorePermissions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -59,14 +61,14 @@ beforeEach(function () {
 
 afterEach(fn () => @unlink(storage_path('framework/testing/setup-checklist-fcm.json')));
 
-test('a user holding every permission gets the eleven checks in order, and an empty shop has only the cash check done', function () {
+test('a user holding every permission gets the twelve checks in order, and an empty shop has only the cash and gateway checks done', function () {
     $items = app(SetupChecklist::class)->items(setupChecklistStaff());
 
     expect(array_column($items, 'key'))->toBe([
-        'smtp', 'paymentMethod', 'cashOnDeliveryProducts', 'shipping', 'firebasePush', 'googleMaps',
+        'smtp', 'paymentMethod', 'paymentGateways', 'cashOnDeliveryProducts', 'shipping', 'firebasePush', 'googleMaps',
         'currency', 'vatTax', 'catalog', 'siteBasics', 'language',
     ])->and(array_column($items, 'done', 'key'))->toBe([
-        'smtp' => false, 'paymentMethod' => false, 'cashOnDeliveryProducts' => true, 'shipping' => false,
+        'smtp' => false, 'paymentMethod' => false, 'paymentGateways' => true, 'cashOnDeliveryProducts' => true, 'shipping' => false,
         'firebasePush' => false, 'googleMaps' => false, 'currency' => false, 'vatTax' => false,
         'catalog' => false, 'siteBasics' => false, 'language' => false,
     ]);
@@ -77,6 +79,7 @@ test('each item carries every permission needed to fix it', function () {
 
     expect(array_column($items, 'permissions', 'key'))->toBe([
         'smtp' => ['smtp_settings'], 'paymentMethod' => ['features_activation'],
+        'paymentGateways' => ['payment_methods_configurations'],
         'cashOnDeliveryProducts' => ['show_all_products'], 'shipping' => ['shipping_configuration'],
         'firebasePush' => ['google_firebase_setting'], 'googleMaps' => ['google_map_setting'],
         'currency' => ['currency_setup'], 'vatTax' => ['vat_&_tax_setup'], 'catalog' => ['show_all_products'],
@@ -136,6 +139,7 @@ test('an empty shop explains every check with its exact missing setting', functi
     expect($reasons)->toBe([
         'smtp' => ['smtp.username_and_password'],
         'paymentMethod' => ['paymentMethod.none_enabled'],
+        'paymentGateways' => [],
         'cashOnDeliveryProducts' => [],
         'shipping' => ['shipping.type_unset'],
         'firebasePush' => ['firebasePush.project_unset', 'firebasePush.credentials_missing'],
@@ -185,6 +189,7 @@ test('smtp is done as soon as either credential is set, as the dashboard warning
 // paymentMethod
 
 test('a payment method is done when the app can list one', function (string $setting, string|int $value, bool $done) {
+    config(['store.enabled_payment_gateways' => ['iyzico', 'bkash', 'nagad', 'sslcommerz']]);
     storeSetting($setting, $value);
 
     expect(setupChecklistDone('paymentMethod'))->toBe($done);
@@ -198,6 +203,81 @@ test('a payment method is done when the app can list one', function (string $set
     'a gateway switched off' => ['bkash', 0, false],
     'an unrelated setting' => ['site_name', 1, false],
 ]);
+
+test('a gateway switched on in Features activation counts only while it is enabled, as the app lists it only then', function () {
+    storeSetting('bkash', 1);
+
+    config(['store.enabled_payment_gateways' => []]);
+    expect(setupChecklistDone('paymentMethod'))->toBeFalse();
+
+    config(['store.enabled_payment_gateways' => ['bkash']]);
+    expect(setupChecklistDone('paymentMethod'))->toBeTrue();
+
+    // Chosen on the Payment methods page with bKash off: the admin list wins over .env.
+    PaymentGatewaySetting::query()->create(['gateway' => 'bkash', 'field' => 'enabled', 'value' => '0']);
+    StorePaymentGateways::forget();
+    expect(setupChecklistDone('paymentMethod'))->toBeFalse();
+});
+
+// paymentGateways
+
+test('an enabled gateway names every required field it lacks and links to that field', function () {
+    config([
+        'store.enabled_payment_gateways' => ['bkash', 'payhere'],
+        'services.bkash.app_key' => 'APPKEY', 'services.bkash.app_secret' => null,
+        'services.bkash.username' => 'user', 'services.bkash.password' => null, 'services.bkash.currency' => 'BDT',
+        'services.payhere.merchant_id' => '1211149', 'services.payhere.secret' => 'secret',
+    ]);
+
+    $item = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))->firstWhere('key', 'paymentGateways');
+
+    expect($item['done'])->toBeFalse()
+        ->and($item['reasons'])->toBe([
+            ['key' => 'paymentGateways.bkash_app_secret', 'route' => 'payment_method.index', 'highlight' => 'bkash.app_secret'],
+            ['key' => 'paymentGateways.bkash_password', 'route' => 'payment_method.index', 'highlight' => 'bkash.password'],
+        ]);
+});
+
+test('the gateway check reads the effective values: a group saved in the admin replaces .env', function () {
+    config([
+        'store.enabled_payment_gateways' => ['sslcommerz'],
+        'services.sslcommerz.store_id' => 'env-store', 'services.sslcommerz.store_password' => 'env-pass', 'services.sslcommerz.currency' => 'BDT',
+    ]);
+    expect(setupChecklistReasons('paymentGateways'))->toBe([]);
+
+    // The store id is saved in the admin, so the .env password no longer counts.
+    PaymentGatewaySetting::query()->create(['gateway' => 'sslcommerz', 'field' => 'store_id', 'value' => 'admin-store']);
+    PaymentGatewaySetting::query()->create(['gateway' => 'sslcommerz', 'field' => 'currency', 'value' => 'BDT']);
+    StorePaymentGateways::forget();
+    expect(setupChecklistReasons('paymentGateways'))->toBe(['paymentGateways.sslcommerz_store_password']);
+});
+
+test('a disabled gateway is not checked, whatever it lacks', function () {
+    config(['store.enabled_payment_gateways' => [], 'services.bkash.app_key' => null]);
+
+    expect(setupChecklistReasons('paymentGateways'))->toBe([]);
+});
+
+test('every required field of a gateway with a payment flow has a checklist target on the Payment methods page', function () {
+    foreach (StorePaymentGateways::GATEWAYS as $gateway => $spec) {
+        foreach ($spec['fields'] as $field => $fieldSpec) {
+            $key = "paymentGateways.{$gateway}_{$field}";
+
+            if ($spec['flow'] && $fieldSpec['required']) {
+                expect(SetupChecklist::TARGETS[$key] ?? null)->toBe(['payment_method.index', "{$gateway}.{$field}"], $key);
+            } else {
+                expect(SetupChecklist::TARGETS)->not->toHaveKey($key);
+            }
+        }
+    }
+});
+
+test('the gateway check is listed for staff who may configure payment gateways only', function () {
+    $checklist = app(SetupChecklist::class);
+
+    expect(array_column($checklist->items(createStoreStaff('payment_methods_configurations')), 'key'))->toBe(['paymentGateways'])
+        ->and(array_column($checklist->items(createStoreStaff('features_activation')), 'key'))->not->toContain('paymentGateways');
+});
 
 test('offline payment counts only when its addon is on and a manual method exists', function (bool $addon, bool $method, bool $done) {
     if ($addon) {
@@ -611,6 +691,7 @@ test('the payment check is listed for staff who can switch payment methods on, n
 
 test('items without a permission are not counted as to do or as total', function () {
     $checklist = app(SetupChecklist::class);
+    config(['store.enabled_payment_gateways' => ['bkash']]);
     storeSetting('bkash', 1);
     $user = createStoreStaff('features_activation', 'smtp_settings');
 

@@ -1073,6 +1073,7 @@ export interface StoreDashboardProps {
 export type StoreSetupChecklistKey =
     | 'smtp'
     | 'paymentMethod'
+    | 'paymentGateways'
     | 'cashOnDeliveryProducts'
     | 'shipping'
     | 'firebasePush'
