@@ -3,6 +3,7 @@
 namespace App\Utility;
 
 use App\Services\GatewayCurrency;
+use App\Support\StorePaymentGateways;
 use Cache;
 
 class PayhereUtility
@@ -53,11 +54,11 @@ class PayhereUtility
 
         $hash = strtoupper(
             md5(
-                config('services.payhere.merchant_id').
+                StorePaymentGateways::get('payhere', 'merchant_id').
                 $order_id.
                 number_format($payhere_amount, 2, '.', '').
                 $currency.
-                strtoupper(md5(config('services.payhere.secret')))
+                strtoupper(md5(StorePaymentGateways::get('payhere', 'secret')))
             )
         );
         return $hash;

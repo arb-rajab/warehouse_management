@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\StoreUser;
+use App\Support\StorePaymentGateways;
 use Illuminate\Support\Facades\Log;
 use Iyzipay\Model\Address;
 use Iyzipay\Model\BasketItem;
@@ -26,8 +27,8 @@ class IyzicoPayments
     public function options(): Options
     {
         $options = new Options;
-        $options->setApiKey((string) config('services.iyzico.api_key'));
-        $options->setSecretKey((string) config('services.iyzico.secret_key'));
+        $options->setApiKey((string) StorePaymentGateways::get('iyzico', 'api_key'));
+        $options->setSecretKey((string) StorePaymentGateways::get('iyzico', 'secret_key'));
         $options->setBaseUrl(get_setting('iyzico_sandbox') == 1 ? 'https://sandbox-api.iyzipay.com' : 'https://api.iyzipay.com');
 
         return $options;

@@ -39,8 +39,10 @@ return [
 
     // Merged from the legacy store's config/services.php (see
     // .ai/rules/legacy-albaraka-holland.md sections 0.3 and 1). 'stripe' and
-    // 'paytm-wallet' are inert: both gateway packages were removed in the
-    // legacy repo's own phase-1 pruning, and nothing here reads these keys.
+    // 'paytm-wallet' have no payment flow: both gateway packages were removed in
+    // the legacy repo's own phase-1 pruning. Their keys can be stored on the
+    // Payment methods page (App\Support\StorePaymentGateways), ready for an
+    // integration; nothing charges with them.
 
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
@@ -56,6 +58,8 @@ return [
         'model' => StoreUser::class,
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
+        // Empty: the store's own currency.
+        'currency' => env('STRIPE_CURRENCY'),
     ],
 
     'google' => [
@@ -162,8 +166,9 @@ return [
         'store_password' => env('SSLCZ_STORE_PASSWD'),
     ],
 
-    // Every gateway credential is read from here with config(), never with env(): production runs
-    // `artisan config:cache`, after which env() outside config/ returns null and the gateway has no keys.
+    // Every gateway credential is read through App\Support\StorePaymentGateways::get(), which returns the
+    // values saved on the Payment methods page and falls back to these (never env() outside config/:
+    // production runs `artisan config:cache`, after which env() returns null).
     'bkash' => [
         'currency' => env('BKASH_CURRENCY', 'BDT'),
         'app_key' => env('BKASH_CHECKOUT_APP_KEY'),

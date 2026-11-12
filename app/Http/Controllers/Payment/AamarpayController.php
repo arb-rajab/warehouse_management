@@ -7,6 +7,7 @@ use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use Auth;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
@@ -53,7 +54,7 @@ class AamarpayController extends Controller
         $tran_id = Str::random(20);
 
         $fields = [
-            'store_id' => config('services.aamarpay.store_id'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
+            'store_id' => StorePaymentGateways::get('aamarpay', 'store_id'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
             'amount' => GatewayCurrency::format($converted), //transaction amount
             'payment_type' => 'VISA', //no need to change
             'currency' => $currency->chargeCode(),
@@ -83,7 +84,7 @@ class AamarpayController extends Controller
             'opt_b' => Session::get('combined_order_id'),
             'opt_c' => json_encode(Session::get('payment_data')),
             'opt_d' => '',
-            'signature_key' => config('services.aamarpay.signature_key'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature
+            'signature_key' => StorePaymentGateways::get('aamarpay', 'signature_key'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature
         ];
 
         try {
@@ -156,8 +157,8 @@ class AamarpayController extends Controller
     {
         $response = Http::timeout(30)->get($this->baseUrl().'api/v1/trxcheck/request.php', [
             'request_id' => $tran_id,
-            'store_id' => config('services.aamarpay.store_id'),
-            'signature_key' => config('services.aamarpay.signature_key'),
+            'store_id' => StorePaymentGateways::get('aamarpay', 'store_id'),
+            'signature_key' => StorePaymentGateways::get('aamarpay', 'signature_key'),
             'type' => 'json',
         ]);
 

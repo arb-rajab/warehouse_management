@@ -8,6 +8,7 @@ use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -42,7 +43,7 @@ class VoguepayController extends Controller
         Session::put('voguepay_merchant_ref', $merchantRef);
 
         return view('shop.frontend.voguepay.pay', [
-            'merchantId' => get_setting('voguepay_sandbox') == 1 ? 'demo' : config('services.voguepay.merchant_id'),
+            'merchantId' => get_setting('voguepay_sandbox') == 1 ? 'demo' : StorePaymentGateways::get('voguepay', 'merchant_id'),
             'total' => GatewayCurrency::format($converted),
             'currency' => $currency->chargeCode(),
             'merchantRef' => $merchantRef,

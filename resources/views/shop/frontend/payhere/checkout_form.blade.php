@@ -1,7 +1,7 @@
 
 
     <form style="display: none" method="POST" action="{{ \App\Utility\PayhereUtility::get_action_url() }}" id="payhere-checkout-form">
-        <input type="hidden" name="merchant_id" value="{{ config('services.payhere.merchant_id') }}">
+        <input type="hidden" name="merchant_id" value="{{ \App\Support\StorePaymentGateways::get('payhere', 'merchant_id') }}">
         <!-- Replace your Merchant ID -->
         <input type="hidden" name="return_url" value="{{ route('payhere.checkout.return') }}">
         <input type="hidden" name="cancel_url" value="{{ route('payhere.checkout.cancel') }}">

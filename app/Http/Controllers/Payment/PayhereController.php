@@ -8,6 +8,7 @@ use App\Models\CustomerPackage;
 use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use App\Utility\PayhereUtility;
 use Auth;
 use Illuminate\Http\Request;
@@ -177,18 +178,19 @@ class PayhereController extends Controller
      * secret, and reports a completed payment.
      *
      * The three notify handlers each rebuilt the signature from
-     * config('services.payhere.secret'), which is null once config is cached, so the
+     * env('PAYHERE_SECRET'), which is null once config is cached, so the
      * "secret" was empty and anyone could sign a payment-complete call for any
      * order. They also took the merchant id from the request. With no secret or
-     * merchant id configured this refuses everything, and it compares in
+     * merchant id configured (StorePaymentGateways: saved on the Payment
+     * methods page, else `.env`) this refuses everything, and it compares in
      * constant time.
      *
      * @param  array<string, mixed>  $post
      */
     private static function notificationIsAuthentic(array $post): bool
     {
-        $secret = (string) config('services.payhere.secret');
-        $merchantId = (string) config('services.payhere.merchant_id');
+        $secret = (string) StorePaymentGateways::get('payhere', 'secret');
+        $merchantId = (string) StorePaymentGateways::get('payhere', 'merchant_id');
 
         if ($secret === '' || $merchantId === '') {
             return false;

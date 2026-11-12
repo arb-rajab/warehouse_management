@@ -2,6 +2,7 @@
 
 namespace App\Utility;
 
+use App\Support\StorePaymentGateways;
 use Illuminate\Support\Facades\Http;
 
 class NgeniusUtility
@@ -15,12 +16,12 @@ class NgeniusUtility
     /** 'live' only when NGENIUS_MODE says so; everything else is N-Genius's UAT test environment. */
     public static function getMode()
     {
-        return strtolower((string) config('services.ngenius.mode')) === 'live' ? 'live' : 'uat';
+        return strtolower((string) StorePaymentGateways::get('ngenius', 'mode')) === 'live' ? 'live' : 'uat';
     }
 
     public static function getAccessToken()
     {
-        $apikey = config('services.ngenius.api_key'); // set your service account API key (example only)
+        $apikey = StorePaymentGateways::get('ngenius', 'api_key'); // set your service account API key (example only)
         $idServiceURL = self::getUrl('identity');                   // set the identity service URL (example only)
 
         $tokenHeaders = ["Authorization: Basic $apikey", "Content-Type: application/x-www-form-urlencoded"];
@@ -51,7 +52,7 @@ class NgeniusUtility
         $order = new \stdClass();
         $order->action = 'SALE'; // authorize and capture in one step
         $order->amount = new \stdClass();
-        $order->amount->currencyCode = $currencyCode !== '' ? $currencyCode : strtoupper((string) config('services.ngenius.currency'));
+        $order->amount->currencyCode = $currencyCode !== '' ? $currencyCode : strtoupper((string) StorePaymentGateways::currency('ngenius'));
         $order->amount->value = $amount; // minor units (1000 = 10.00)
         $order->language = 'en'; // payment page language ('en' or 'ar' only)
         $order->merchantOrderReference = time();
@@ -59,7 +60,7 @@ class NgeniusUtility
         $order->merchantAttributes->redirectUrl = $callback_url; // where N-Genius returns the customer to
         $order = json_encode($order);
 
-        $outletRef = config('services.ngenius.outlet_id');
+        $outletRef = StorePaymentGateways::get('ngenius', 'outlet_id');
         $txnServiceURL = self::getUrl('gateway')."/transactions/outlets/$outletRef/orders";
         $access_token = self::getAccessToken();
 
@@ -88,7 +89,7 @@ class NgeniusUtility
      */
     public static function retrieve_order($orderRef)
     {
-        $outletRef = config('services.ngenius.outlet_id'); // set your outlet reference/ID value here (example only)
+        $outletRef = StorePaymentGateways::get('ngenius', 'outlet_id'); // set your outlet reference/ID value here (example only)
         $orderCheckURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders/" . rawurlencode($orderRef);
         $access_token = self::getAccessToken();
 
