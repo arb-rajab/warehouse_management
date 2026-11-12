@@ -43,7 +43,7 @@ class GatewayPayment extends Model
      * Pending rows that expired more than 90 days ago. A completed row is never
      * pruned: it is what stops a reference being credited twice.
      *
-     * @return Builder<self>
+     * @return Builder<static>
      */
     public function prunable(): Builder
     {

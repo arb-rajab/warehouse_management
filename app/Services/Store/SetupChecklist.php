@@ -327,7 +327,7 @@ class SetupChecklist
         $reasons = [];
 
         foreach (StorePaymentGateways::enabled() as $gateway) {
-            if (! isset(StorePaymentGateways::GATEWAYS[$gateway]) || ! StorePaymentGateways::GATEWAYS[$gateway]['flow']) {
+            if (! isset(StorePaymentGateways::gateways()[$gateway]) || ! StorePaymentGateways::gateways()[$gateway]['flow']) {
                 continue;
             }
 

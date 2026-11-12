@@ -56,7 +56,8 @@ class PaymentGatewaySettingsChangedMail extends LocalizedMail
         }
 
         [$gateway, $field] = array_pad(explode('.', $key, 2), 2, '');
-        $name = StorePaymentGateways::GATEWAYS[$gateway]['name'] ?? $gateway;
+        $name = StorePaymentGateways::gateways()[$gateway]['name'] ?? $gateway;
+        $name = (string) $name;
 
         // A switch reads "bKash (enabled)": the kind already says what happened.
         if ($field === StorePaymentGateways::ENABLED) {

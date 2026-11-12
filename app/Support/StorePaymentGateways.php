@@ -33,6 +33,8 @@ use Throwable;
  * Secrets are stored encrypted with the application key and decrypted only by
  * get(). Nothing is laid over config(): consumers read get(), so no console
  * boot, `config:cache` or job payload can hold a decrypted secret.
+ *
+ * @phpstan-type GatewaySpec array{name: string, identifying: string, flow: bool, offered: string|null, mode: array<string, string>, fixed_currency?: string, tied: list<string>, fields: array<string, array<string, mixed>>}
  */
 final class StorePaymentGateways
 {
@@ -212,10 +214,25 @@ final class StorePaymentGateways
     /** @var array<string, true> secrets already reported as unreadable in this process */
     private static array $warned = [];
 
-    /** The gateways that have a payment flow in the store. */
+    /**
+     * Every gateway the page edits (GATEWAYS), typed for static analysis: the
+     * constant's own literal type differs from gateway to gateway.
+     *
+     * @return array<string, GatewaySpec>
+     */
+    public static function gateways(): array
+    {
+        return self::GATEWAYS;
+    }
+
+    /**
+     * The gateways that have a payment flow in the store.
+     *
+     * @return list<string>
+     */
     public static function withFlow(): array
     {
-        return array_keys(array_filter(self::GATEWAYS, fn (array $gateway): bool => $gateway['flow']));
+        return array_keys(array_filter(self::gateways(), fn (array $gateway): bool => $gateway['flow']));
     }
 
     /**
@@ -276,7 +293,7 @@ final class StorePaymentGateways
      */
     public static function currency(string $gateway): string
     {
-        $value = isset(self::GATEWAYS[$gateway]['fields']['currency'])
+        $value = isset(self::gateways()[$gateway]['fields']['currency'])
             ? self::get($gateway, 'currency')
             : config("services.$gateway.currency");
 
@@ -449,7 +466,7 @@ final class StorePaymentGateways
             $before = self::snapshot();
             $chosenHere = ($data['enabled_source'] ?? 'env') === 'admin';
 
-            foreach (self::GATEWAYS as $gateway => $spec) {
+            foreach (self::gateways() as $gateway => $spec) {
                 $input = is_array($data['gateways'][$gateway] ?? null) ? $data['gateways'][$gateway] : [];
 
                 self::saveGroup($gateway, $spec, $input, $userId);
@@ -486,11 +503,11 @@ final class StorePaymentGateways
     /**
      * The setting key of `$gateway`'s spec, or an exception for an unknown gateway.
      *
-     * @return array<string, mixed>
+     * @return GatewaySpec
      */
     public static function spec(string $gateway): array
     {
-        return self::GATEWAYS[$gateway] ?? throw new InvalidArgumentException("Unknown payment gateway [{$gateway}].");
+        return self::gateways()[$gateway] ?? throw new InvalidArgumentException("Unknown payment gateway [{$gateway}].");
     }
 
     /** A value read from the config or saved, on the page's sandbox/live scale. */
@@ -528,7 +545,10 @@ final class StorePaymentGateways
         return $value === '' ? null : $value;
     }
 
-    /** @param  array<string, mixed>  $spec */
+    /**
+     * @param  GatewaySpec  $spec
+     * @param  array<string, mixed>  $input
+     */
     private static function saveGroup(string $gateway, array $spec, array $input, ?int $userId): void
     {
         $identifying = self::clean($input[$spec['identifying']] ?? null, $spec['fields'][$spec['identifying']]);
@@ -628,7 +648,7 @@ final class StorePaymentGateways
         $rows = [];
 
         foreach (PaymentGatewaySetting::query()->orderBy('id')->get(['gateway', 'field', 'value', 'is_secret']) as $row) {
-            if (isset(self::GATEWAYS[$row->gateway])) {
+            if (isset(self::gateways()[$row->gateway])) {
                 $rows[$row->gateway][$row->field] = ['value' => (string) $row->value, 'secret' => $row->is_secret];
             }
         }
@@ -645,7 +665,7 @@ final class StorePaymentGateways
         $chosenHere = false;
         $enabled = [];
 
-        foreach (self::GATEWAYS as $gateway => $spec) {
+        foreach (self::gateways() as $gateway => $spec) {
             if (isset($rows[$gateway][self::ENABLED])) {
                 $chosenHere = true;
                 if ($spec['flow'] && $rows[$gateway][self::ENABLED]['value'] === '1') {
@@ -668,7 +688,7 @@ final class StorePaymentGateways
         $rows = self::read();
         $modes = [];
 
-        foreach (self::GATEWAYS as $gateway => $spec) {
+        foreach (self::gateways() as $gateway => $spec) {
             if (isset($spec['mode']['setting'])) {
                 $modes[$gateway] = self::settingMode($spec['mode']['setting'], $spec['mode']['default']);
             }
@@ -697,7 +717,7 @@ final class StorePaymentGateways
             $changes['enabled_source'] = $after['source'] === 'admin' ? 'set' : 'removed';
         }
 
-        foreach (self::GATEWAYS as $gateway => $spec) {
+        foreach (self::gateways() as $gateway => $spec) {
             $wasOn = in_array($gateway, $before['enabled'], true);
             $isOn = in_array($gateway, $after['enabled'], true);
             if ($wasOn !== $isOn) {

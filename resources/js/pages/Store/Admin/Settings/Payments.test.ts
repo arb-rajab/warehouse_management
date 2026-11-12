@@ -285,7 +285,7 @@ describe('Store payment methods page', () => {
             t('store.settings.payments.secretKeep'),
         );
         expect(
-            byName(wrapper, 'gateways[bkash][app_secret_clear]').exists(),
+            wrapper.find('[name="gateways[bkash][app_secret_clear]"]').exists(),
         ).toBe(true);
         expect(
             wrapper.find('[name="gateways[bkash][password_clear]"]').exists(),

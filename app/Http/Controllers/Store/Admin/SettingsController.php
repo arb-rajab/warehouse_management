@@ -236,7 +236,7 @@ class SettingsController extends Controller implements HasMiddleware
      * names with how each changed; never a value or the user agent.
      *
      * @param  list<string>  $actions
-     * @return list<array<string, mixed>>
+     * @return array<int, array<string, mixed>>
      */
     private function auditEntries(array $actions): array
     {
@@ -509,7 +509,7 @@ class SettingsController extends Controller implements HasMiddleware
     {
         $keys = ['enabled_source'];
 
-        foreach (StorePaymentGateways::GATEWAYS as $gateway => $spec) {
+        foreach (StorePaymentGateways::gateways() as $gateway => $spec) {
             $keys[] = "{$gateway}.".StorePaymentGateways::ENABLED;
             $keys[] = "{$gateway}.mode";
             foreach (array_keys($spec['fields']) as $field) {
@@ -534,14 +534,14 @@ class SettingsController extends Controller implements HasMiddleware
     {
         $enabled = StorePaymentGateways::enabled();
         $offered = BusinessSetting::query()
-            ->whereIn('type', array_values(array_filter(array_column(StorePaymentGateways::GATEWAYS, 'offered'))))
+            ->whereIn('type', array_filter(array_column(StorePaymentGateways::gateways(), 'offered')))
             ->orderByRaw('lang IS NOT NULL')->orderBy('id')->get(['type', 'value'])
             ->unique('type')->pluck('value', 'type');
         $rates = Currency::query()->where('status', 1)->pluck('code')
             ->map(fn ($code): string => strtoupper((string) $code))->all();
         $gateways = [];
 
-        foreach (StorePaymentGateways::GATEWAYS as $gateway => $spec) {
+        foreach (StorePaymentGateways::gateways() as $gateway => $spec) {
             $stored = StorePaymentGateways::stored()[$gateway] ?? [];
             $fields = [];
 

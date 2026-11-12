@@ -44,7 +44,7 @@ class UpdatePaymentGatewaySettingsRequest extends FormRequest
     {
         $rules = ['enabled_source' => ['required', 'string', 'in:'.implode(',', StorePaymentGateways::SOURCES)]];
 
-        foreach (StorePaymentGateways::GATEWAYS as $gateway => $spec) {
+        foreach (StorePaymentGateways::gateways() as $gateway => $spec) {
             $prefix = "gateways.{$gateway}";
             $rules["{$prefix}.".StorePaymentGateways::ENABLED] = ['nullable', 'boolean'];
 
@@ -108,7 +108,7 @@ class UpdatePaymentGatewaySettingsRequest extends FormRequest
                 return;
             }
 
-            foreach (StorePaymentGateways::GATEWAYS as $gateway => $spec) {
+            foreach (StorePaymentGateways::gateways() as $gateway => $spec) {
                 $input = is_array($gateways[$gateway] ?? null) ? $gateways[$gateway] : [];
                 $prefix = "gateways.{$gateway}";
 
@@ -242,7 +242,7 @@ class UpdatePaymentGatewaySettingsRequest extends FormRequest
         }
 
         foreach ($gateways as $gateway => $fields) {
-            $spec = StorePaymentGateways::GATEWAYS[$gateway] ?? null;
+            $spec = StorePaymentGateways::gateways()[$gateway] ?? null;
 
             if ($spec === null || ! is_array($fields)) {
                 $validator->errors()->add("gateways.{$gateway}", __('validation.prohibited', ['attribute' => "gateways.{$gateway}"]));
