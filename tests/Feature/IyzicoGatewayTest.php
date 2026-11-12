@@ -282,6 +282,54 @@ test('the API refuses a currency with no active rate', function () {
     expect($captured)->not->toHaveProperty('request');
 });
 
+// --- the identity number (IYZICO_IDENTITY_NUMBER, .env only) ------------------------
+
+test('the buyer carries the configured identity number, and the config holds no placeholder default', function () {
+    config(['services.iyzico.identity_number' => '12345678901']);
+    izCurrencies();
+    actingAsStoreUser(izCustomer());
+    $captured = new stdClass;
+    izServer($captured);
+
+    izTopUp($this, 25)->assertRedirect('https://pay.iyzico.test/page');
+
+    expect($captured->request->getBuyer()->getIdentityNumber())->toBe('12345678901')
+        ->and(file_get_contents(config_path('services.php')))->not->toContain('11111111111');
+});
+
+test('without IYZICO_IDENTITY_NUMBER the storefront refuses to start a payment and iyzico is not called', function (?string $number) {
+    config(['services.iyzico.identity_number' => $number]);
+    izCurrencies();
+    actingAsStoreUser(izCustomer());
+    $captured = new stdClass;
+    izServer($captured);
+
+    izTopUp($this, 25)->assertRedirect(route('cart'));
+
+    expect($captured)->not->toHaveProperty('request')
+        ->and(session('iyzico_basket_id'))->toBeNull()
+        ->and(session('flash_notification'))->not->toBeNull()
+        ->and(__('storefront.checkout.iyzico_unavailable'))->not->toBe('storefront.checkout.iyzico_unavailable')
+        ->and(__('storefront.checkout.iyzico_unavailable', [], 'ar'))->not->toBe(__('storefront.checkout.iyzico_unavailable', [], 'en'));
+})->with([
+    'unset' => [null],
+    'empty' => [''],
+    'blank' => ['  '],
+]);
+
+test('without IYZICO_IDENTITY_NUMBER the API refuses to start a payment and says why', function () {
+    config(['services.iyzico.identity_number' => null]);
+    izCurrencies();
+    $captured = new stdClass;
+    izServer($captured);
+
+    $this->withToken(storeApiToken(izCustomer()))->getJson('/api/v1/store/iyzico/init?payment_type=wallet_payment&amount=25')
+        ->assertJsonPath('result', false)
+        ->assertJsonPath('message', __('storefront.checkout.iyzico_unavailable'));
+
+    expect($captured)->not->toHaveProperty('request');
+});
+
 test('the API credits a converted payment once, and refuses the unconverted figure or another currency', function () {
     izCurrencies(35.0);
     $customer = izCustomer();

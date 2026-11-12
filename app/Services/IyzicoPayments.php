@@ -48,6 +48,15 @@ class IyzicoPayments
         return app()->getLocale() === 'tr' ? Locale::TR : Locale::EN;
     }
 
+    /**
+     * The buyer identity number iyzico requires: `IYZICO_IDENTITY_NUMBER`, `.env` only, never a
+     * placeholder. Empty when unset, and iyzico then refuses to start a payment.
+     */
+    public function identityNumber(): string
+    {
+        return trim((string) config('services.iyzico.identity_number'));
+    }
+
     /** Whether a payment of `$paymentType` can be started. */
     public function supports(string $paymentType): bool
     {
@@ -82,7 +91,7 @@ class IyzicoPayments
         if (trim((string) $payer->phone) !== '') {
             $buyer->setGsmNumber((string) $payer->phone);
         }
-        $buyer->setIdentityNumber((string) config('services.iyzico.identity_number'));
+        $buyer->setIdentityNumber($this->identityNumber());
         $buyer->setRegistrationAddress($address);
         $buyer->setCity($city);
         $buyer->setCountry($country);

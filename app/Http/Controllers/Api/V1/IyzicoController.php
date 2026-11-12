@@ -31,6 +31,13 @@ class IyzicoController extends Controller
         }
 
         $iyzico = app(IyzicoPayments::class);
+
+        if ($iyzico->identityNumber() === '') {
+            Log::error('iyzico refused: IYZICO_IDENTITY_NUMBER is not set in .env.');
+
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.iyzico_unavailable')]);
+        }
+
         $currency = GatewayCurrency::forGateway('iyzico');
         $converted = $currency->fromStore((float) $payment['amount']);
         $payer = StoreUser::query()->find($payment['user_id']);

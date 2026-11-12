@@ -202,6 +202,7 @@ return [
         'insufficient_wallet_balance' => 'Insufficient wallet balance',
         'invoice_code' => 'Invoice Code',
         'item_details' => 'Item Details',
+        'iyzico_unavailable' => 'iyzico is not available right now. Please choose another payment method.',
         'last_recharge' => 'Last Recharge',
         'local_pickup' => 'Local Pickup',
         'minimum_order_amount' => 'Minimum Order Amount',

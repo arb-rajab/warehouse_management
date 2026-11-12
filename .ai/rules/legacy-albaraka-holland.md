@@ -290,8 +290,29 @@ prefix. That is the single point every storefront asset URL goes through.
   `bkash/api/success` now need the bearer token, `bkash/api/process` and
   `nagad/process` are gone (Nagad completes in `nagad/verify`), and
   `user_id`/`amount` are no longer read except a top-up's amount. Seller-package
-  payments go through the same sink (it needs the seller's shop), but have no
-  test: this repository has no `seller_packages` migration.
+  payments go through the same sink (it needs the seller's shop). **Tested
+  2026-11-12** (`GatewayPackagePaymentCreditingTest`, seller and customer
+  packages through N-Genius on the web and the API's iyzico, SSLCommerz, Nagad
+  and bKash): the right owner, the exact converted amount, a replay credits
+  nothing, a wrong amount is refused, the package is activated only after a
+  verified credit. The web has no page that starts a seller package payment; it
+  reaches a gateway through the API (`payment_type=seller_package_payment`) or
+  a session that holds one. That test found `seller_purchase_payment_done()`
+  counting a renewal from the old end date, so a seller whose package had
+  expired paid and stayed expired; it now counts from today unless the package
+  is still active.
+  **PayHere's `/temp/payhere/{checkout,wallet,customer_package}/testing`
+  routes** (a signed test form for a made-up buyer) answer only while PayHere is
+  enabled, in sandbox mode (`payhere_sandbox`, effective value) and outside
+  production: `EnsurePaymentGatewaySandbox` (`payment.sandbox:payhere`),
+  otherwise 404. `PayhereTestingRoutesTest`.
+  **iyzico's buyer identity number** is `IYZICO_IDENTITY_NUMBER`, `.env` only,
+  with no default: the old placeholder `11111111111` was sent on every payment.
+  While it is unset (`IyzicoPayments::identityNumber()`) iyzico refuses to start
+  a payment, on the web and in the API, with `storefront.checkout.iyzico_unavailable`.
+  **Not confirmed with the providers, owner to confirm** (docs/qa/payment-gateway-sandbox-checklist.md,
+  "Needs your input"): N-Genius's live URLs (`NGENIUS_LIVE_*_URL`), and that
+  AamarPay's payment page accepts the GET redirect the store now sends.
 - User-written HTML was printed unescaped, so anyone who could write it could run
   script in the browser of whoever viewed it. The worst case was the **admin
   backend's** ticket page (`backend/support/support_tickets/show`), which printed

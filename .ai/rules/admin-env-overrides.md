@@ -54,6 +54,7 @@ paths:
   - 'resources/js/pages/Store/Admin/Settings/Payments.vue'
   - 'resources/js/lib/paymentGatewaySettings*'
   - 'app/Http/Middleware/EnsurePaymentGatewayEnabled.php'
+  - 'app/Http/Middleware/EnsurePaymentGatewaySandbox.php'
   - 'app/Services/PaymentOptions.php'
   - 'app/Services/GatewayCurrency.php'
   - 'app/Http/Controllers/Api/V1/PaymentTypesController.php'
@@ -261,6 +262,15 @@ secret or public, required, format, mode source).
   "offered at checkout" switch; the page shows their state and links there.
 - **Still `.env` only:** `IYZICO_IDENTITY_NUMBER`, `NGENIUS_*_URL`,
   `NAGAD_CALLBACK_URL` (a redirect target), `NAGAD_CURRENCY` (BDT only).
+  `IYZICO_IDENTITY_NUMBER` has no default and is never guessed: while it is unset
+  iyzico refuses to start a payment (`IyzicoPayments::identityNumber()`).
+  `NGENIUS_LIVE_*_URL` and AamarPay's GET redirect are defaults the provider has
+  not confirmed; they are not changed here, the owner confirms them
+  (docs/qa/payment-gateway-sandbox-checklist.md, "Needs your input").
+- **Test-only routes.** A route that exists only to try a gateway (PayHere's
+  `/testing` forms) answers only while the gateway is enabled, its effective
+  mode is sandbox and the app is not in production (`payment.sandbox:<gateway>`,
+  `EnsurePaymentGatewaySandbox`, reading `StorePaymentGateways::mode()`).
 - **Hardening (as SMTP).** `payment_methods_configurations` is in
   `StorePermissions::SENSITIVE`. `UpdatePaymentGatewaySettingsRequest` requires
   `current_password` through `ConfirmsCurrentPassword`, whose limiter key

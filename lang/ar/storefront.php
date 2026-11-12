@@ -202,6 +202,7 @@ return [
         'insufficient_wallet_balance' => 'رصيد المحفظة غير كافٍ',
         'invoice_code' => 'رمز الفاتورة',
         'item_details' => 'تفاصيل العناصر',
+        'iyzico_unavailable' => 'خدمة iyzico غير متاحة حاليًا. يُرجى اختيار طريقة دفع أخرى.',
         'last_recharge' => 'آخر شحن للرصيد',
         'local_pickup' => 'الاستلام المحلي',
         'minimum_order_amount' => 'الحد الأدنى لقيمة الطلب',
