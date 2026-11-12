@@ -1,6 +1,9 @@
 ---
 paths:
   - 'app/Support/StoreMailSettings.php'
+  - 'app/Support/PublicSettingsGuard.php'
+  - 'app/Http/Controllers/Api/V1/BusinessSettingController.php'
+  - 'tests/Feature/PublicSettingsGuardTest.php'
   - 'app/Support/GoogleMapsKey.php'
   - 'app/Support/StoreIntegrationIds.php'
   - 'app/Support/StoreRecaptchaSettings.php'
@@ -110,8 +113,11 @@ the value is stored in `business_settings` and laid over the config at runtime.
 - **Cache.** The saved rows are cached under `business_settings:mail` (secrets still
   encrypted, 10 minutes). The writer forgets that entry and `business_settings`.
 - **Keep the rows private.** Public endpoints that list `business_settings` by
-  name must leave these rows out (`ConfigController::business_settings` excludes
-  `StoreMailSettings::KEYS`).
+  name must go through `App\Support\PublicSettingsGuard` (`ConfigController::business_settings`,
+  `activated_social_login` and `BusinessSettingController::index` do). The SMTP rows
+  (`StoreMailSettings::KEYS`), the encrypted reCAPTCHA secret and the other
+  credentials are blocked there, not in each controller: see "Every
+  `business_settings` key is classified" below.
 - **A value printed into a script or URL is validated and escaped.** The public
   IDs (`StoreIntegrationIds`) must match a pattern of the characters real IDs
   use (no quote, angle bracket, space or line break; `D` flag so a trailing
@@ -192,6 +198,58 @@ mitigations hold together; keep all three when touching the SMTP page.
   mailer gets no extra copy. A mail that fails is logged by exception class only
   and never undoes or fails the save.
 
+## Every `business_settings` key is classified (`PublicSettingsGuard`)
+
+Added 2026-11-12 (owner-approved). `POST /api/v1/store/business-settings` is
+public and unauthenticated and used to return any row whose `type` the caller
+named. It now returns every requested key **except the blocked ones**: a
+block-list, not an allow-list and not a sign-in. Old mobile app versions are
+forced to update through the minimum app version, so a blocked key needs no
+compatibility. `App\Support\PublicSettingsGuard` is the one class that decides;
+`ConfigController::business_settings()` uses `requested()` (the names to query)
+and `filter()` (the rows read, judged by their own `type`, since a database
+collation can match a type the request spelled differently), and the GET list and
+the social-login list filter through it as well.
+
+- **What is blocked.** `isBlocked()` compares trimmed and lower-cased (also
+  non-breaking and zero-width spaces), so case and padding cannot get around it,
+  and blocks an empty name. A key is blocked when it is in `BLOCKED` or owned by a
+  support class (`named()`: `StoreMailSettings::KEYS`, the encrypted reCAPTCHA
+  secret, `GoogleMapsKey::SETTING`, so a field added there is blocked without an
+  edit), when its name starts with a `BLOCKED_PREFIXES` entry (`payment_gateway_`,
+  `mail_`, `smtp_`, `firebase_`, `fcm_`, `sms_`, the usual payment and SMS
+  providers, and the internal `product_source_` and `store_filter_seed_`), when it
+  ends in `secret`, `key`, `password`, `token`, `credentials`, `encrypted` (and a
+  few more words, see the class) or carries `secret`, `password`, `token`,
+  `credentials` or `encrypted` as a word. `requested()` reads `keys` as a
+  comma-separated string or an array of such strings, ignores anything else
+  (a number, a nested array) and caps the names at `MAX_KEYS`.
+- **Exceptions.** `PUBLIC_EXCEPTIONS` are names a rule would block that stay
+  public on purpose. Today only `recaptcha_site_key` (the reCAPTCHA SITE key is
+  printed into every storefront form; only the secret is a credential). An exception
+  never overrides a named key. Add one only with the reason beside it.
+- **The Google Maps key is blocked**, although it is a browser-side key: only a
+  signed-in customer's or seller's page prints it (the address map), the admin page
+  only shows a mask of it, and no app reads it from this endpoint.
+- **Every new `business_settings` key must be classified in the guard.** Either a
+  rule blocks it (a credential: name it so a rule matches, or add it to `BLOCKED`),
+  or it is added to `PUBLIC` (not a credential: printed into public pages, needed
+  by the apps, or a plain switch or number). `PublicSettingsGuardTest` enforces it:
+  it reads the admin pages' keys (`SettingsController::PAGES`), the `Update*Request::KEYS`
+  lists, the support classes' constants and every `get_setting('...')` and
+  `BusinessSetting::where('type', '...')` literal in `app/` and `resources/views/`,
+  and fails for a key that is neither blocked nor in `PUBLIC`. A key built at runtime
+  is not seen by that scan: add it to the test's source list or give it a name a rule
+  blocks.
+- **A secret has a name a rule blocks.** Name credentials `*_secret`, `*_key`,
+  `*_password`, `*_token`, `*_credentials` or `*_encrypted` (as `mail_password_encrypted`
+  and `recaptcha_secret_key_encrypted` are), or put them under `mail_` or
+  `payment_gateway_`; never store a secret under a plain name and rely on the
+  list. The payment gateway settings use `payment_gateway_`, so the whole family is
+  blocked with nothing to edit; a gateway flag the apps must read goes to
+  `PUBLIC_EXCEPTIONS` and `PUBLIC` with the reason. `business_settings.type` is a
+  `string(30)`: a long key must fit.
+
 ## Superseded `.env` keys today
 
 | Admin setting | `.env` fallback | Stored as |
@@ -215,8 +273,9 @@ inline, naming the field, when a switch is on and no value is in effect. The
 reCAPTCHA secret is needed for a new or changed site key (the request asks again,
 as for the SMTP password). `StoreIntegrationIds`, `StoreRecaptchaSettings`
 and `UpdateIntegrationIdsRequest`/`UpdateRecaptchaSettingsRequest` are the code;
-the public business-settings endpoint hides only the encrypted secret row (the
-IDs and the site key are public by nature). The Facebook login keys
+the public business-settings endpoint hides the encrypted secret row through
+`PublicSettingsGuard` (the IDs and the site key are public by nature: the site key
+is the guard's one name-rule exception). The Facebook login keys
 (`FACEBOOK_CLIENT_ID`/`SECRET`) and the other social logins stay `.env` only.
 
 The delivery fields and the default language are optional too (an empty field uses
@@ -238,6 +297,10 @@ other mailers' keys, and the from address of the health and backup notifications
   change / clear, cache forgetting, the queue-worker and console paths, an
   unreadable table or password, authorization, validation (header injection), the
   immediate test email and the public API filter.
+- `tests/Feature/PublicSettingsGuardTest.php`: the enforcement test (every key the
+  code names is blocked or public), the guard's lists, the name rules, case and
+  whitespace, an array or junk `keys`, the full row shape, the keys the apps rely
+  on, and the GET and social-login lists.
 - `SmtpSettingsClientValidationParityTest`: the browser copy of the rules.
 - `tests/Feature/Store/Admin/SmtpSettingsSecurityTest.php`: the current password
   (missing, wrong, another account's, never flashed), the throttle and its capped
