@@ -288,7 +288,7 @@ function auditWhat(entry: StorePaymentGatewayAuditEntry): string {
                     class="cursor-pointer rounded-md px-3 py-1.5 text-sm"
                     :class="
                         activeTab === gateway.key
-                            ? 'bg-ink text-white'
+                            ? 'bg-ink text-page'
                             : 'text-ink hover:bg-line'
                     "
                     @click="activeTab = gateway.key"

@@ -133,7 +133,7 @@ describe('StoreStaffFormFields', () => {
         ]);
         expect(
             t('store.staff.fields.roleSensitive', { name: 'Mail admin' }),
-        ).toBe('Mail admin (sensitive: can read all outgoing email)');
+        ).toBe('Mail admin (sensitive: controls outgoing email or payments)');
     });
 
     it('shows each field error, the role one included', () => {

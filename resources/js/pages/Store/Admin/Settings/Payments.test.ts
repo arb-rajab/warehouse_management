@@ -434,6 +434,8 @@ describe('Store payment methods page', () => {
                 t(`store.settings.payments.liveUnconfirmed.${key}`),
             );
             expect(note.text()).toContain(mention);
+            // The first page re-renders with the locale, so keep its English text.
+            const english = note.text();
 
             i18n.global.locale.value = 'ar';
             const ar = mountPage(
@@ -452,7 +454,7 @@ describe('Store payment methods page', () => {
             );
             expect(
                 ar.get(`[data-note="unconfirmed-live-${key}"]`).text(),
-            ).not.toBe(note.text());
+            ).not.toBe(english);
 
             i18n.global.locale.value = 'en';
             const off = mountPage(
