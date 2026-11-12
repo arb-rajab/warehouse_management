@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Coupon;
+use App\Models\GatewayPayment;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Pallet;
@@ -22,6 +23,7 @@ use App\Models\Staff;
 use App\Models\StoreUser;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\GatewayReturn;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
@@ -560,6 +562,19 @@ function createStoreOrder(StoreUser $customer, array $attributes = []): Order
     ])->save();
 
     return $order->fresh();
+}
+
+/**
+ * A storefront SSLCommerz, AamarPay or iyzico payment as its pay() records it
+ * (GatewayReturn::begin()): pending under `$reference`, for `$payer`, with the
+ * store-currency `$amount` and the `$gatewayAmount` charged in `$currency`.
+ */
+function pendingGatewayReturn(string $gateway, string $reference, StoreUser $payer, string $paymentType, float $amount, float $gatewayAmount, string $currency = 'BDT', ?int $combinedOrderId = null, ?int $packageId = null): GatewayPayment
+{
+    return app(GatewayReturn::class)->begin($gateway, $reference, [
+        'user_id' => $payer->id, 'payment_type' => $paymentType, 'combined_order_id' => $combinedOrderId,
+        'package_id' => $packageId, 'amount' => $amount,
+    ], $gatewayAmount, $currency);
 }
 
 /**
