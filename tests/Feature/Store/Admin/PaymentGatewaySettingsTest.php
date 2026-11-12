@@ -496,6 +496,64 @@ test('an enabled gateway that lacks a required field is named on the page', func
         ->where('payments.gateways.0.missing', ['app_secret']));
 });
 
+test('iyzico\'s identity number reaches the page as set or not set, never as a value', function (?string $number, bool $set) {
+    config(['services.iyzico.identity_number' => $number]);
+    pgsAdmin();
+
+    $response = $this->get(route('payment_method.index'))->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page->where('payments.gateways', function ($gateways) use ($set): bool {
+        $gateways = collect($gateways)->keyBy('key');
+
+        return $gateways['iyzico']['env_only'] === [['key' => 'identity_number', 'env' => 'IYZICO_IDENTITY_NUMBER', 'set' => $set]]
+            && $gateways->except('iyzico')->every(fn (array $gateway): bool => $gateway['env_only'] === []);
+    }));
+    expect($response->getContent())->not->toContain('12345678901');
+})->with([
+    'unset' => [null, false],
+    'blank' => ['   ', false],
+    'set' => ['12345678901', true],
+]);
+
+test('the unconfirmed-live note is sent only for N-Genius and AamarPay, enabled, in live mode', function () {
+    config([
+        'store.enabled_payment_gateways' => ['ngenius', 'aamarpay', 'bkash'],
+        'services.ngenius.mode' => 'live',
+    ]);
+    pgsAdmin();
+    $flagged = fn (array $keys) => $this->get(route('payment_method.index'))->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('payments.gateways', fn ($gateways): bool => collect($gateways)
+            ->filter(fn (array $gateway): bool => $gateway['live_unconfirmed'])->pluck('key')->sort()->values()->all() === $keys),
+    );
+
+    // AamarPay has no saved sandbox switch, so it is live; bKash is never flagged.
+    $flagged(['aamarpay', 'ngenius']);
+
+    // Sandbox mode switches the note off, per gateway.
+    config(['services.ngenius.mode' => 'uat']);
+    $flagged(['aamarpay']);
+    DB::table('business_settings')->insert(['type' => 'aamarpay_sandbox', 'value' => '1']);
+    $flagged([]);
+
+    // Live again, but a disabled gateway is not flagged.
+    DB::table('business_settings')->where('type', 'aamarpay_sandbox')->update(['value' => '0']);
+    config(['services.ngenius.mode' => 'live', 'store.enabled_payment_gateways' => ['bkash']]);
+    $flagged([]);
+});
+
+test('StorePaymentGateways reports the .env-only values a gateway lacks and when its live setup is unconfirmed', function () {
+    config(['services.iyzico.identity_number' => null, 'store.enabled_payment_gateways' => ['aamarpay']]);
+
+    expect(StorePaymentGateways::envOnlyMissing('iyzico'))->toBe(['identity_number'])
+        ->and(StorePaymentGateways::envOnlyMissing('bkash'))->toBe([])
+        ->and(StorePaymentGateways::liveUnconfirmed('aamarpay'))->toBeTrue()
+        ->and(StorePaymentGateways::liveUnconfirmed('ngenius'))->toBeFalse()
+        ->and(StorePaymentGateways::liveUnconfirmed('bkash'))->toBeFalse();
+
+    config(['services.iyzico.identity_number' => '12345678901']);
+    expect(StorePaymentGateways::envOnlyMissing('iyzico'))->toBe([]);
+});
+
 test('the page passes on only a highlight key it holds', function (mixed $highlight, ?string $expected) {
     pgsAdmin();
 
@@ -506,6 +564,7 @@ test('the page passes on only a highlight key it holds', function (mixed $highli
     'a switch' => ['nagad.enabled', 'nagad.enabled'],
     'the list source' => ['enabled_source', 'enabled_source'],
     'a sandbox switch' => ['bkash_sandbox', 'bkash_sandbox'],
+    'an .env-only value' => ['iyzico.identity_number', 'iyzico.identity_number'],
     'unknown' => ['bkash.callback_url', null],
     'an array' => [['bkash.app_key'], null],
 ]);

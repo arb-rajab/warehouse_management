@@ -266,7 +266,12 @@ secret or public, required, format, mode source).
   iyzico refuses to start a payment (`IyzicoPayments::identityNumber()`).
   `NGENIUS_LIVE_*_URL` and AamarPay's GET redirect are defaults the provider has
   not confirmed; they are not changed here, the owner confirms them
-  (docs/qa/payment-gateway-sandbox-checklist.md, "Needs your input").
+  (docs/qa/payment-gateway-sandbox-checklist.md, "Needs your input"). The page
+  says so inline: an amber note on the N-Genius and AamarPay tabs, only while the
+  gateway is enabled and its effective mode is live (`liveUnconfirmed` in the page
+  props, `StorePaymentGateways::LIVE_UNCONFIRMED`), and iyzico's identity number
+  as a read-only set / not set row (`ENV_ONLY`, `env_only` in the props) with a red
+  alert while it is unset. Remove a note when the owner confirms that gateway.
 - **Test-only routes.** A route that exists only to try a gateway (PayHere's
   `/testing` forms) answers only while the gateway is enabled, its effective
   mode is sandbox and the app is not in production (`payment.sandbox:<gateway>`,

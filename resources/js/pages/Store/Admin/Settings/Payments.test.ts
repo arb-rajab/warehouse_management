@@ -87,6 +87,8 @@ function bkash(
             currency: { value: 'BDT', source: 'admin' },
         },
         missing: ['password'],
+        env_only: [],
+        live_unconfirmed: false,
         ...overrides,
     };
 }
@@ -116,6 +118,8 @@ function stripe(): StorePaymentGateway {
             currency: { value: null, source: 'env' },
         },
         missing: ['publishable_key', 'secret_key'],
+        env_only: [],
+        live_unconfirmed: false,
     };
 }
 
@@ -147,7 +151,50 @@ function nagad(): StorePaymentGateway {
             mode: { value: 'sandbox', source: 'env' },
         },
         missing: [],
+        env_only: [],
+        live_unconfirmed: false,
     };
+}
+
+/** iyzico: an `.env`-only identity number the page shows as set or not set. */
+function iyzico(
+    overrides: Partial<StorePaymentGateway> = {},
+): StorePaymentGateway {
+    return {
+        ...bkash({
+            key: 'iyzico',
+            name: 'iyzico',
+            offered_setting: 'iyzico',
+            fields: [field('api_key'), field('secret_key', { secret: true })],
+            effective: {},
+            missing: [],
+        }),
+        env_only: [
+            {
+                key: 'identity_number',
+                env: 'IYZICO_IDENTITY_NUMBER',
+                set: false,
+            },
+        ],
+        ...overrides,
+    };
+}
+
+/** N-Genius and AamarPay: the gateways whose live setup the provider has not confirmed. */
+function unconfirmed(
+    key: 'ngenius' | 'aamarpay',
+    overrides: Partial<StorePaymentGateway> = {},
+): StorePaymentGateway {
+    return bkash({
+        key,
+        name: key === 'ngenius' ? 'N-Genius' : 'AamarPay',
+        offered_setting: key,
+        fields: [field('currency')],
+        effective: {},
+        missing: [],
+        mode: 'live',
+        ...overrides,
+    });
 }
 
 function settings(
@@ -288,6 +335,136 @@ describe('Store payment methods page', () => {
             t('store.settings.payments.notOffered', { gateway: 'bKash' }),
         );
     });
+
+    it("names iyzico's identity number in red while it is enabled and unset in .env, and shows it read-only", () => {
+        const wrapper = mountPage(
+            settings({ gateways: [iyzico({ enabled: true })] }),
+        );
+        const alert = wrapper.get(
+            '[data-missing-env="iyzico.identity_number"]',
+        );
+
+        expect(alert.attributes('role')).toBe('alert');
+        expect(alert.classes()).toContain('text-danger');
+        expect(alert.text()).toBe(
+            t('store.settings.payments.envOnlyMissing', {
+                gateway: 'iyzico',
+                env: 'IYZICO_IDENTITY_NUMBER',
+            }),
+        );
+        const row = wrapper.get('[data-field="iyzico.identity_number"]');
+        expect(row.text()).toContain(
+            t('store.settings.payments.envOnlyFields.identity_number', {
+                env: 'IYZICO_IDENTITY_NUMBER',
+            }),
+        );
+        expect(row.text()).toContain(
+            t('store.settings.payments.effective.notSet'),
+        );
+        expect(row.find('input').exists()).toBe(false);
+    });
+
+    it('shows the identity number as set, without an alert, once .env has it, and without the alert while iyzico is off', () => {
+        const set = mountPage(
+            settings({
+                gateways: [
+                    iyzico({
+                        enabled: true,
+                        env_only: [
+                            {
+                                key: 'identity_number',
+                                env: 'IYZICO_IDENTITY_NUMBER',
+                                set: true,
+                            },
+                        ],
+                    }),
+                ],
+            }),
+        );
+        expect(set.find('[data-missing-env]').exists()).toBe(false);
+        expect(
+            set.get('[data-field="iyzico.identity_number"]').text(),
+        ).toContain(t('store.settings.payments.effective.set'));
+
+        const off = mountPage(settings({ gateways: [iyzico()] }));
+        expect(off.find('[data-missing-env]').exists()).toBe(false);
+        expect(off.find('[data-field="iyzico.identity_number"]').exists()).toBe(
+            true,
+        );
+    });
+
+    it('opens the iyzico tab of a checklist link and marks only the identity number', () => {
+        const wrapper = mountPage(
+            settings({ gateways: [bkash(), iyzico({ enabled: true })] }),
+            { highlight: 'iyzico.identity_number', attach: true },
+        );
+
+        expect(
+            wrapper.get('[data-tab="iyzico"]').attributes('aria-selected'),
+        ).toBe('true');
+        const marked = wrapper.findAll('[data-highlighted]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0].attributes('data-field')).toBe(
+            'iyzico.identity_number',
+        );
+        wrapper.unmount();
+    });
+
+    it.each([
+        ['ngenius', 'NGENIUS_LIVE_IDENTITY_URL'],
+        ['aamarpay', 'AamarPay'],
+    ] as const)(
+        'shows the unconfirmed-live note of %s only while the server says so, in both languages',
+        async (key, mention) => {
+            const on = mountPage(
+                settings({
+                    gateways: [
+                        unconfirmed(key, {
+                            enabled: true,
+                            live_unconfirmed: true,
+                        }),
+                    ],
+                }),
+            );
+            const note = on.get(`[data-note="unconfirmed-live-${key}"]`);
+
+            expect(note.attributes('role')).toBe('note');
+            expect(note.classes()).toContain('text-warning');
+            expect(note.text()).toBe(
+                t(`store.settings.payments.liveUnconfirmed.${key}`),
+            );
+            expect(note.text()).toContain(mention);
+
+            i18n.global.locale.value = 'ar';
+            const ar = mountPage(
+                settings({
+                    gateways: [
+                        unconfirmed(key, {
+                            enabled: true,
+                            live_unconfirmed: true,
+                        }),
+                    ],
+                }),
+            );
+            await nextTick();
+            expect(ar.get(`[data-note="unconfirmed-live-${key}"]`).text()).toBe(
+                t(`store.settings.payments.liveUnconfirmed.${key}`),
+            );
+            expect(
+                ar.get(`[data-note="unconfirmed-live-${key}"]`).text(),
+            ).not.toBe(note.text());
+
+            i18n.global.locale.value = 'en';
+            const off = mountPage(
+                settings({
+                    gateways: [unconfirmed(key, { enabled: true })],
+                }),
+            );
+            expect(off.find('[data-note^="unconfirmed-live"]').exists()).toBe(
+                false,
+            );
+        },
+    );
 
     it('does not warn about a disabled gateway', () => {
         expect(mountPage().find('[data-missing]').exists()).toBe(false);

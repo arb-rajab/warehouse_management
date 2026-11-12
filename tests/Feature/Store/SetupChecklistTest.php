@@ -252,6 +252,44 @@ test('the gateway check reads the effective values: a group saved in the admin r
     expect(setupChecklistReasons('paymentGateways'))->toBe(['paymentGateways.sslcommerz_store_password']);
 });
 
+test('an enabled iyzico without IYZICO_IDENTITY_NUMBER in .env names it and links to its row on the iyzico tab', function (?string $number) {
+    config([
+        'store.enabled_payment_gateways' => ['iyzico'],
+        'services.iyzico.api_key' => 'KEY', 'services.iyzico.secret_key' => 'SECRET', 'services.iyzico.currency' => 'TRY',
+        'services.iyzico.identity_number' => $number,
+    ]);
+
+    $item = collect(app(SetupChecklist::class)->items(setupChecklistStaff()))->firstWhere('key', 'paymentGateways');
+
+    expect($item['done'])->toBeFalse()
+        ->and($item['reasons'])->toBe([
+            ['key' => 'paymentGateways.iyzico_identity_number', 'route' => 'payment_method.index', 'highlight' => 'iyzico.identity_number'],
+        ]);
+})->with(['unset' => [null], 'empty' => [''], 'blank' => ['  ']]);
+
+test('the identity number reason follows the other iyzico reasons, and goes once .env has it or iyzico is off', function () {
+    config([
+        'store.enabled_payment_gateways' => ['iyzico'],
+        'services.iyzico.api_key' => 'KEY', 'services.iyzico.secret_key' => null, 'services.iyzico.currency' => 'TRY',
+        'services.iyzico.identity_number' => null,
+    ]);
+    expect(setupChecklistReasons('paymentGateways'))->toBe(['paymentGateways.iyzico_secret_key', 'paymentGateways.iyzico_identity_number']);
+
+    config(['services.iyzico.secret_key' => 'SECRET', 'services.iyzico.identity_number' => '12345678901']);
+    expect(setupChecklistReasons('paymentGateways'))->toBe([]);
+
+    config(['services.iyzico.identity_number' => null, 'store.enabled_payment_gateways' => []]);
+    expect(setupChecklistReasons('paymentGateways'))->toBe([]);
+});
+
+test('the identity number reason is a target on the Payment methods page, and the ENV_ONLY values all have one', function () {
+    foreach (StorePaymentGateways::ENV_ONLY as $gateway => $fields) {
+        foreach (array_keys($fields) as $field) {
+            expect(SetupChecklist::TARGETS["paymentGateways.{$gateway}_{$field}"] ?? null)->toBe(['payment_method.index', "{$gateway}.{$field}"]);
+        }
+    }
+});
+
 test('a disabled gateway is not checked, whatever it lacks', function () {
     config(['store.enabled_payment_gateways' => [], 'services.bkash.app_key' => null]);
 

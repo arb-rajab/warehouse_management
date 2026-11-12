@@ -1250,6 +1250,16 @@ export interface StorePaymentGateway {
     effective: Record<string, StorePaymentGatewayEffectiveValue>;
     /** Required fields with no effective value (here or in `.env`). */
     missing: string[];
+    /** Values only the server's `.env` sets (iyzico's identity number): set or not, never the value. */
+    env_only: StorePaymentGatewayEnvOnly[];
+    /** On in live mode while the provider has not confirmed its live setup (N-Genius, AamarPay). */
+    live_unconfirmed: boolean;
+}
+
+export interface StorePaymentGatewayEnvOnly {
+    key: string;
+    env: string;
+    set: boolean;
 }
 
 export interface StorePaymentGatewaySettings {

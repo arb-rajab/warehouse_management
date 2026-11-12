@@ -343,6 +343,23 @@ function auditWhat(entry: StorePaymentGatewayAuditEntry): string {
                         }}
                     </p>
                     <p
+                        v-for="entry in gateway.env_only.filter(
+                            (envOnly) => !envOnly.set,
+                        )"
+                        :key="entry.key"
+                        role="alert"
+                        class="flex items-center gap-2 text-sm text-danger"
+                        :data-missing-env="`${gateway.key}.${entry.key}`"
+                    >
+                        <TriangleAlert class="h-4 w-4" aria-hidden="true" />
+                        {{
+                            t('store.settings.payments.envOnlyMissing', {
+                                gateway: gateway.name,
+                                env: entry.env,
+                            })
+                        }}
+                    </p>
+                    <p
                         v-if="gateway.offered === false"
                         class="text-sm text-danger"
                         data-warning="not-offered"
@@ -354,6 +371,19 @@ function auditWhat(entry: StorePaymentGatewayAuditEntry): string {
                         }}
                     </p>
                 </div>
+                <p
+                    v-if="gateway.live_unconfirmed"
+                    role="note"
+                    class="flex items-center gap-2 text-sm text-warning"
+                    :data-note="`unconfirmed-live-${gateway.key}`"
+                >
+                    <TriangleAlert class="h-4 w-4" aria-hidden="true" />
+                    {{
+                        t(
+                            `store.settings.payments.liveUnconfirmed.${gateway.key}`,
+                        )
+                    }}
+                </p>
                 <p
                     v-if="gateway.currency_without_rate"
                     class="text-sm text-danger"
@@ -630,6 +660,28 @@ function auditWhat(entry: StorePaymentGatewayAuditEntry): string {
                         />
                     </StoreHighlight>
                 </div>
+                <StoreHighlight
+                    v-for="entry in gateway.env_only"
+                    :key="entry.key"
+                    :active="highlight === `${gateway.key}.${entry.key}`"
+                    :data-field="`${gateway.key}.${entry.key}`"
+                >
+                    <DetailList>
+                        <DetailItem
+                            :label="
+                                t(
+                                    `store.settings.payments.envOnlyFields.${entry.key}`,
+                                    { env: entry.env },
+                                )
+                            "
+                            :value="
+                                t(
+                                    `store.settings.payments.effective.${entry.set ? 'set' : 'notSet'}`,
+                                )
+                            "
+                        />
+                    </DetailList>
+                </StoreHighlight>
                 <p class="text-sm text-muted">
                     {{
                         t('store.settings.payments.groupHelp', {

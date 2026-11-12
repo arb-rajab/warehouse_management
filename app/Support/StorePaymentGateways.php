@@ -48,6 +48,18 @@ final class StorePaymentGateways
     /** Where the enabled list comes from. */
     public const array SOURCES = ['env', 'admin'];
 
+    /**
+     * Values a gateway needs that only the server's `.env` can set (never typed on
+     * the page, never shown): `<gateway> => [<field> => [<env name>, <config key>]]`.
+     * The page shows each as set or not set and the setup checklist names it.
+     */
+    public const array ENV_ONLY = [
+        'iyzico' => ['identity_number' => ['IYZICO_IDENTITY_NUMBER', 'services.iyzico.identity_number']],
+    ];
+
+    /** Gateways whose live endpoints or flow the provider has not confirmed (the page says so while one is on in live mode). */
+    public const array LIVE_UNCONFIRMED = ['ngenius', 'aamarpay'];
+
     public const string CURRENCY = '/^[A-Z]{3}$/D';
 
     private const string ALNUM = '/^[A-Za-z0-9]+$/D';
@@ -342,6 +354,28 @@ final class StorePaymentGateways
         }
 
         return $missing;
+    }
+
+    /**
+     * The `.env`-only values of `$gateway` (ENV_ONLY) that are not set, as field names.
+     *
+     * @return list<string>
+     */
+    public static function envOnlyMissing(string $gateway): array
+    {
+        return array_keys(array_filter(self::ENV_ONLY[$gateway] ?? [], fn (array $spec): bool => ! self::envOnlySet($spec[1])));
+    }
+
+    /** Whether an ENV_ONLY config value is set (not empty, not blank). */
+    public static function envOnlySet(string $configKey): bool
+    {
+        return trim((string) config($configKey)) !== '';
+    }
+
+    /** Whether `$gateway` is on in live mode while the provider has not confirmed its live setup (LIVE_UNCONFIRMED). */
+    public static function liveUnconfirmed(string $gateway): bool
+    {
+        return in_array($gateway, self::LIVE_UNCONFIRMED, true) && self::isEnabled($gateway) && self::mode($gateway) === 'live';
     }
 
     /** Whether a saved secret exists but can no longer be decrypted (the application key changed). */

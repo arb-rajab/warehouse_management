@@ -515,6 +515,9 @@ class SettingsController extends Controller implements HasMiddleware
             foreach (array_keys($spec['fields']) as $field) {
                 $keys[] = "{$gateway}.{$field}";
             }
+            foreach (array_keys(StorePaymentGateways::ENV_ONLY[$gateway] ?? []) as $field) {
+                $keys[] = "{$gateway}.{$field}";
+            }
         }
 
         return array_values(array_unique($keys));
@@ -583,6 +586,10 @@ class SettingsController extends Controller implements HasMiddleware
                 'fields' => $fields,
                 'effective' => StorePaymentGateways::effective($gateway),
                 'missing' => StorePaymentGateways::missing($gateway),
+                'env_only' => collect(StorePaymentGateways::ENV_ONLY[$gateway] ?? [])
+                    ->map(fn (array $envSpec, string $field): array => ['key' => $field, 'env' => $envSpec[0], 'set' => StorePaymentGateways::envOnlySet($envSpec[1])])
+                    ->values()->all(),
+                'live_unconfirmed' => StorePaymentGateways::liveUnconfirmed($gateway),
             ];
         }
 

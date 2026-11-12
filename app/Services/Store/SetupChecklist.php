@@ -88,6 +88,8 @@ class SetupChecklist
         'paymentGateways.iyzico_api_key' => ['payment_method.index', 'iyzico.api_key'],
         'paymentGateways.iyzico_secret_key' => ['payment_method.index', 'iyzico.secret_key'],
         'paymentGateways.iyzico_currency' => ['payment_method.index', 'iyzico.currency'],
+        // `.env` only (StorePaymentGateways::ENV_ONLY): the page shows it read-only, set or not set.
+        'paymentGateways.iyzico_identity_number' => ['payment_method.index', 'iyzico.identity_number'],
         'paymentGateways.payhere_merchant_id' => ['payment_method.index', 'payhere.merchant_id'],
         'paymentGateways.payhere_secret' => ['payment_method.index', 'payhere.secret'],
         'paymentGateways.aamarpay_store_id' => ['payment_method.index', 'aamarpay.store_id'],
@@ -314,7 +316,8 @@ class SetupChecklist
 
     /**
      * Every enabled gateway has each required field in effect (saved on the
-     * Payment methods page, else `.env`): one reason per missing field,
+     * Payment methods page, else `.env`) and each `.env`-only value
+     * (StorePaymentGateways::ENV_ONLY, iyzico's identity number): one reason per missing field,
      * `<gateway>_<field>`, which the page highlights as `<gateway>.<field>`.
      *
      * @return list<string>
@@ -328,7 +331,7 @@ class SetupChecklist
                 continue;
             }
 
-            foreach (StorePaymentGateways::missing($gateway) as $field) {
+            foreach ([...StorePaymentGateways::missing($gateway), ...StorePaymentGateways::envOnlyMissing($gateway)] as $field) {
                 $reasons[] = "{$gateway}_{$field}";
             }
         }

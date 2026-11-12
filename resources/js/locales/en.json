@@ -1658,6 +1658,14 @@
                 "missing": "{gateway} is enabled but its {field} is not set here or in .env.",
                 "groupHelp": "Fields marked * are needed once any {gateway} field is entered here. Leave every field empty to use .env; emptying the {identifying} removes every saved {gateway} setting, secrets included.",
                 "envHint": ".env ({env}): {value}",
+                "envOnlyMissing": "{gateway} needs {env} in .env: without it {gateway} cannot start a payment.",
+                "envOnlyFields": {
+                    "identity_number": "Buyer identity number ({env}, .env only)"
+                },
+                "liveUnconfirmed": {
+                    "ngenius": "The live URLs are defaults that were not confirmed with the provider: confirm NGENIUS_LIVE_IDENTITY_URL and NGENIUS_LIVE_GATEWAY_URL in .env before going live.",
+                    "aamarpay": "The payment page is opened with a GET redirect that was not confirmed with the provider: check it in AamarPay's sandbox before going live (the old code POSTed a form)."
+                },
                 "secretSaved": "Saved here. Leave the field empty to keep it.",
                 "secretNotSaved": "Not saved here.",
                 "secretUnreadable": "The saved value can no longer be read (the application key changed). Enter it again.",
@@ -3099,6 +3107,7 @@
                         "iyzico_api_key": "iyzico is enabled, but its API key is not set on the Payment methods page or in .env, so it cannot take payments.",
                         "iyzico_secret_key": "iyzico is enabled, but its secret key is not set on the Payment methods page or in .env, so it cannot take payments.",
                         "iyzico_currency": "iyzico is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_identity_number": "iyzico needs IYZICO_IDENTITY_NUMBER in .env: without it iyzico cannot start a payment.",
                         "payhere_merchant_id": "PayHere is enabled, but its merchant ID is not set on the Payment methods page or in .env, so it cannot take payments.",
                         "payhere_secret": "PayHere is enabled, but its merchant secret is not set on the Payment methods page or in .env, so it cannot take payments.",
                         "aamarpay_store_id": "AamarPay is enabled, but its store ID is not set on the Payment methods page or in .env, so it cannot take payments.",

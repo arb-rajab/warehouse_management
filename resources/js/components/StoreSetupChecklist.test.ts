@@ -246,13 +246,14 @@ const REASONS: [StoreSetupChecklistReason, RouteDefinition<'get'>][] = [
 
 /**
  * The Payment methods page's reasons: every required field of a gateway with
- * a payment flow (SetupChecklist::TARGETS), highlighted as `<gateway>.<field>`.
+ * a payment flow and iyzico's `.env`-only identity number
+ * (SetupChecklist::TARGETS), highlighted as `<gateway>.<field>`.
  */
 const PAYMENT_GATEWAY_FIELDS: Record<string, string[]> = {
     bkash: ['app_key', 'app_secret', 'username', 'password', 'currency'],
     nagad: ['merchant_id', 'pg_public_key', 'merchant_private_key', 'mode'],
     sslcommerz: ['store_id', 'store_password', 'currency'],
-    iyzico: ['api_key', 'secret_key', 'currency'],
+    iyzico: ['api_key', 'secret_key', 'currency', 'identity_number'],
     payhere: ['merchant_id', 'secret'],
     aamarpay: ['store_id', 'signature_key', 'currency'],
     ngenius: ['outlet_id', 'api_key', 'currency', 'mode'],
