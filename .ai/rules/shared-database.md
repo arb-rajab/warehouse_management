@@ -329,6 +329,7 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 
 - `pallets.product_id`
 - `cell_status_logs.product_id`
+- `cell_status_logs.old_product_id` (the product a pallet held before a `product_changed` entry)
 - `cell_verification_reports.expected_product_id`
 - `cell_verification_reports.reported_product_id`
 - `wms_product_settings.product_id`

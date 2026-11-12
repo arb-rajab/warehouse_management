@@ -8,6 +8,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\PalletActionService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -173,13 +174,14 @@ test('changing a pallets product writes a product_changed log carrying the new p
 
     $log = CellStatusLog::query()->sole();
 
-    expect($log->only(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'boxes_count', 'user_id', 'note']))->toEqual([
+    expect($log->only(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'old_product_id', 'pallet_id', 'boxes_count', 'user_id', 'note']))->toEqual([
         'cell_id' => $cell->id,
         'related_cell_id' => null,
         'action' => CellLogAction::ProductChanged,
         'from_state' => CellState::Full,
         'to_state' => CellState::Full,
         'product_id' => $newProduct->id,
+        'old_product_id' => $oldProduct->id,
         'pallet_id' => $pallet->id,
         'boxes_count' => 5,
         'user_id' => $user->id,
@@ -293,4 +295,28 @@ test('place writes one stored log with the pallets remaining boxes and returns t
             'pallet_id' => $pallet->id,
             'user_id' => $user->id,
         ]);
+});
+
+test('the pallets own note is kept by place, open, remove-boxes, transfer and the admin correction', function () {
+    [$first, $second] = secondLevelCells(2);
+    Setting::current()->update(['allowed_open_levels' => [1, 2, 3, 4, 5, 6]]);
+    $pallet = Pallet::factory()->unplaced()->create(['remaining_boxes' => 10, 'note' => 'Olive oil 5L']);
+    $user = User::factory()->create();
+    $actions = palletActionsUnderTest();
+    Row::query()->whereKey($first->row_id)->update(['warehouse_id' => Pallet::query()->with('receipt')->findOrFail($pallet->id)->receipt->warehouse_id]);
+
+    $actions->place($pallet, $first->id, $user->id, 'Placed');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->open($pallet->fresh(), 2, false, $user->id, 'Opened');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->removeBoxes($pallet->fresh(), 1, false, $user->id, 'Removed');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->transfer($pallet->fresh(), $second->id, $user->id, 'Moved');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->update($pallet->fresh(), Product::factory()->create()->id, null, 5, $user->id, false);
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
 });

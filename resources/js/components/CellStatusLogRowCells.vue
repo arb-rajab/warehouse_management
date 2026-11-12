@@ -12,6 +12,7 @@ import {
     cellLogActionLabel,
     cellWarehouseName,
     hasUnacknowledgedFlags,
+    isPalletCorrection,
     transferPair,
 } from '@/lib/cellStatusLogDisplay';
 import type { DisplayCellStatusLog } from '@/lib/cellStatusLogDisplay';
@@ -52,7 +53,14 @@ const pair = computed(() => transferPair(props.log));
 
 <template>
     <td class="px-4 py-2">
-        <div class="flex flex-wrap items-start gap-1">
+        <span
+            v-if="!pair.from"
+            class="text-muted"
+            data-testid="cell-log-no-cell"
+        >
+            {{ t('cellLog.columns.noCell') }}
+        </span>
+        <div v-else class="flex flex-wrap items-start gap-1">
             <div class="min-w-0">
                 <TableLink
                     class="font-mono"
@@ -138,9 +146,9 @@ const pair = computed(() => transferPair(props.log));
                 class="h-3.5 w-3.5 shrink-0 text-warning"
             />
         </div>
-        <div class="text-xs text-muted">
+        <div v-if="log.from_state" class="text-xs text-muted">
             {{ cellStateLabel(log.from_state) }}
-            <template v-if="!log.pairedIn">
+            <template v-if="!log.pairedIn && log.to_state">
                 <span class="inline-block rtl:rotate-180">→</span>
                 {{ cellStateLabel(log.to_state) }}
             </template>
@@ -171,6 +179,14 @@ const pair = computed(() => transferPair(props.log));
             <ProductActiveBadge :active="log.product.active" />
         </div>
         <span v-else class="text-muted">—</span>
+        <div
+            v-if="log.old_product"
+            class="text-xs text-muted"
+            data-testid="cell-log-old-product"
+        >
+            {{ t('cellLog.correction.wasProduct') }}:
+            {{ productName(log.old_product.name, log.old_product.ar_name) }}
+        </div>
     </td>
     <td class="px-4 py-2">
         <template v-if="log.pallet">
@@ -194,6 +210,33 @@ const pair = computed(() => transferPair(props.log));
         <span v-else class="text-muted">—</span>
     </td>
     <td
+        v-if="isPalletCorrection(log)"
+        class="max-w-xs px-4 py-2 text-muted"
+        data-testid="cell-log-correction"
+    >
+        <div v-if="log.reason" class="truncate" :title="log.reason">
+            {{ t('cellLog.correction.reason') }}: {{ log.reason }}
+        </div>
+        <div
+            v-if="
+                log.action === 'note_changed' ||
+                log.old_note !== null ||
+                log.new_note !== null
+            "
+            class="truncate text-xs"
+            :title="`${log.old_note ?? ''} → ${log.new_note ?? ''}`"
+        >
+            {{ t('cellLog.correction.palletNote') }}:
+            {{ log.old_note ?? t('cellLog.correction.noNote') }}
+            <span class="inline-block rtl:rotate-180">→</span>
+            {{ log.new_note ?? t('cellLog.correction.noNote') }}
+        </div>
+        <div v-if="log.note" class="truncate text-xs" :title="log.note">
+            {{ log.note }}
+        </div>
+    </td>
+    <td
+        v-else
         class="max-w-xs truncate px-4 py-2 text-muted"
         :title="log.note ?? undefined"
     >

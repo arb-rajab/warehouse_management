@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $product_id
  * @property int $boxes
  * @property CarbonImmutable|null $expiration_date
+ * @property string|null $note copied onto the pallet finalizing creates
  * @property int|null $pallet_id
  * @property int $position
  * @property CarbonImmutable|null $created_at
@@ -29,7 +30,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read Product $product
  * @property-read Pallet|null $pallet
  */
-#[Fillable(['receipt_id', 'product_id', 'boxes', 'expiration_date', 'pallet_id', 'position'])]
+#[Fillable(['receipt_id', 'product_id', 'boxes', 'expiration_date', 'note', 'pallet_id', 'position'])]
 class ReceiptPallet extends Model
 {
     /** @use HasFactory<ReceiptPalletFactory> */

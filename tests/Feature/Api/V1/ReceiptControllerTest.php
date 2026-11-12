@@ -259,8 +259,8 @@ test('an admin creates a draft receipt with a note and the pallets typed from th
         'warehouse_id' => $warehouse->id,
         'note' => 'Truck arrived late',
         'pallets' => [
-            ['product_id' => $gadgets->id, 'boxes' => 12, 'expiration_date' => '2027-03-04'],
-            ['product_id' => $widgets->id, 'boxes' => 30],
+            ['product_id' => $gadgets->id, 'boxes' => 12, 'expiration_date' => '2027-03-04', 'note' => '  Olive oil 5L, Brand X  '],
+            ['product_id' => $widgets->id, 'boxes' => 30, 'note' => ''],
             ['product_id' => $gadgets->id, 'boxes' => 7, 'expiration_date' => null],
         ],
     ]);
@@ -281,9 +281,9 @@ test('an admin creates a draft receipt with a note and the pallets typed from th
         'created_at' => $receipt->created_at->toIso8601String(),
         'files' => [],
         'pallets' => [
-            ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 12, 'expiration_date' => '2027-03-04'],
-            ['product_id' => $widgets->id, 'product' => ['id' => $widgets->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'image_url' => 'https://cdn.example.com/widgets.png', 'boxes_count' => 10, 'active' => true], 'boxes' => 30, 'expiration_date' => null],
-            ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 7, 'expiration_date' => null],
+            ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 12, 'expiration_date' => '2027-03-04', 'note' => 'Olive oil 5L, Brand X'],
+            ['product_id' => $widgets->id, 'product' => ['id' => $widgets->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'image_url' => 'https://cdn.example.com/widgets.png', 'boxes_count' => 10, 'active' => true], 'boxes' => 30, 'expiration_date' => null, 'note' => null],
+            ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 7, 'expiration_date' => null, 'note' => null],
         ],
     ]);
 
@@ -383,6 +383,8 @@ test('creating a receipt rejects a malformed pallet entry, by the field that is 
     'fractional boxes' => [['product_id' => 'PRODUCT', 'boxes' => 1.5], 'pallets.1.boxes'],
     'too many boxes' => [['product_id' => 'PRODUCT', 'boxes' => 100001], 'pallets.1.boxes'],
     'invalid expiry' => [['product_id' => 'PRODUCT', 'boxes' => 3, 'expiration_date' => 'next week'], 'pallets.1.expiration_date'],
+    'note over 255 characters' => [['product_id' => 'PRODUCT', 'boxes' => 3, 'note' => str_repeat('a', 256)], 'pallets.1.note'],
+    'note not a string' => [['product_id' => 'PRODUCT', 'boxes' => 3, 'note' => ['a']], 'pallets.1.note'],
 ]);
 
 test('creating a receipt rejects pallets that are not a list of entries', function () {
@@ -443,8 +445,8 @@ test('a receipt detail carries the files with their download url and the pallets
             ['id' => $pdf->id, 'original_name' => 'back.pdf', 'mime_type' => 'application/pdf', 'size' => 4096, 'url' => route('api.v1.receipts.files.show', ['receipt' => $receipt->id, 'file' => $pdf->id]), 'created_at' => $pdf->created_at->toIso8601String()],
         ],
         'pallets' => [
-            ['product_id' => $widgets->id, 'product' => ['id' => $widgets->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'image_url' => null, 'boxes_count' => 10, 'active' => true], 'boxes' => 12, 'expiration_date' => '2027-03-04'],
-            ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 7, 'expiration_date' => null],
+            ['product_id' => $widgets->id, 'product' => ['id' => $widgets->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'image_url' => null, 'boxes_count' => 10, 'active' => true], 'boxes' => 12, 'expiration_date' => '2027-03-04', 'note' => null],
+            ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 7, 'expiration_date' => null, 'note' => null],
         ],
     ]);
 
@@ -480,7 +482,7 @@ test('a finalized receipt detail names who finalized it and still carries no pal
         ->and($response->json('finalized_at'))->not->toBeNull();
 
     foreach ($response->json('pallets') as $entry) {
-        expect(array_keys($entry))->toBe(['product_id', 'product', 'boxes', 'expiration_date']);
+        expect(array_keys($entry))->toBe(['product_id', 'product', 'boxes', 'expiration_date', 'note']);
     }
 
     foreach ($createdPalletIds as $palletId) {
@@ -595,7 +597,22 @@ test('replacing the pallets rejects a malformed entry and keeps the earlier list
     'unknown product' => [['product_id' => 999999, 'boxes' => 3], 'pallets.0.product_id'],
     'zero boxes' => [['product_id' => 'PRODUCT', 'boxes' => 0], 'pallets.0.boxes'],
     'invalid expiry' => [['product_id' => 'PRODUCT', 'boxes' => 3, 'expiration_date' => 'soon'], 'pallets.0.expiration_date'],
+    'note over 255 characters' => [['product_id' => 'PRODUCT', 'boxes' => 3, 'note' => str_repeat('a', 256)], 'pallets.0.note'],
 ]);
+
+test('replacing the pallets stores each entry note, trimmed, and returns them in the order sent', function () {
+    actingAsAdminMobileUser();
+    $receipt = Receipt::factory()->create();
+    $product = Product::factory()->create();
+
+    $response = $this->putJson("/api/v1/receipts/{$receipt->id}/pallets", ['pallets' => [
+        ['product_id' => $product->id, 'boxes' => 3, 'note' => ' Olive oil 5L '],
+        ['product_id' => $product->id, 'boxes' => 4],
+        ['product_id' => $product->id, 'boxes' => 5, 'note' => str_repeat('a', 255)],
+    ]])->assertOk();
+
+    expect(array_column($response->json('pallets'), 'note'))->toBe(['Olive oil 5L', null, str_repeat('a', 255)]);
+});
 
 test('replacing the pallets of a receipt that does not exist is a 404', function () {
     actingAsAdminMobileUser();

@@ -19,14 +19,27 @@ use Illuminate\Support\Carbon;
  * anti-fraud signal raised against the log's own actor, so they are withheld
  * from a non-admin (mobile app) viewer — see CellStatusLog::WITH_FLAG_DETAILS.
  *
+ * A record correction (`note_changed`, `product_changed`) of a received pallet
+ * that has no cell yet has a null `cell`, `from_state` and `to_state`; every
+ * other entry names its cell and states. `batch_id` is shared by the entries
+ * one bulk request wrote; `old_product`/`new_product` are set on
+ * `product_changed`, `old_note`/`new_note` (the pallet's own note) on both
+ * corrections, and `reason` on a product change made through the bulk
+ * endpoint.
+ *
  * @property-read int $id
  * @property-read CellLogAction $action
- * @property-read CellState $from_state
- * @property-read CellState $to_state
+ * @property-read CellState|null $from_state
+ * @property-read CellState|null $to_state
  * @property-read string|null $note
- * @property-read Cell $cell
+ * @property-read string|null $batch_id
+ * @property-read string|null $reason
+ * @property-read string|null $old_note
+ * @property-read string|null $new_note
+ * @property-read Cell|null $cell
  * @property-read Cell|null $relatedCell
  * @property-read Product|null $product
+ * @property-read Product|null $oldProduct
  * @property-read int|null $pallet_id
  * @property-read int|null $boxes_count
  * @property-read Pallet|null $pallet
@@ -53,11 +66,17 @@ class CellStatusLogResource extends JsonResource
         return [
             'id' => $this->id,
             'action' => $this->action->value,
-            'from_state' => $this->from_state->value,
-            'to_state' => $this->to_state->value,
+            'from_state' => $this->from_state?->value,
+            'to_state' => $this->to_state?->value,
             'note' => $this->note,
             'boxes_count' => $this->boxes_count,
-            'cell' => $this->whenLoaded('cell', fn () => $this->cell->toLocationWithWarehouseArray()),
+            'batch_id' => $this->batch_id,
+            'reason' => $this->reason,
+            'old_note' => $this->old_note,
+            'new_note' => $this->new_note,
+            'old_product' => $this->whenLoaded('oldProduct', fn (): ?array => $this->productSummary($this->oldProduct)),
+            'new_product' => $this->whenLoaded('product', fn (): ?array => $this->action === CellLogAction::ProductChanged ? $this->productSummary($this->product) : null),
+            'cell' => $this->whenLoaded('cell', fn () => $this->cell?->toLocationWithWarehouseArray()),
             'related_cell' => $this->whenLoaded('relatedCell', fn () => $this->relatedCell?->toLocationWithWarehouseArray()),
             'product' => $this->whenLoaded('product', fn () => $this->product === null ? null : new ProductResource($this->product)),
             'pallet' => $this->pallet_id === null ? null : [
@@ -80,6 +99,20 @@ class CellStatusLogResource extends JsonResource
                         : null,
                 ])->all()),
             ),
+        ];
+    }
+
+    /**
+     * The id and names of a product a correction entry names.
+     *
+     * @return array{id: int, name: string, ar_name: string}|null
+     */
+    private function productSummary(?Product $product): ?array
+    {
+        return $product === null ? null : [
+            'id' => $product->id,
+            'name' => $product->name,
+            'ar_name' => $product->ar_name,
         ];
     }
 }

@@ -247,7 +247,8 @@ export type CellLogAction =
     | 'transferred_in'
     | 'deactivated'
     | 'reactivated'
-    | 'product_changed';
+    | 'product_changed'
+    | 'note_changed';
 
 export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
 
@@ -258,14 +259,32 @@ export interface CellStatusLogFlag {
     acknowledged_by?: UserSummary | null;
 }
 
+/** A product a record correction names (`product_changed`). */
+export interface CellLogProductSummary {
+    id: number;
+    name: string;
+    ar_name: string;
+}
+
 export interface CellStatusLog {
     id: number;
     action: CellLogAction;
-    from_state: Cell['state'];
-    to_state: Cell['state'];
+    /** Null only on a correction of a pallet with no cell yet. */
+    from_state: Cell['state'] | null;
+    to_state: Cell['state'] | null;
     note: string | null;
     boxes_count: number | null;
-    cell: CellSlotLocation;
+    /** Shared by the entries one bulk correction wrote. */
+    batch_id: string | null;
+    /** Why the product was changed (bulk product change). */
+    reason: string | null;
+    /** The pallet's own note before and after a correction. */
+    old_note: string | null;
+    new_note: string | null;
+    old_product: CellLogProductSummary | null;
+    new_product: CellLogProductSummary | null;
+    /** Null only on a correction of a pallet with no cell yet. */
+    cell: CellSlotLocation | null;
     related_cell: CellSlotLocation | null;
     product: ProductDetails | null;
     pallet: {
@@ -565,6 +584,8 @@ export interface ReceiptPalletEntry {
     product: ProductDetails;
     boxes: number;
     expiration_date: string | null;
+    /** Copied onto the pallet when the receipt is finalized. */
+    note: string | null;
 }
 
 export interface ReceiptDetail extends ReceiptListItem {

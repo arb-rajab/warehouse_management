@@ -30,7 +30,7 @@ use Throwable;
  * it created are corrected through the normal pallet actions. Who may receive
  * at all (`role:admin`) is the route's concern, not re-checked here.
  *
- * @phpstan-type WrittenPallet array{product_id: int, boxes: int, expiration_date: string|null}
+ * @phpstan-type WrittenPallet array{product_id: int, boxes: int, expiration_date: string|null, note?: string|null}
  */
 class ReceiptService
 {
@@ -198,7 +198,7 @@ class ReceiptService
      * Finalize a draft receipt: with the receipt locked, refuse it while it
      * has no bill file (`receipt_has_no_files`) or no pallet entry
      * (`receipt_has_no_pallets`); otherwise create one unplaced pallet per
-     * entry (its product, boxes and expiry, no cell, owned by the receipt's
+     * entry (its product, boxes, expiry and note, no cell, owned by the receipt's
      * warehouse through `receipt_id`), link each entry to its pallet and
      * stamp the receipt finalized.
      *
@@ -215,7 +215,7 @@ class ReceiptService
             }
 
             $entries = $locked->pallets()
-                ->select(['id', 'receipt_id', 'product_id', 'boxes', 'expiration_date', 'pallet_id'])
+                ->select(['id', 'receipt_id', 'product_id', 'boxes', 'expiration_date', 'note', 'pallet_id'])
                 ->orderBy('position')
                 ->orderBy('id')
                 ->get();
@@ -231,6 +231,7 @@ class ReceiptService
                     'receipt_id' => $locked->id,
                     'expiration_date' => $entry->expiration_date?->toDateString(),
                     'remaining_boxes' => $entry->boxes,
+                    'note' => $entry->note,
                 ]);
 
                 $entry->update(['pallet_id' => $pallet->id]);
@@ -274,6 +275,7 @@ class ReceiptService
             'product_id' => $pallet['product_id'],
             'boxes' => $pallet['boxes'],
             'expiration_date' => $pallet['expiration_date'],
+            'note' => $pallet['note'] ?? null,
             'position' => $position,
         ], $pallets, array_keys($pallets)));
     }

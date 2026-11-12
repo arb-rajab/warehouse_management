@@ -110,6 +110,7 @@ test('products.id and every product_id FK are declared as signed integers, not b
         '2026_09_30_000001_create_product_variations_table.php' => ["\$table->integer('product_id');"],
         '2026_09_30_000005_create_carts_offered_table.php' => ["\$table->integer('product_id')->nullable();"],
         '2026_09_30_000007_create_offer_products_table.php' => ["\$table->integer('product_id');"],
+        '2026_11_12_100002_add_pallet_corrections_to_cell_status_logs_table.php' => ["\$table->integer('old_product_id')->nullable();"],
     ];
 
     foreach ($columns as $migration => $declarations) {

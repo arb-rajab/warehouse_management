@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property-read Carbon|null $created_at
  * @property-read CarbonImmutable|null $cell_entered_at
  * @property-read int $remaining_boxes
+ * @property-read string|null $note
  * @property-read int $product_boxes_count
  * @property-read Cell|null $cell
  *
@@ -34,8 +35,39 @@ class ProductPalletResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Spelled out key by key (from the shared summary) so the API
+        // documentation lists every field; a spread is not followed.
+        $summary = $this->resource->toListingSummaryArray();
+
         return [
-            ...$this->resource->toListingSummaryArray(),
+            /**
+             * The pallet id (for `GET pallets/{pallet}` and the pallet actions).
+             *
+             * @var int
+             */
+            'id' => $summary['id'],
+            /**
+             * The cell state; null for an unplaced pallet.
+             *
+             * @var string|null
+             */
+            'state' => $summary['state'],
+            /**
+             * `Y-m-d`; null when the pallet has no expiry.
+             *
+             * @var string|null
+             */
+            'expiration_date' => $summary['expiration_date'],
+            /**
+             * When the pallet was first stocked (ISO 8601).
+             *
+             * @var string|null
+             */
+            'added_at' => $summary['added_at'],
+            /** @var int */
+            'remaining_boxes' => $summary['remaining_boxes'],
+            /** The pallet's own note; null when it has none. */
+            'note' => $this->note,
             'cell_entered_at' => $this->whenLoaded('cellEnteredLog', fn () => $this->cell_entered_at?->toIso8601String()),
             'product_boxes_count' => $this->product_boxes_count,
             'placed' => $this->cell_id !== null,

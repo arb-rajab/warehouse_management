@@ -51,6 +51,36 @@ test('a cell status log belongs to its product', function () {
     expect($log->product->id)->not->toBe($otherProduct->id);
 });
 
+test('a cell status log names the product a pallet held before a product change, and none otherwise', function () {
+    $old = Product::factory()->create();
+    $new = Product::factory()->create();
+    $change = CellStatusLog::factory()->create(['action' => CellLogAction::ProductChanged, 'product_id' => $new->id, 'old_product_id' => $old->id]);
+    $plain = CellStatusLog::factory()->create(['product_id' => $old->id]); // noise
+
+    expect($change->oldProduct->id)->toBe($old->id)
+        ->and($change->product->id)->toBe($new->id)
+        ->and($plain->oldProduct)->toBeNull();
+});
+
+test('a correction of an unplaced pallet is logged without a cell or states', function () {
+    $log = CellStatusLog::factory()->create([
+        'cell_id' => null,
+        'from_state' => null,
+        'to_state' => null,
+        'action' => CellLogAction::NoteChanged,
+        'batch_id' => '7c1d4a52-5b2e-4a51-9d3a-0f2b8d9c1e11',
+        'old_note' => 'Before',
+        'new_note' => 'After',
+        'reason' => null,
+    ])->fresh();
+
+    expect($log->cell)->toBeNull()
+        ->and($log->from_state)->toBeNull()
+        ->and($log->to_state)->toBeNull()
+        ->and($log->action)->toBe(CellLogAction::NoteChanged)
+        ->and($log->only(['batch_id', 'old_note', 'new_note']))->toBe(['batch_id' => '7c1d4a52-5b2e-4a51-9d3a-0f2b8d9c1e11', 'old_note' => 'Before', 'new_note' => 'After']);
+});
+
 test('a cell status log belongs to its pallet', function () {
     $pallet = Pallet::factory()->create();
     $otherPallet = Pallet::factory()->create();

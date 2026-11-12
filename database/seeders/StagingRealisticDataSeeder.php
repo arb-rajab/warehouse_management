@@ -493,16 +493,27 @@ class StagingRealisticDataSeeder extends Seeder
      * Record an admin's product correction on a few stored pallets (the
      * `product_changed` log action). The pallets already hold the product the
      * log names, so this only adds the history entry PalletActionService::update()
-     * would have written, without changing what is on the shelf.
+     * would have written, without changing what is on the shelf. Then the same
+     * pallets get one shared note in one bulk request (`note_changed`, a shared
+     * `batch_id`), as PalletCorrectionService::changeNote() writes it.
      *
      * @param  list<array{cell: Cell, pallet: Pallet, product: Product, last_at: CarbonInterface}>  $occupied
      */
     private function seedProductCorrections(array $occupied): void
     {
+        $batchId = (string) Str::uuid();
+        $note = 'Olive oil 5L, Brand X';
+
         foreach ($occupied as $placed) {
             $cell = Cell::query()->select(['id', 'state'])->findOrFail($placed['cell']->id);
+            $changedAt = $this->timeAfter($placed['last_at']);
 
-            $this->saveLog($cell, CellLogAction::ProductChanged, $cell->state, $cell->state, $placed['product'], $placed['pallet'], $placed['pallet']->remaining_boxes, $this->admin, $this->timeAfter($placed['last_at']));
+            $this->saveLog($cell, CellLogAction::ProductChanged, $cell->state, $cell->state, $placed['product'], $placed['pallet'], $placed['pallet']->remaining_boxes, $this->admin, $changedAt);
+
+            $placed['pallet']->forceFill(['note' => $note])->saveQuietly();
+            $this->saveLog($cell, CellLogAction::NoteChanged, $cell->state, $cell->state, $placed['product'], $placed['pallet'], $placed['pallet']->remaining_boxes, $this->admin, $this->timeAfter($changedAt))
+                ->forceFill(['batch_id' => $batchId, 'old_note' => null, 'new_note' => $note])
+                ->saveQuietly();
         }
     }
 

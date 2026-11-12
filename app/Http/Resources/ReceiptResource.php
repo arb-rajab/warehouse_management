@@ -55,6 +55,7 @@ class ReceiptResource extends JsonResource
                 'product' => new ProductResource($pallet->product),
                 'boxes' => $pallet->boxes,
                 'expiration_date' => $pallet->expiration_date?->toDateString(),
+                'note' => $pallet->note,
             ])->all()),
         ];
     }

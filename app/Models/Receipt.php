@@ -77,7 +77,7 @@ class Receipt extends Model
                 ->select(['id', 'receipt_id', 'original_name', 'mime_type', 'size', 'created_at'])
                 ->orderBy('id'),
             'pallets' => fn (HasMany $query) => $query
-                ->select(['id', 'receipt_id', 'product_id', 'boxes', 'expiration_date', 'position'])
+                ->select(['id', 'receipt_id', 'product_id', 'boxes', 'expiration_date', 'note', 'position'])
                 ->with([
                     'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
                     'product.thumbnailUpload:id,file_name,external_link',

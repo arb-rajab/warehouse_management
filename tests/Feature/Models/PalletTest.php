@@ -488,6 +488,45 @@ test('the etag works without a cell and changes when the pallet is placed', func
     expect(Pallet::query()->with('cell')->findOrFail($pallet->id)->etag())->not->toBe($unplacedEtag);
 });
 
+test('the etag of a pallet without a note is the one it had before notes existed', function () {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $fresh = Pallet::query()->findOrFail($pallet->id);
+
+    expect($fresh->etag())->toBe(md5(implode('|', [
+        $fresh->id,
+        $fresh->product_id,
+        $fresh->cell_id,
+        $fresh->expiration_date?->toDateString(),
+        $fresh->remaining_boxes,
+        null,
+        $fresh->updated_at?->getTimestamp(),
+    ])));
+});
+
+test('the etag changes with the note, even within the same second', function () {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $fresh = fn () => Pallet::query()->findOrFail($pallet->id);
+    $timestamp = $fresh()->updated_at;
+
+    $without = $fresh()->etag();
+    Pallet::query()->whereKey($pallet->id)->update(['note' => 'Brand X', 'updated_at' => $timestamp]);
+    $withX = $fresh()->etag();
+    Pallet::query()->whereKey($pallet->id)->update(['note' => 'Brand Y', 'updated_at' => $timestamp]);
+
+    expect($withX)->not->toBe($without)
+        ->and($fresh()->etag())->not->toBe($withX);
+});
+
+test('note is fillable and nullable', function () {
+    $pallet = Pallet::factory()->create(['note' => 'Olive oil 5L']);
+
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $pallet->update(['note' => null]);
+
+    expect($pallet->fresh()->note)->toBeNull();
+});
+
 test('the etag of an unplaced pallet differs from another unplaced pallets', function () {
     $first = Pallet::factory()->unplaced()->create();
     $second = Pallet::factory()->unplaced()->create();

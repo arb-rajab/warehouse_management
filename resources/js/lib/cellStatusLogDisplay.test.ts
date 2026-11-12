@@ -9,6 +9,7 @@ import {
     flagReasonLabel,
     hasUnacknowledgedFlags,
     mergeTransferPairs,
+    isPalletCorrection,
     transferPair,
 } from './cellStatusLogDisplay';
 
@@ -107,7 +108,28 @@ describe('acknowledgeFlags', () => {
     });
 });
 
+describe('isPalletCorrection', () => {
+    it('is true for the product and note corrections only', () => {
+        expect(isPalletCorrection(cellLog({ action: 'product_changed' }))).toBe(
+            true,
+        );
+        expect(isPalletCorrection(cellLog({ action: 'note_changed' }))).toBe(
+            true,
+        );
+        expect(isPalletCorrection(cellLog({ action: 'stored' }))).toBe(false);
+        expect(isPalletCorrection(cellLog({ action: 'transferred_out' }))).toBe(
+            false,
+        );
+    });
+});
+
 describe('transferPair', () => {
+    it('has no source slot for a correction of a pallet with no cell', () => {
+        expect(
+            transferPair(cellLog({ action: 'note_changed', cell: null })),
+        ).toEqual({ from: null, to: null });
+    });
+
     it('treats the log cell as the origin for a transferred_out entry', () => {
         const log = cellLog({
             action: 'transferred_out',
