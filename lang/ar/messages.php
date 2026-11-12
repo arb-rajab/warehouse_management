@@ -83,7 +83,7 @@ return [
     'order_updated_title' => 'تم تعديل الطلبية',
     'order_updated_body' => 'تم تعديل الطلبية رقم :code. يرجى مراجعتها في التطبيق.',
     'role_permission_not_held' => 'يمكنك فقط منح الدور صلاحيات تملكها أنت.',
-    'role_permission_super_admin_only' => 'لا يمنح الصلاحيات الحساسة، مثل إعدادات SMTP أو بوابات الدفع، أو يزيلها إلا المدير العام (Super Admin).',
+    'role_permission_super_admin_only' => 'لا يمنح الصلاحيات الحساسة، مثل إعدادات SMTP أو بوابات الدفع، أو يزيلها إلا المدير العام.',
     'staff_role_not_assignable' => 'يمكنك فقط منح دور لا يتجاوز صلاحياتك، ولا يمكنك تغيير دورك الخاص.',
     'seller_payout_full_request' => 'ادفع كامل المبلغ المطلوب (:amount)، أو اطلب من البائع تقديم طلب جديد. الدفعات الجزئية غير مدعومة.',
     'seller_payout_balance_limit' => 'لا يمكن أن يتجاوز المبلغ الرصيد المتاح لطريقة الدفع هذه (:amount).',

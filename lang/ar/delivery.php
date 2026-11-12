@@ -18,7 +18,7 @@ return [
         'smtp_changed' => [
             'subject' => 'تم تغيير إعدادات SMTP في :shop',
             'intro' => 'تم تغيير إعدادات البريد الصادر (SMTP) في :shop.',
-            'changed_by' => 'غيّرها',
+            'changed_by' => 'تم التغيير بواسطة',
             'when' => 'الوقت',
             'ip' => 'من عنوان IP',
             'fields_label' => 'الحقول التي تغيّرت',
@@ -46,7 +46,7 @@ return [
         'payment_gateway_changed' => [
             'subject' => 'تم تغيير إعدادات بوابات الدفع في :shop',
             'intro' => 'تم تغيير إعدادات بوابات الدفع في :shop.',
-            'changed_by' => 'غيّرها',
+            'changed_by' => 'تم التغيير بواسطة',
             'when' => 'الوقت',
             'ip' => 'من عنوان IP',
             'fields_label' => 'الإعدادات التي تغيّرت',
@@ -66,7 +66,7 @@ return [
             ],
             'fields' => [
                 'app_key' => 'مفتاح التطبيق',
-                'app_secret' => 'سر التطبيق',
+                'app_secret' => 'المفتاح السري للتطبيق',
                 'username' => 'اسم المستخدم',
                 'password' => 'كلمة المرور',
                 'currency' => 'العملة',
@@ -79,9 +79,9 @@ return [
                 'store_password' => 'كلمة مرور المتجر',
                 'api_key' => 'مفتاح API',
                 'secret_key' => 'المفتاح السري',
-                'secret' => 'سر التاجر',
+                'secret' => 'المفتاح السري للتاجر',
                 'signature_key' => 'مفتاح التوقيع',
-                'outlet_id' => 'معرّف المنفذ',
+                'outlet_id' => 'معرّف منفذ البيع',
                 'category_code' => 'رمز الفئة',
                 'user_secret_key' => 'المفتاح السري للمستخدم',
                 'publishable_key' => 'المفتاح القابل للنشر',

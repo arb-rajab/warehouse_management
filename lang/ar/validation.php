@@ -181,11 +181,11 @@ return [
                 'enabled' => 'تفعيل bKash',
                 'mode' => 'الوضع (bKash)',
                 'app_key' => 'مفتاح التطبيق (bKash)',
-                'app_secret' => 'سر التطبيق (bKash)',
-                'app_secret_clear' => 'حذف سر التطبيق المحفوظ (bKash)',
+                'app_secret' => 'المفتاح السري للتطبيق (bKash)',
+                'app_secret_clear' => 'حذف المفتاح السري للتطبيق المحفوظ (bKash)',
                 'username' => 'اسم المستخدم (bKash)',
                 'password' => 'كلمة المرور (bKash)',
-                'password_clear' => 'حذف كلمة المرور المحفوظ (bKash)',
+                'password_clear' => 'حذف كلمة المرور المحفوظة (bKash)',
                 'currency' => 'العملة (bKash)',
             ],
             'nagad' => [
@@ -202,7 +202,7 @@ return [
                 'mode' => 'الوضع (SSLCommerz)',
                 'store_id' => 'معرّف المتجر (SSLCommerz)',
                 'store_password' => 'كلمة مرور المتجر (SSLCommerz)',
-                'store_password_clear' => 'حذف كلمة مرور المتجر المحفوظ (SSLCommerz)',
+                'store_password_clear' => 'حذف كلمة مرور المتجر المحفوظة (SSLCommerz)',
                 'currency' => 'العملة (SSLCommerz)',
             ],
             'iyzico' => [
@@ -217,8 +217,8 @@ return [
                 'enabled' => 'تفعيل PayHere',
                 'mode' => 'الوضع (PayHere)',
                 'merchant_id' => 'معرّف التاجر (PayHere)',
-                'secret' => 'سر التاجر (PayHere)',
-                'secret_clear' => 'حذف سر التاجر المحفوظ (PayHere)',
+                'secret' => 'المفتاح السري للتاجر (PayHere)',
+                'secret_clear' => 'حذف المفتاح السري للتاجر المحفوظ (PayHere)',
                 'currency' => 'العملة (PayHere)',
             ],
             'aamarpay' => [
@@ -231,7 +231,7 @@ return [
             ],
             'ngenius' => [
                 'enabled' => 'تفعيل N-Genius',
-                'outlet_id' => 'معرّف المنفذ (N-Genius)',
+                'outlet_id' => 'معرّف منفذ البيع (N-Genius)',
                 'api_key' => 'مفتاح API (N-Genius)',
                 'api_key_clear' => 'حذف مفتاح API المحفوظ (N-Genius)',
                 'currency' => 'العملة (N-Genius)',

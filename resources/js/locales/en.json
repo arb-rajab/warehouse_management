@@ -1481,13 +1481,7 @@
                 "google_analytics": "Google Analytics",
                 "facebook_pixel": "Facebook Pixel",
                 "google_recaptcha": "reCAPTCHA",
-                "google_firebase": "Firebase",
-                "bkash_sandbox": "Bkash sandbox",
-                "sslcommerz_sandbox": "Sslcommerz sandbox",
-                "aamarpay_sandbox": "Aamarpay sandbox",
-                "iyzico_sandbox": "Iyzico sandbox",
-                "payhere_sandbox": "Payhere sandbox",
-                "voguepay_sandbox": "Voguepay sandbox"
+                "google_firebase": "Firebase"
             },
             "server": {
                 "set": "Set",
@@ -1664,7 +1658,6 @@
                 "missing": "{gateway} is enabled but its {field} is not set here or in .env.",
                 "groupHelp": "Fields marked * are needed once any {gateway} field is entered here. Leave every field empty to use .env; emptying the {identifying} removes every saved {gateway} setting, secrets included.",
                 "envHint": ".env ({env}): {value}",
-                "envHintSecret": ".env ({env}): {state}",
                 "secretSaved": "Saved here. Leave the field empty to keep it.",
                 "secretNotSaved": "Not saved here.",
                 "secretUnreadable": "The saved value can no longer be read (the application key changed). Enter it again.",
