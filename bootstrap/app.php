@@ -6,6 +6,7 @@ use App\Http\Middleware\CheckoutMiddleware;
 use App\Http\Middleware\EnsureMinimumAppVersion;
 use App\Http\Middleware\EnsurePasswordHasBeenChanged;
 use App\Http\Middleware\EnsurePaymentGatewayEnabled;
+use App\Http\Middleware\EnsurePaymentGatewaySandbox;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\HidePricesFromUnverified;
 use App\Http\Middleware\IsAdmin;
@@ -144,6 +145,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'rep_or_admin' => IsRepresentativeOrAdmin::class,
             'delivery_boy' => IsDeliveryBoy::class,
             'payment.gateway' => EnsurePaymentGatewayEnabled::class,
+            'payment.sandbox' => EnsurePaymentGatewaySandbox::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

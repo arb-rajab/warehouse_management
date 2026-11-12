@@ -397,9 +397,12 @@ Route::get('/customer-products/admin', [IyzicoController::class, 'initPayment'])
 
 //payhere below
 Route::controller(PayhereController::class)->group(function () {
-    Route::get('/payhere/checkout/testing', 'checkout_testing')->name('payhere.checkout.testing');
-    Route::get('/payhere/wallet/testing', 'wallet_testing')->name('payhere.checkout.testing');
-    Route::get('/payhere/customer_package/testing', 'customer_package_payment_testing')->name('payhere.customer_package.testing');
+    // Developer test forms: only while PayHere is enabled, in sandbox mode, outside production.
+    Route::middleware('payment.sandbox:payhere')->group(function () {
+        Route::get('/payhere/checkout/testing', 'checkout_testing')->name('payhere.checkout.testing');
+        Route::get('/payhere/wallet/testing', 'wallet_testing')->name('payhere.checkout.testing');
+        Route::get('/payhere/customer_package/testing', 'customer_package_payment_testing')->name('payhere.customer_package.testing');
+    });
 
     Route::any('/payhere/checkout/notify', 'checkout_notify')->name('payhere.checkout.notify');
     Route::any('/payhere/checkout/return', 'checkout_return')->name('payhere.checkout.return');
