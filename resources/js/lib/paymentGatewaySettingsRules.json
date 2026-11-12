@@ -1,0 +1,291 @@
+{
+    "rules": {
+        "enabled_source": ["required", "string", "in:env,admin"],
+        "gateways.bkash.enabled": ["nullable", "boolean"],
+        "gateways.bkash.mode": ["required", "string", "in:sandbox,live"],
+        "gateways.bkash.app_key": [
+            "required_with:gateways.bkash.app_secret,gateways.bkash.username,gateways.bkash.password,gateways.bkash.currency",
+            "nullable",
+            "string",
+            "max:100",
+            "regex:/^[A-Za-z0-9]+$/D"
+        ],
+        "gateways.bkash.app_secret": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.bkash.app_secret_clear": ["nullable", "boolean"],
+        "gateways.bkash.username": [
+            "required_with:gateways.bkash.app_key,gateways.bkash.app_secret,gateways.bkash.password,gateways.bkash.currency",
+            "nullable",
+            "string",
+            "max:100",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.bkash.password": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.bkash.password_clear": ["nullable", "boolean"],
+        "gateways.bkash.currency": [
+            "required_with:gateways.bkash.app_key,gateways.bkash.app_secret,gateways.bkash.username,gateways.bkash.password",
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.nagad.enabled": ["nullable", "boolean"],
+        "gateways.nagad.merchant_id": [
+            "required_with:gateways.nagad.merchant_number,gateways.nagad.pg_public_key,gateways.nagad.merchant_private_key,gateways.nagad.mode",
+            "nullable",
+            "string",
+            "max:20",
+            "regex:/^[0-9]{6,20}$/D"
+        ],
+        "gateways.nagad.merchant_number": [
+            "nullable",
+            "string",
+            "max:11",
+            "regex:/^01[0-9]{9}$/D"
+        ],
+        "gateways.nagad.pg_public_key": [
+            "required_with:gateways.nagad.merchant_id,gateways.nagad.merchant_number,gateways.nagad.merchant_private_key,gateways.nagad.mode",
+            "nullable",
+            "string",
+            "max:4096",
+            "regex:/^[A-Za-z0-9+\\/=\\s-]+$/D"
+        ],
+        "gateways.nagad.merchant_private_key": [
+            "nullable",
+            "string",
+            "max:8192",
+            "regex:/^[A-Za-z0-9+\\/=\\s-]+$/D"
+        ],
+        "gateways.nagad.merchant_private_key_clear": ["nullable", "boolean"],
+        "gateways.nagad.mode": [
+            "required_with:gateways.nagad.merchant_id,gateways.nagad.merchant_number,gateways.nagad.pg_public_key,gateways.nagad.merchant_private_key",
+            "nullable",
+            "string",
+            "in:sandbox,live"
+        ],
+        "gateways.sslcommerz.enabled": ["nullable", "boolean"],
+        "gateways.sslcommerz.mode": ["required", "string", "in:sandbox,live"],
+        "gateways.sslcommerz.store_id": [
+            "required_with:gateways.sslcommerz.store_password,gateways.sslcommerz.currency",
+            "nullable",
+            "string",
+            "max:100",
+            "regex:/^[A-Za-z0-9_-]+$/D"
+        ],
+        "gateways.sslcommerz.store_password": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.sslcommerz.store_password_clear": ["nullable", "boolean"],
+        "gateways.sslcommerz.currency": [
+            "required_with:gateways.sslcommerz.store_id,gateways.sslcommerz.store_password",
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.iyzico.enabled": ["nullable", "boolean"],
+        "gateways.iyzico.mode": ["required", "string", "in:sandbox,live"],
+        "gateways.iyzico.api_key": [
+            "required_with:gateways.iyzico.secret_key,gateways.iyzico.currency",
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^[A-Za-z0-9_-]+$/D"
+        ],
+        "gateways.iyzico.secret_key": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.iyzico.secret_key_clear": ["nullable", "boolean"],
+        "gateways.iyzico.currency": [
+            "required_with:gateways.iyzico.api_key,gateways.iyzico.secret_key",
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.payhere.enabled": ["nullable", "boolean"],
+        "gateways.payhere.mode": ["required", "string", "in:sandbox,live"],
+        "gateways.payhere.merchant_id": [
+            "required_with:gateways.payhere.secret,gateways.payhere.currency",
+            "nullable",
+            "string",
+            "max:20",
+            "regex:/^[0-9]{4,20}$/D"
+        ],
+        "gateways.payhere.secret": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.payhere.secret_clear": ["nullable", "boolean"],
+        "gateways.payhere.currency": [
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.aamarpay.enabled": ["nullable", "boolean"],
+        "gateways.aamarpay.mode": ["required", "string", "in:sandbox,live"],
+        "gateways.aamarpay.store_id": [
+            "required_with:gateways.aamarpay.signature_key,gateways.aamarpay.currency",
+            "nullable",
+            "string",
+            "max:100",
+            "regex:/^[A-Za-z0-9_-]+$/D"
+        ],
+        "gateways.aamarpay.signature_key": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.aamarpay.signature_key_clear": ["nullable", "boolean"],
+        "gateways.aamarpay.currency": [
+            "required_with:gateways.aamarpay.store_id,gateways.aamarpay.signature_key",
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.ngenius.enabled": ["nullable", "boolean"],
+        "gateways.ngenius.outlet_id": [
+            "required_with:gateways.ngenius.api_key,gateways.ngenius.currency,gateways.ngenius.mode",
+            "nullable",
+            "string",
+            "max:36",
+            "regex:/^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/D"
+        ],
+        "gateways.ngenius.api_key": [
+            "nullable",
+            "string",
+            "max:512",
+            "regex:/^[A-Za-z0-9+\\/=]+$/D"
+        ],
+        "gateways.ngenius.api_key_clear": ["nullable", "boolean"],
+        "gateways.ngenius.currency": [
+            "required_with:gateways.ngenius.outlet_id,gateways.ngenius.api_key,gateways.ngenius.mode",
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.ngenius.mode": [
+            "required_with:gateways.ngenius.outlet_id,gateways.ngenius.api_key,gateways.ngenius.currency",
+            "nullable",
+            "string",
+            "in:sandbox,live"
+        ],
+        "gateways.voguepay.enabled": ["nullable", "boolean"],
+        "gateways.voguepay.mode": ["required", "string", "in:sandbox,live"],
+        "gateways.voguepay.merchant_id": [
+            "required_with:gateways.voguepay.currency",
+            "nullable",
+            "string",
+            "max:100",
+            "regex:/^[A-Za-z0-9_-]+$/D"
+        ],
+        "gateways.voguepay.currency": [
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.toyyibpay.enabled": ["nullable", "boolean"],
+        "gateways.toyyibpay.category_code": [
+            "required_with:gateways.toyyibpay.user_secret_key,gateways.toyyibpay.mode",
+            "nullable",
+            "string",
+            "max:50",
+            "regex:/^[A-Za-z0-9]+$/D"
+        ],
+        "gateways.toyyibpay.user_secret_key": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^[A-Za-z0-9_-]+$/D"
+        ],
+        "gateways.toyyibpay.user_secret_key_clear": ["nullable", "boolean"],
+        "gateways.toyyibpay.mode": [
+            "required_with:gateways.toyyibpay.category_code,gateways.toyyibpay.user_secret_key",
+            "nullable",
+            "string",
+            "in:sandbox,live"
+        ],
+        "gateways.stripe.enabled": ["nullable", "boolean"],
+        "gateways.stripe.publishable_key": [
+            "required_with:gateways.stripe.secret_key,gateways.stripe.currency",
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^pk_(test|live)_[A-Za-z0-9]+$/D"
+        ],
+        "gateways.stripe.secret_key": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^(sk|rk)_(test|live)_[A-Za-z0-9]+$/D"
+        ],
+        "gateways.stripe.secret_key_clear": ["nullable", "boolean"],
+        "gateways.stripe.currency": [
+            "nullable",
+            "string",
+            "max:3",
+            "regex:/^[A-Z]{3}$/D"
+        ],
+        "gateways.paytm.enabled": ["nullable", "boolean"],
+        "gateways.paytm.merchant_id": [
+            "required_with:gateways.paytm.merchant_key,gateways.paytm.merchant_website,gateways.paytm.channel,gateways.paytm.industry_type,gateways.paytm.mode",
+            "nullable",
+            "string",
+            "max:50",
+            "regex:/^[A-Za-z0-9]+$/D"
+        ],
+        "gateways.paytm.merchant_key": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^\\S+$/D"
+        ],
+        "gateways.paytm.merchant_key_clear": ["nullable", "boolean"],
+        "gateways.paytm.merchant_website": [
+            "required_with:gateways.paytm.merchant_id,gateways.paytm.merchant_key,gateways.paytm.channel,gateways.paytm.industry_type,gateways.paytm.mode",
+            "nullable",
+            "string",
+            "max:50",
+            "regex:/^[A-Za-z0-9_]+$/D"
+        ],
+        "gateways.paytm.channel": ["nullable", "string", "in:WEB,WAP"],
+        "gateways.paytm.industry_type": [
+            "nullable",
+            "string",
+            "max:50",
+            "regex:/^[A-Za-z0-9_]+$/D"
+        ],
+        "gateways.paytm.mode": [
+            "required_with:gateways.paytm.merchant_id,gateways.paytm.merchant_key,gateways.paytm.merchant_website,gateways.paytm.channel,gateways.paytm.industry_type",
+            "nullable",
+            "string",
+            "in:sandbox,live"
+        ],
+        "current_password": ["required", "string"]
+    },
+    "serverOnly": {
+        "current_password": ["current_password:store"]
+    }
+}

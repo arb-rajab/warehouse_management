@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\Session;
  * package come from the session, the amount due from the database, and the
  * amount paid from the gateway's own server. Every web gateway used to take the
  * order, the package or the amount from its callback's query string or form.
+ *
+ * SSLCommerz, AamarPay and iyzico return with a cross-site POST that carries no
+ * session cookie, so they only use pending() to start: their return finds the
+ * payment by its reference (GatewayReturn).
  */
 class SessionGatewayPayment
 {
@@ -37,6 +41,34 @@ class SessionGatewayPayment
             self::sessionPackageId($paymentData),
             isset($paymentData['amount']) ? (float) $paymentData['amount'] : null,
         );
+    }
+
+    /**
+     * The payment the signed-in customer's session started, as GatewayReturn
+     * records it: the payer, what is paid for and the amount due, from the
+     * database. Null when there is nothing they can pay for.
+     *
+     * @return array{user_id: int, payment_type: string, combined_order_id: int|null, package_id: int|null, amount: float}|null
+     */
+    public function pending(): ?array
+    {
+        $payerId = Auth::id();
+        $amount = $this->amountDue();
+
+        if ($payerId === null || $amount === null) {
+            return null;
+        }
+
+        $paymentType = (string) Session::get('payment_type');
+        $isPackage = in_array($paymentType, [GatewayPaymentService::CUSTOMER_PACKAGE, GatewayPaymentService::SELLER_PACKAGE], true);
+
+        return [
+            'user_id' => (int) $payerId,
+            'payment_type' => $paymentType,
+            'combined_order_id' => $paymentType === GatewayPaymentService::CART ? (int) Session::get('combined_order_id') : null,
+            'package_id' => $isPackage ? self::sessionPackageId((array) Session::get('payment_data', [])) : null,
+            'amount' => $amount,
+        ];
     }
 
     /**

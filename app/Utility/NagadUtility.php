@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Utility;
+use App\Support\StorePaymentGateways;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Cache;
@@ -25,7 +26,7 @@ class NagadUtility {
      */
     public static function EncryptDataWithPublicKey($data)
     {
-        $pgPublicKey = config('nagad.pg_public_key');
+        $pgPublicKey = StorePaymentGateways::get('nagad', 'pg_public_key');
         $public_key = "-----BEGIN PUBLIC KEY-----\n" . $pgPublicKey . "\n-----END PUBLIC KEY-----";
         // echo $public_key;
         // exit();
@@ -39,7 +40,7 @@ class NagadUtility {
      */
     public static function SignatureGenerate($data)
     {
-        $merchantPrivateKey = config('nagad.merchant_private_key');
+        $merchantPrivateKey = StorePaymentGateways::get('nagad', 'merchant_private_key');
         $private_key = "-----BEGIN RSA PRIVATE KEY-----\n" . $merchantPrivateKey . "\n-----END RSA PRIVATE KEY-----";
         // echo $private_key;
         // exit();
@@ -72,7 +73,7 @@ class NagadUtility {
 
     public static function DecryptDataWithPrivateKey($crypttext)
     {
-        $merchantPrivateKey = config('nagad.merchant_private_key');
+        $merchantPrivateKey = StorePaymentGateways::get('nagad', 'merchant_private_key');
         $private_key = "-----BEGIN RSA PRIVATE KEY-----\n" . $merchantPrivateKey . "\n-----END RSA PRIVATE KEY-----";
         openssl_private_decrypt(base64_decode($crypttext), $plain_text, $private_key);
         return $plain_text;

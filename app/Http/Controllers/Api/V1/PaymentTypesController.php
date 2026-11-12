@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Cart;
 use App\Models\ManualPaymentMethod;
+use App\Support\StorePaymentGateways;
 use Illuminate\Http\Request;
 
 class PaymentTypesController
@@ -39,8 +40,11 @@ class PaymentTypesController
         $payment_types = [];
         $unavailable = [];
 
+        // A gateway is listed only while it is also enabled (StorePaymentGateways:
+        // the Payment methods page, else STORE_PAYMENT_GATEWAYS): its endpoints
+        // answer 404 otherwise, so the app would offer a payment that cannot start.
         if ($list == "online" || $list == "both") {
-            if (get_setting('iyzico') == 1) {
+            if (get_setting('iyzico') == 1 && StorePaymentGateways::isEnabled('iyzico')) {
                 $payment_type = [];
                 $payment_type['payment_type'] = 'iyzico';
                 $payment_type['payment_type_key'] = 'iyzico';
@@ -56,7 +60,7 @@ class PaymentTypesController
                 $payment_types[] = $payment_type;
             }
 
-            if (get_setting('bkash') == 1) {
+            if (get_setting('bkash') == 1 && StorePaymentGateways::isEnabled('bkash')) {
                 $payment_type = [];
                 $payment_type['payment_type'] = 'bkash';
                 $payment_type['payment_type_key'] = 'bkash';
@@ -72,7 +76,7 @@ class PaymentTypesController
                 $payment_types[] = $payment_type;
             }
 
-            if (get_setting('nagad') == 1) {
+            if (get_setting('nagad') == 1 && StorePaymentGateways::isEnabled('nagad')) {
                 $payment_type = [];
                 $payment_type['payment_type'] = 'nagad';
                 $payment_type['payment_type_key'] = 'nagad';
@@ -88,7 +92,7 @@ class PaymentTypesController
                 $payment_types[] = $payment_type;
             }
 
-            if (get_setting('sslcommerz_payment') == 1) {
+            if (get_setting('sslcommerz_payment') == 1 && StorePaymentGateways::isEnabled('sslcommerz')) {
                 $payment_type = [];
                 $payment_type['payment_type'] = 'sslcommerz_payment';
                 $payment_type['payment_type_key'] = 'sslcommerz';

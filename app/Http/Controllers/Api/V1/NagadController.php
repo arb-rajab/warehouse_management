@@ -9,6 +9,7 @@ use App\Services\ApiGatewayPayment;
 use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use App\Utility\NagadUtility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -28,7 +29,7 @@ class NagadController
 
     public function __construct()
     {
-        if (config('nagad.sandbox_mode') === 'sandbox') {
+        if (StorePaymentGateways::get('nagad', 'mode') === 'sandbox') {
             $this->nagadHost = "http://sandbox.mynagad.com:10080/";
         } else {
             $this->nagadHost = "https://api.mynagad.com/";
@@ -71,7 +72,7 @@ class NagadController
     {
 
         $DateTime = now('Asia/Dhaka')->format('YmdHis'); // Nagad's protocol timestamps are Dhaka time
-        $MerchantID = config('nagad.merchant_id');
+        $MerchantID = StorePaymentGateways::get('nagad', 'merchant_id');
         //$invoice_no = 'Inv'.Date('YmdH').rand(1000, 10000);
         $invoice_no = $this->tnx_status ? $this->tnx : 'Inv' . now('Asia/Dhaka')->format('ymdHis') . random_int(1000, 9999);
         $merchantCallbackURL = route('app.nagad.callback_url', ['payment_type' => $payment_type]);
@@ -84,7 +85,7 @@ class NagadController
         ];
 
         $PostData = [
-            'accountNumber' => config('nagad.merchant_number'), //optional
+            'accountNumber' => StorePaymentGateways::get('nagad', 'merchant_number'), //optional
             'dateTime' => $DateTime,
             'sensitiveData' => NagadUtility::EncryptDataWithPublicKey(json_encode($SensitiveData)),
             'signature' => NagadUtility::SignatureGenerate(json_encode($SensitiveData)),

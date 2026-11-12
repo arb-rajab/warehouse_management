@@ -10,6 +10,7 @@ import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/P
 import {
     activation,
     firebase,
+    payments,
     smtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shipping } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
@@ -34,6 +35,7 @@ vi.mock('@inertiajs/vue3', async () => {
 const KEYS: StoreSetupChecklistKey[] = [
     'smtp',
     'paymentMethod',
+    'paymentGateways',
     'cashOnDeliveryProducts',
     'shipping',
     'firebasePush',
@@ -242,6 +244,35 @@ const REASONS: [StoreSetupChecklistReason, RouteDefinition<'get'>][] = [
     ],
 ];
 
+/**
+ * The Payment methods page's reasons: every required field of a gateway with
+ * a payment flow and iyzico's `.env`-only identity number
+ * (SetupChecklist::TARGETS), highlighted as `<gateway>.<field>`.
+ */
+const PAYMENT_GATEWAY_FIELDS: Record<string, string[]> = {
+    bkash: ['app_key', 'app_secret', 'username', 'password', 'currency'],
+    nagad: ['merchant_id', 'pg_public_key', 'merchant_private_key', 'mode'],
+    sslcommerz: ['store_id', 'store_password', 'currency'],
+    iyzico: ['api_key', 'secret_key', 'currency', 'identity_number'],
+    payhere: ['merchant_id', 'secret'],
+    aamarpay: ['store_id', 'signature_key', 'currency'],
+    ngenius: ['outlet_id', 'api_key', 'currency', 'mode'],
+    voguepay: ['merchant_id'],
+};
+
+for (const [gateway, fields] of Object.entries(PAYMENT_GATEWAY_FIELDS)) {
+    for (const field of fields) {
+        REASONS.push([
+            {
+                key: `paymentGateways.${gateway}_${field}`,
+                route: 'payment_method.index',
+                highlight: `${gateway}.${field}`,
+            },
+            payments({ query: { highlight: `${gateway}.${field}` } }),
+        ]);
+    }
+}
+
 /** Each to-do item carries every reason of its check (two for site basics and firebase, say). */
 function checklist(doneKeys: StoreSetupChecklistKey[]): StoreSetupChecklist {
     return {
@@ -294,7 +325,7 @@ describe('StoreSetupChecklist', () => {
             });
             const progress = t('store.dashboard.checklist.progress', {
                 done: 8,
-                total: 11,
+                total: 12,
             });
             expect(wrapper.get('h2').text()).toBe(
                 t('store.dashboard.checklist.title'),
@@ -304,10 +335,10 @@ describe('StoreSetupChecklist', () => {
             expect(bar.attributes()).toMatchObject({
                 'aria-valuenow': '8',
                 'aria-valuemin': '0',
-                'aria-valuemax': '11',
+                'aria-valuemax': '12',
                 'aria-valuetext': progress,
             });
-            expect(bar.get('div').attributes('style')).toContain('width: 73%');
+            expect(bar.get('div').attributes('style')).toContain('width: 67%');
         },
     );
 
@@ -315,7 +346,7 @@ describe('StoreSetupChecklist', () => {
         const wrapper = mount(StoreSetupChecklistCard, {
             props: { checklist: checklist(['smtp', 'paymentMethod']) },
         });
-        expect(wrapper.findAll('[data-key]')).toHaveLength(11);
+        expect(wrapper.findAll('[data-key]')).toHaveLength(12);
         const done = row(wrapper, 'smtp');
         expect(done.attributes('data-done')).toBe('true');
         expect(done.classes()).toContain('text-muted');

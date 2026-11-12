@@ -18,8 +18,8 @@ use Illuminate\Support\Str;
 /**
  * One sensitive store back-office action (admin_audit_logs): who (the store
  * user's id, with their name and email as they were), what (`action`), which
- * fields it touched and how (`changed_fields`: field => `set`, `changed` or
- * `removed`), when, and from which IP and browser. Never a value or a secret.
+ * fields it touched and how (`changed_fields`: field => `set`, `changed`,
+ * `removed`, or a payment gateway's `enabled`/`disabled`), when, and from which IP and browser. Never a value or a secret.
  * Rows are written once and never updated (.ai/rules/admin-env-overrides.md,
  * "Security").
  *
@@ -47,8 +47,17 @@ class AdminAuditLog extends Model
     /** A wrong current password on the SMTP settings page, counted by its limiter. */
     public const string SMTP_SETTINGS_PASSWORD_FAILED = 'smtp_settings.password_failed';
 
-    /** The kinds of change `changed_fields` records. */
-    public const array CHANGE_KINDS = ['set', 'changed', 'removed'];
+    /** A save of the Payment methods page that changed at least one gateway field, switch or mode. */
+    public const string PAYMENT_GATEWAY_SETTINGS_UPDATED = 'payment_gateway_settings.updated';
+
+    /** A wrong current password on the Payment methods page, counted by the shared limiter. */
+    public const string PAYMENT_GATEWAY_SETTINGS_PASSWORD_FAILED = 'payment_gateway_settings.password_failed';
+
+    /**
+     * The kinds of change `changed_fields` records: a value `set`, `changed` or
+     * `removed`, and a payment gateway `enabled` or `disabled`.
+     */
+    public const array CHANGE_KINDS = ['set', 'changed', 'removed', 'enabled', 'disabled'];
 
     /** Rows are written once and never updated. */
     public const UPDATED_AT = null;

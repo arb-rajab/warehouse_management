@@ -147,7 +147,17 @@ test('a store in euros is charged the amount converted to the gateway currency',
     sslcRecharge($this, 25);
 
     expect(FakeSslcommerzGateway::$sent['currency'])->toBe('BDT')
-        ->and((float) FakeSslcommerzGateway::$sent['total_amount'])->toBe(3262.5);
+        ->and((float) FakeSslcommerzGateway::$sent['total_amount'])->toBe(3262.5)
+        ->and(FakeSslcommerzGateway::$sent['tran_id'])->toStartWith('WEB-')
+        ->and(session('sslcommerz_tran_id'))->toBeNull();
+
+    // What success() will credit is recorded now, under the transaction id sent.
+    $pending = GatewayPayment::query()->where('gateway', 'sslcommerz')->where('reference', FakeSslcommerzGateway::$sent['tran_id'])->sole();
+    expect($pending->completed_at)->toBeNull()
+        ->and($pending->payment_type)->toBe('wallet_payment')
+        ->and((float) $pending->amount)->toBe(25.0)
+        ->and((float) $pending->gateway_amount)->toBe(3262.5)
+        ->and($pending->gateway_currency)->toBe('BDT');
 });
 
 test('a store already in the gateway currency is charged its own figure', function () {
@@ -177,7 +187,8 @@ test('a currency the store has no active rate for is refused, and nothing is sen
 
     sslcRecharge($this, 25)->assertRedirect(route('cart'));
 
-    expect(FakeSslcommerzGateway::$sent)->toBeNull();
+    expect(FakeSslcommerzGateway::$sent)->toBeNull()
+        ->and(GatewayPayment::count())->toBe(0);
 })->with([
     'no row at all' => [[]],
     'an inactive row' => [['BDT' => [130.5, 0]]],
@@ -213,51 +224,55 @@ test('the API charges the converted amount and records the pending payment in th
 
 // --- verifying and crediting ---------------------------------------------------
 
-test('a payment confirmed in the gateway currency credits the amount due in the store currency, once', function () {
+test('a payment confirmed in the gateway currency credits the recorded amount in the store currency, once, with no session', function () {
     sslcCurrencies('EUR', ['BDT' => [130.5, 1]]);
-    $customer = sslcCustomer();
-    $session = ['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 25], 'sslcommerz_tran_id' => 'T-1'];
-    sslcFakeValidation('T-1', '3262.50');
+    $customer = createStoreUser('customer');
+    pendingGatewayReturn('sslcommerz', 'WEB-T-1', $customer, 'wallet_payment', 25, 3262.5);
+    sslcFakeValidation('WEB-T-1', '3262.50');
 
-    $this->withSession($session)->post(route('sslcommerz.success'), sslcSignedPost('T-1', '3262.50'));
-    $this->withSession($session)->post(route('sslcommerz.success'), sslcSignedPost('T-1', '3262.50'));
+    $this->post(route('sslcommerz.success'), sslcSignedPost('WEB-T-1', '3262.50'))->assertStatus(303);
+    $this->post(route('sslcommerz.success'), sslcSignedPost('WEB-T-1', '3262.50'))->assertStatus(303);
 
     expect(sslcWalletTotal($customer))->toBe(25.0)
         ->and(Wallet::query()->where('user_id', $customer->id)->count())->toBe(1);
 });
 
-test('the store-currency figure, or a short amount, is not accepted as the payment of a converted charge', function (string $confirmed) {
+test('the store-currency figure, a short amount, or a figure off by a cent is not accepted as the payment of a converted charge', function (string $confirmed) {
     sslcCurrencies('EUR', ['BDT' => [130.5, 1]]);
-    $customer = sslcCustomer();
-    sslcFakeValidation('T-1', $confirmed);
+    $customer = createStoreUser('customer');
+    pendingGatewayReturn('sslcommerz', 'WEB-T-1', $customer, 'wallet_payment', 25, 3262.5);
+    sslcFakeValidation('WEB-T-1', $confirmed);
 
-    $this->withSession(['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 25], 'sslcommerz_tran_id' => 'T-1'])
-        ->post(route('sslcommerz.success'), sslcSignedPost('T-1', $confirmed));
+    $this->post(route('sslcommerz.success'), sslcSignedPost('WEB-T-1', $confirmed));
 
-    expect(sslcWalletTotal($customer))->toBe(0.0);
+    expect(sslcWalletTotal($customer))->toBe(0.0)
+        ->and(GatewayPayment::query()->whereNull('completed_at')->count())->toBe(1);
 })->with([
     'the unconverted 25.00' => '25.00',
     'a short 3000.00' => '3000.00',
+    // SSLCommerz's own check allows anything under one unit off; the return does not.
+    'half a taka short' => '3262.00',
+    'a cent over' => '3262.51',
 ]);
 
-test('a store with no rate for the gateway currency pays nothing on a callback', function () {
-    sslcCurrencies('EUR');
-    $customer = sslcCustomer();
-    sslcFakeValidation('T-1', '25.00');
+test('a payment confirmed in another currency than the one charged pays nothing', function () {
+    sslcCurrencies('EUR', ['BDT' => [130.5, 1]]);
+    $customer = createStoreUser('customer');
+    pendingGatewayReturn('sslcommerz', 'WEB-T-1', $customer, 'wallet_payment', 25, 3262.5);
+    sslcFakeValidation('WEB-T-1', '3262.50', 'USD');
 
-    $this->withSession(['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 25], 'sslcommerz_tran_id' => 'T-1'])
-        ->post(route('sslcommerz.success'), sslcSignedPost('T-1', '25.00'));
+    $this->post(route('sslcommerz.success'), sslcSignedPost('WEB-T-1', '3262.50'));
 
     expect(sslcWalletTotal($customer))->toBe(0.0);
 });
 
-test('a store already in the gateway currency still credits what the gateway confirmed', function () {
+test('a store already in the gateway currency credits what the gateway confirmed for the recorded amount', function () {
     sslcCurrencies('BDT');
-    $customer = sslcCustomer();
-    sslcFakeValidation('T-1', '25.00');
+    $customer = createStoreUser('customer');
+    pendingGatewayReturn('sslcommerz', 'WEB-T-1', $customer, 'wallet_payment', 25, 25);
+    sslcFakeValidation('WEB-T-1', '25.00');
 
-    $this->withSession(['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 25], 'sslcommerz_tran_id' => 'T-1'])
-        ->post(route('sslcommerz.success'), sslcSignedPost('T-1', '25.00'));
+    $this->post(route('sslcommerz.success'), sslcSignedPost('WEB-T-1', '25.00'));
 
     expect(sslcWalletTotal($customer))->toBe(25.0);
 });

@@ -6,6 +6,7 @@ use App\Http\Middleware\CheckoutMiddleware;
 use App\Http\Middleware\EnsureMinimumAppVersion;
 use App\Http\Middleware\EnsurePasswordHasBeenChanged;
 use App\Http\Middleware\EnsurePaymentGatewayEnabled;
+use App\Http\Middleware\EnsurePaymentGatewaySandbox;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\HidePricesFromUnverified;
 use App\Http\Middleware\IsAdmin;
@@ -61,11 +62,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // gateway's signature or its API). The store lives under /temp, so the paths carry it. The
         // list used to sit in a VerifyCsrfToken class that nothing registered, so every such POST
         // answered 419 and a customer who had paid at the gateway never had the order completed.
+        // SSLCommerz, AamarPay and iyzico are not listed: their return routes run outside the
+        // `web` group (routes/shop-gateway-returns.php), so no CSRF check runs on them at all,
+        // and any other route under those paths keeps it.
         $middleware->preventRequestForgery(except: [
-            'temp/sslcommerz*',
             'temp/payhere*',
-            'temp/iyzico*',
-            'temp/aamarpay*',
             'temp/bkash*',
             'temp/apple-callback',
         ]);
@@ -144,10 +145,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'rep_or_admin' => IsRepresentativeOrAdmin::class,
             'delivery_boy' => IsDeliveryBoy::class,
             'payment.gateway' => EnsurePaymentGatewayEnabled::class,
+            'payment.sandbox' => EnsurePaymentGatewaySandbox::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password', 'recaptcha_secret_key']);
+        // `gateways`: the Payment methods page's credentials (secrets among them); its form keeps its own values.
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password', 'recaptcha_secret_key', 'gateways']);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*', '*/api/*') || $request->expectsJson(),

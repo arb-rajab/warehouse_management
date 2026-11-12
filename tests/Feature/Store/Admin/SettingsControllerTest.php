@@ -19,7 +19,8 @@ function writableSettingsPages(): array
         'pixel alias' => ['analytics', 'facebook_pixel.update', 'analytics_tools_configuration'],
         'recaptcha' => ['recaptcha', 'google_recaptcha.update', 'google_recaptcha_configuration'],
         'firebase' => ['firebase', 'google-firebase.update', 'google_firebase_setting'],
-        'payments' => ['payments', 'payment_method.update', 'payment_methods_configurations'],
+        // The payments page posts its gateways and the current password
+        // (PaymentGatewaySettingsTest), not a switch list.
     ];
 }
 

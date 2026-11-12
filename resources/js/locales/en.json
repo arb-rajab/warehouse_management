@@ -1201,7 +1201,7 @@
                 "newPassword": "New password",
                 "confirmPassword": "Confirm password",
                 "passwordPlaceholder": "Leave blank to keep current password",
-                "roleSensitive": "{name} (sensitive: can read all outgoing email)"
+                "roleSensitive": "{name} (sensitive: controls outgoing email or payments)"
             }
         },
         "roles": {
@@ -1214,7 +1214,7 @@
                 "edit": "Edit",
                 "delete": "Delete",
                 "sensitiveBadge": "Sensitive",
-                "sensitiveBadgeHint": "Includes a permission only a Super Admin can grant: it can read all outgoing email."
+                "sensitiveBadgeHint": "Includes a permission only a Super Admin can grant: it can read all outgoing email or redirect payments."
             },
             "create": {
                 "title": "Add role",
@@ -1232,7 +1232,7 @@
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
                 "permissions": "Permissions",
                 "sensitive": "Sensitive",
-                "sensitiveWarning": "Can read all outgoing email, password-reset emails included. Only a Super Admin can grant it."
+                "sensitiveWarning": "Controls where the shop's email or payments go: whoever holds it can read all outgoing email (password-reset emails included) or redirect payments. Only a Super Admin can grant it."
             }
         },
         "reference": {
@@ -1396,7 +1396,7 @@
             "enabled": "Enabled",
             "disabled": "Disabled",
             "environmentReadOnly": "Environment configuration is managed on the server. Credentials are not displayed or edited here.",
-            "gatewayNotice": "Payment gateway availability is managed on the server and requires verified credentials and callbacks.",
+            "gatewayNotice": "A payment gateway switched on here is offered at checkout only while it is also enabled on the Payment methods page, where its credentials are set.",
             "testEmail": "Test recipient email",
             "sendTest": "Send test email",
             "sendingTest": "Sending…",
@@ -1481,13 +1481,7 @@
                 "google_analytics": "Google Analytics",
                 "facebook_pixel": "Facebook Pixel",
                 "google_recaptcha": "reCAPTCHA",
-                "google_firebase": "Firebase",
-                "bkash_sandbox": "Bkash sandbox",
-                "sslcommerz_sandbox": "Sslcommerz sandbox",
-                "aamarpay_sandbox": "Aamarpay sandbox",
-                "iyzico_sandbox": "Iyzico sandbox",
-                "payhere_sandbox": "Payhere sandbox",
-                "voguepay_sandbox": "Voguepay sandbox"
+                "google_firebase": "Firebase"
             },
             "server": {
                 "set": "Set",
@@ -1628,6 +1622,124 @@
                         "set": "set",
                         "changed": "changed",
                         "removed": "removed"
+                    }
+                }
+            },
+            "payments": {
+                "intro": "Values saved here win over the server's .env, one gateway at a time: once any field of a gateway is saved here, all of its settings come from this page and none from .env. Leave all of a gateway's fields empty to use .env. Secrets are stored encrypted and never shown again.",
+                "enabledSource": "Which gateways answer",
+                "enabledSources": {
+                    "env": "Follow STORE_PAYMENT_GATEWAYS in .env ({list})",
+                    "admin": "Choose here with each gateway's switch"
+                },
+                "enabledSourceHelp": "While .env is followed, the switches show the .env list and cannot be changed. Chosen here with every switch off, no gateway answers.",
+                "none": "none",
+                "tabs": "Payment gateways",
+                "enabled": "Enabled: its checkout and callbacks answer",
+                "noFlow": "No payment flow yet: the keys are stored ready for a future integration. Customers are not offered this gateway and it cannot be enabled.",
+                "offered": "Offered at checkout (Features activation): {state}",
+                "offeredStates": {
+                    "on": "on",
+                    "off": "off"
+                },
+                "openActivation": "Change it in Features activation",
+                "notOffered": "{gateway} is enabled, but switched off in Features activation, so customers are not offered it.",
+                "mode": "Mode",
+                "modes": {
+                    "sandbox": "Sandbox (test payments)",
+                    "live": "Live"
+                },
+                "modeFromEnv": "Not saved here (.env: {mode})",
+                "modeDerived": "Mode (read from the keys): {mode}",
+                "modeUnknown": "no key yet",
+                "currencyFixed": "Currency: {code}, the only one this gateway accepts.",
+                "currencyStore": "Empty: the store's own currency.",
+                "currencyNoRate": "No active exchange rate for {code} in Currencies: payments are refused until there is one.",
+                "missing": "{gateway} is enabled but its {field} is not set here or in .env.",
+                "groupHelp": "Fields marked * are needed once any {gateway} field is entered here. Leave every field empty to use .env; emptying the {identifying} removes every saved {gateway} setting, secrets included.",
+                "envHint": ".env ({env}): {value}",
+                "envOnlyMissing": "{gateway} needs {env} in .env: without it {gateway} cannot start a payment.",
+                "envOnlyFields": {
+                    "identity_number": "Buyer identity number ({env}, .env only)"
+                },
+                "liveUnconfirmed": {
+                    "ngenius": "The live URLs are defaults that were not confirmed with the provider: confirm NGENIUS_LIVE_IDENTITY_URL and NGENIUS_LIVE_GATEWAY_URL in .env before going live.",
+                    "aamarpay": "The payment page is opened with a GET redirect that was not confirmed with the provider: check it in AamarPay's sandbox before going live (the old code POSTed a form)."
+                },
+                "secretSaved": "Saved here. Leave the field empty to keep it.",
+                "secretNotSaved": "Not saved here.",
+                "secretUnreadable": "The saved value can no longer be read (the application key changed). Enter it again.",
+                "secretKeep": "Leave empty to keep the saved value",
+                "secretAgain": "Asked for again when the {identifying} changes.",
+                "removeSecret": "Remove the saved {field}",
+                "keyHelp": "Paste the key with or without its BEGIN/END lines; spaces and line breaks are removed.",
+                "effective": {
+                    "title": "Effective configuration: {gateway}",
+                    "source": "Settings source",
+                    "sources": {
+                        "admin": "Saved in admin",
+                        "env": "From .env"
+                    },
+                    "enabled": "Enabled",
+                    "listSources": {
+                        "admin": "chosen here",
+                        "env": "from .env"
+                    },
+                    "enabledValue": "{state} ({source})",
+                    "yes": "Yes",
+                    "no": "No",
+                    "set": "Set",
+                    "notSet": "Not set"
+                },
+                "fields": {
+                    "app_key": "App key",
+                    "app_secret": "App secret",
+                    "username": "Username",
+                    "password": "Password",
+                    "currency": "Currency",
+                    "merchant_id": "Merchant ID",
+                    "merchant_number": "Merchant number",
+                    "pg_public_key": "Gateway public key",
+                    "merchant_private_key": "Merchant private key",
+                    "mode": "Mode",
+                    "store_id": "Store ID",
+                    "store_password": "Store password",
+                    "api_key": "API key",
+                    "secret_key": "Secret key",
+                    "secret": "Merchant secret",
+                    "signature_key": "Signature key",
+                    "outlet_id": "Outlet ID",
+                    "category_code": "Category code",
+                    "user_secret_key": "User secret key",
+                    "publishable_key": "Publishable key",
+                    "merchant_key": "Merchant key",
+                    "merchant_website": "Merchant website",
+                    "channel": "Channel",
+                    "industry_type": "Industry type",
+                    "enabled": "Enabled"
+                },
+                "currentPassword": "Your current password",
+                "currentPasswordHelp": "Needed to save: these settings decide where customer payments go. It is checked on every save.",
+                "audit": {
+                    "title": "Recent changes",
+                    "help": "The last 10 saves and refused passwords on this page. Values are never recorded.",
+                    "when": "When",
+                    "who": "Staff member",
+                    "ip": "IP address",
+                    "what": "What changed",
+                    "empty": "No payment gateway changes have been recorded yet.",
+                    "passwordFailed": "Wrong current password, nothing saved",
+                    "deletedUser": "Account #{id} no longer exists",
+                    "fieldChange": "{field} ({change})",
+                    "gatewayField": "{gateway} {field}",
+                    "enabledSource": "Where the enabled gateways come from",
+                    "separator": ", ",
+                    "kinds": {
+                        "set": "set",
+                        "changed": "changed",
+                        "removed": "removed",
+                        "enabled": "enabled",
+                        "disabled": "disabled"
                     }
                 }
             }
@@ -2937,6 +3049,9 @@
                     "paymentMethod": {
                         "label": "Payment methods"
                     },
+                    "paymentGateways": {
+                        "label": "Payment gateway settings"
+                    },
                     "cashOnDeliveryProducts": {
                         "label": "Cash on delivery products"
                     },
@@ -2974,7 +3089,35 @@
                         "username_and_password": "No SMTP username or password is saved in the admin or set on the server (MAIL_USERNAME, MAIL_PASSWORD), so the store cannot send emails."
                     },
                     "paymentMethod": {
-                        "none_enabled": "No payment method is switched on in Features activation, so customers cannot place an order in the app."
+                        "none_enabled": "No payment method is switched on in Features activation (an online gateway counts only while it is also enabled on the Payment methods page), so customers cannot place an order in the app."
+                    },
+                    "paymentGateways": {
+                        "bkash_app_key": "bKash is enabled, but its app key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_app_secret": "bKash is enabled, but its app secret is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_username": "bKash is enabled, but its username is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_password": "bKash is enabled, but its password is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_currency": "bKash is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_merchant_id": "Nagad is enabled, but its merchant ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_pg_public_key": "Nagad is enabled, but its gateway public key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_merchant_private_key": "Nagad is enabled, but its merchant private key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_mode": "Nagad is enabled, but its mode is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "sslcommerz_store_id": "SSLCommerz is enabled, but its store ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "sslcommerz_store_password": "SSLCommerz is enabled, but its store password is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "sslcommerz_currency": "SSLCommerz is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_api_key": "iyzico is enabled, but its API key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_secret_key": "iyzico is enabled, but its secret key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_currency": "iyzico is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_identity_number": "iyzico needs IYZICO_IDENTITY_NUMBER in .env: without it iyzico cannot start a payment.",
+                        "payhere_merchant_id": "PayHere is enabled, but its merchant ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "payhere_secret": "PayHere is enabled, but its merchant secret is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "aamarpay_store_id": "AamarPay is enabled, but its store ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "aamarpay_signature_key": "AamarPay is enabled, but its signature key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "aamarpay_currency": "AamarPay is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_outlet_id": "N-Genius is enabled, but its outlet ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_api_key": "N-Genius is enabled, but its API key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_currency": "N-Genius is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_mode": "N-Genius is enabled, but its mode is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "voguepay_merchant_id": "VoguePay is enabled, but its merchant ID is not set on the Payment methods page or in .env, so it cannot take payments."
                     },
                     "cashOnDeliveryProducts": {
                         "no_product_allows_cod": "Cash payment is on, but no product allows cash on delivery. Tick \"Cash on delivery\" on the products that take cash."
@@ -3767,7 +3910,76 @@
             "code": "code",
             "address": "address",
             "password": "password",
-            "current_password": "current password"
+            "current_password": "current password",
+            "enabled_source": "enabled gateways source",
+            "gateways.bkash.enabled": "bKash switch",
+            "gateways.bkash.mode": "bKash mode",
+            "gateways.bkash.app_key": "bKash app key",
+            "gateways.bkash.app_secret": "bKash app secret",
+            "gateways.bkash.app_secret_clear": "remove the saved bKash app secret",
+            "gateways.bkash.username": "bKash username",
+            "gateways.bkash.password": "bKash password",
+            "gateways.bkash.password_clear": "remove the saved bKash password",
+            "gateways.bkash.currency": "bKash currency",
+            "gateways.nagad.enabled": "Nagad switch",
+            "gateways.nagad.merchant_id": "Nagad merchant ID",
+            "gateways.nagad.merchant_number": "Nagad merchant number",
+            "gateways.nagad.pg_public_key": "Nagad gateway public key",
+            "gateways.nagad.merchant_private_key": "Nagad merchant private key",
+            "gateways.nagad.merchant_private_key_clear": "remove the saved Nagad merchant private key",
+            "gateways.nagad.mode": "Nagad mode",
+            "gateways.sslcommerz.enabled": "SSLCommerz switch",
+            "gateways.sslcommerz.mode": "SSLCommerz mode",
+            "gateways.sslcommerz.store_id": "SSLCommerz store ID",
+            "gateways.sslcommerz.store_password": "SSLCommerz store password",
+            "gateways.sslcommerz.store_password_clear": "remove the saved SSLCommerz store password",
+            "gateways.sslcommerz.currency": "SSLCommerz currency",
+            "gateways.iyzico.enabled": "iyzico switch",
+            "gateways.iyzico.mode": "iyzico mode",
+            "gateways.iyzico.api_key": "iyzico API key",
+            "gateways.iyzico.secret_key": "iyzico secret key",
+            "gateways.iyzico.secret_key_clear": "remove the saved iyzico secret key",
+            "gateways.iyzico.currency": "iyzico currency",
+            "gateways.payhere.enabled": "PayHere switch",
+            "gateways.payhere.mode": "PayHere mode",
+            "gateways.payhere.merchant_id": "PayHere merchant ID",
+            "gateways.payhere.secret": "PayHere merchant secret",
+            "gateways.payhere.secret_clear": "remove the saved PayHere merchant secret",
+            "gateways.payhere.currency": "PayHere currency",
+            "gateways.aamarpay.enabled": "AamarPay switch",
+            "gateways.aamarpay.mode": "AamarPay mode",
+            "gateways.aamarpay.store_id": "AamarPay store ID",
+            "gateways.aamarpay.signature_key": "AamarPay signature key",
+            "gateways.aamarpay.signature_key_clear": "remove the saved AamarPay signature key",
+            "gateways.aamarpay.currency": "AamarPay currency",
+            "gateways.ngenius.enabled": "N-Genius switch",
+            "gateways.ngenius.outlet_id": "N-Genius outlet ID",
+            "gateways.ngenius.api_key": "N-Genius API key",
+            "gateways.ngenius.api_key_clear": "remove the saved N-Genius API key",
+            "gateways.ngenius.currency": "N-Genius currency",
+            "gateways.ngenius.mode": "N-Genius mode",
+            "gateways.voguepay.enabled": "VoguePay switch",
+            "gateways.voguepay.mode": "VoguePay mode",
+            "gateways.voguepay.merchant_id": "VoguePay merchant ID",
+            "gateways.voguepay.currency": "VoguePay currency",
+            "gateways.toyyibpay.enabled": "ToyyibPay switch",
+            "gateways.toyyibpay.category_code": "ToyyibPay category code",
+            "gateways.toyyibpay.user_secret_key": "ToyyibPay user secret key",
+            "gateways.toyyibpay.user_secret_key_clear": "remove the saved ToyyibPay user secret key",
+            "gateways.toyyibpay.mode": "ToyyibPay mode",
+            "gateways.stripe.enabled": "Stripe switch",
+            "gateways.stripe.publishable_key": "Stripe publishable key",
+            "gateways.stripe.secret_key": "Stripe secret key",
+            "gateways.stripe.secret_key_clear": "remove the saved Stripe secret key",
+            "gateways.stripe.currency": "Stripe currency",
+            "gateways.paytm.enabled": "Paytm switch",
+            "gateways.paytm.merchant_id": "Paytm merchant ID",
+            "gateways.paytm.merchant_key": "Paytm merchant key",
+            "gateways.paytm.merchant_key_clear": "remove the saved Paytm merchant key",
+            "gateways.paytm.merchant_website": "Paytm merchant website",
+            "gateways.paytm.channel": "Paytm channel",
+            "gateways.paytm.industry_type": "Paytm industry type",
+            "gateways.paytm.mode": "Paytm mode"
         }
     },
     "warehouses": {

@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Resources\V1\BusinessSettingCollection;
 use App\Models\BusinessSetting;
+use App\Support\PublicSettingsGuard;
 
 class BusinessSettingController extends Controller
 {
     /**
      * The settings the storefront apps read before sign-in. Everything else in
      * `business_settings` (mail and gateway credentials, API keys) stays out.
+     * The list is an allow-list on top of PublicSettingsGuard, which filters
+     * the rows too, so a key added here that the guard blocks is still not sent.
      *
      * @var list<string>
      */
@@ -35,6 +38,6 @@ class BusinessSettingController extends Controller
 
     public function index()
     {
-        return new BusinessSettingCollection(BusinessSetting::whereIn('type', self::PUBLIC_KEYS)->get(['type', 'value']));
+        return new BusinessSettingCollection(PublicSettingsGuard::filter(BusinessSetting::whereIn('type', self::PUBLIC_KEYS)->get(['type', 'value'])));
     }
 }

@@ -39,8 +39,10 @@ return [
 
     // Merged from the legacy store's config/services.php (see
     // .ai/rules/legacy-albaraka-holland.md sections 0.3 and 1). 'stripe' and
-    // 'paytm-wallet' are inert: both gateway packages were removed in the
-    // legacy repo's own phase-1 pruning, and nothing here reads these keys.
+    // 'paytm-wallet' have no payment flow: both gateway packages were removed in
+    // the legacy repo's own phase-1 pruning. Their keys can be stored on the
+    // Payment methods page (App\Support\StorePaymentGateways), ready for an
+    // integration; nothing charges with them.
 
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
@@ -56,6 +58,8 @@ return [
         'model' => StoreUser::class,
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
+        // Empty: the store's own currency.
+        'currency' => env('STRIPE_CURRENCY'),
     ],
 
     'google' => [
@@ -148,9 +152,10 @@ return [
         'api_key' => env('IYZICO_API_KEY'),
         'secret_key' => env('IYZICO_SECRET_KEY'),
         'currency' => env('IYZICO_CURRENCY_CODE', 'TRY'),
-        // iyzico requires an identity number for every buyer. The store has none for its customers, so
-        // this placeholder (iyzico's documented value for buyers with no Turkish identity number) is sent.
-        'identity_number' => env('IYZICO_IDENTITY_NUMBER', '11111111111'),
+        // iyzico requires an identity number for every buyer and the store holds none for its customers, so
+        // it is one value the owner provides. No default: unset, iyzico refuses to start a payment
+        // (IyzicoPayments::identityNumber(); the Payments page and the setup checklist name it).
+        'identity_number' => env('IYZICO_IDENTITY_NUMBER'),
     ],
 
     // The currency SSLCommerz is charged in. Amounts are converted to it from the
@@ -162,8 +167,9 @@ return [
         'store_password' => env('SSLCZ_STORE_PASSWD'),
     ],
 
-    // Every gateway credential is read from here with config(), never with env(): production runs
-    // `artisan config:cache`, after which env() outside config/ returns null and the gateway has no keys.
+    // Every gateway credential is read through App\Support\StorePaymentGateways::get(), which returns the
+    // values saved on the Payment methods page and falls back to these (never env() outside config/:
+    // production runs `artisan config:cache`, after which env() returns null).
     'bkash' => [
         'currency' => env('BKASH_CURRENCY', 'BDT'),
         'app_key' => env('BKASH_CHECKOUT_APP_KEY'),

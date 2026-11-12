@@ -25,13 +25,16 @@ final class StorePermissions
 
     /**
      * Permissions only a Super Admin may grant (StaffPrivileges), shown with a
-     * warning on the role form. `smtp_settings` chooses the mail server, so
-     * whoever holds it can read every email the shop sends, password-reset
-     * emails included (.ai/rules/admin-env-overrides.md, "Security").
+     * warning on the role form (.ai/rules/admin-env-overrides.md, "Security").
+     * `smtp_settings` chooses the mail server, so whoever holds it can read
+     * every email the shop sends, password-reset emails included.
+     * `payment_methods_configurations` chooses the payment gateway accounts,
+     * keys and enabled gateways, so whoever holds it can redirect payments.
+     * Existing grants are never revoked.
      *
      * @var list<string>
      */
-    public const array SENSITIVE = ['smtp_settings'];
+    public const array SENSITIVE = ['smtp_settings', 'payment_methods_configurations'];
 
     /**
      * Section => permission names.

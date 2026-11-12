@@ -7,6 +7,7 @@ use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -95,8 +96,8 @@ class BkashController extends Controller
     public function getToken()
     {
         $response = Http::timeout(30)
-            ->withHeaders(['username' => config('services.bkash.username'), 'password' => config('services.bkash.password')])
-            ->post($this->baseUrl().'checkout/token/grant', ['app_key' => config('services.bkash.app_key'), 'app_secret' => config('services.bkash.app_secret')]);
+            ->withHeaders(['username' => StorePaymentGateways::get('bkash', 'username'), 'password' => StorePaymentGateways::get('bkash', 'password')])
+            ->post($this->baseUrl().'checkout/token/grant', ['app_key' => StorePaymentGateways::get('bkash', 'app_key'), 'app_secret' => StorePaymentGateways::get('bkash', 'app_secret')]);
 
         return $response->json('id_token');
     }
@@ -187,7 +188,7 @@ class BkashController extends Controller
     private function api(string $path, array $body, ?string $token): array
     {
         $response = Http::timeout(30)
-            ->withHeaders(['Authorization' => (string) $token, 'X-APP-Key' => (string) config('services.bkash.app_key')])
+            ->withHeaders(['Authorization' => (string) $token, 'X-APP-Key' => (string) StorePaymentGateways::get('bkash', 'app_key')])
             ->post($this->baseUrl().$path, $body);
 
         return is_array($response->json()) ? $response->json() : [];

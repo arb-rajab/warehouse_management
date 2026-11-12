@@ -24,11 +24,13 @@ function sensitiveRole(string $name, string ...$permissions): Role
     return $role;
 }
 
-test('smtp_settings is the sensitive permission and a defined store permission', function () {
-    expect(StorePermissions::SENSITIVE)->toBe(['smtp_settings'])
+test('smtp_settings and payment_methods_configurations are the sensitive permissions and defined store permissions', function () {
+    expect(StorePermissions::SENSITIVE)->toBe(['smtp_settings', 'payment_methods_configurations'])
         ->and(StorePermissions::isSensitive('smtp_settings'))->toBeTrue()
+        ->and(StorePermissions::isSensitive('payment_methods_configurations'))->toBeTrue()
         ->and(StorePermissions::isSensitive('view_all_orders'))->toBeFalse()
-        ->and(StorePermissions::all())->toHaveKey('smtp_settings');
+        ->and(StorePermissions::all())->toHaveKey('smtp_settings')
+        ->and(StorePermissions::all())->toHaveKey('payment_methods_configurations');
 });
 
 test('the role seeder grants no permission to any role but the Super Admin, which needs none', function () {
@@ -40,16 +42,18 @@ test('the role seeder grants no permission to any role but the Super Admin, whic
 });
 
 describe('the role form', function () {
-    test('a Super Admin is offered smtp_settings, marked sensitive, and nothing else is', function () {
+    test('a Super Admin is offered the sensitive permissions, marked sensitive, and nothing else is', function () {
         actingAsStoreUser(createStoreAdmin());
         $smtp = Permission::findByName('smtp_settings', 'store');
+        $payments = Permission::findByName('payment_methods_configurations', 'store');
 
         $this->get(route('roles.create'))->assertOk()->assertInertia(fn (Assert $page) => $page
-            ->where('permissionGroups', function ($groups) use ($smtp): bool {
+            ->where('permissionGroups', function ($groups) use ($smtp, $payments): bool {
                 $permissions = collect($groups)->pluck('permissions')->flatten(1);
 
                 return $permissions->firstWhere('id', $smtp->id)['sensitive'] === true
-                    && $permissions->where('sensitive', true)->pluck('id')->all() === [$smtp->id];
+                    && $permissions->firstWhere('id', $payments->id)['sensitive'] === true
+                    && $permissions->where('sensitive', true)->pluck('id')->sort()->values()->all() === collect([$smtp->id, $payments->id])->sort()->values()->all();
             }));
     });
 

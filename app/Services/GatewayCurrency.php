@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Currency;
+use App\Support\StorePaymentGateways;
 
 /**
  * The currency a payment gateway charges in, against the currency the store
@@ -25,12 +26,13 @@ final class GatewayCurrency
     public function __construct(public readonly string $code) {}
 
     /**
-     * The currency `$gateway` is configured to charge in (`config('services.<gateway>.currency')`).
+     * The currency `$gateway` is configured to charge in: saved on the Payment
+     * methods page, else `config('services.<gateway>.currency')` (StorePaymentGateways::currency()).
      * Empty means the store's own currency, so no conversion applies.
      */
     public static function forGateway(string $gateway): self
     {
-        return new self(strtoupper(trim((string) config("services.$gateway.currency"))));
+        return new self(StorePaymentGateways::currency($gateway));
     }
 
     /** SSLCommerz charges in BDT unless `SSLCZ_CURRENCY` says otherwise. */

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Support\StorePaymentGateways;
+
 /**
  * Which payment options a customer may pick at the checkout, the wallet recharge
  * and the customer-package purchase.
@@ -9,7 +11,8 @@ namespace App\Services;
  * Those three build the payment controller's class name from the `payment_option`
  * the browser sends and run its `pay()`, so the gateway routes' 404 for a
  * disabled gateway never applied to them. An option that names a gateway the
- * store has not enabled (`STORE_PAYMENT_GATEWAYS`) is refused here; cash on
+ * store has not enabled (StorePaymentGateways::enabled(): the Payment methods
+ * page, else `STORE_PAYMENT_GATEWAYS`) is refused here; cash on
  * delivery, the wallet and the manual payment methods (names with no gateway
  * controller) pass.
  */
@@ -35,15 +38,16 @@ class PaymentOptions
     ];
 
     /**
-     * The gateways to show: enabled in `STORE_PAYMENT_GATEWAYS` (the deploy-level
-     * switch the routes and `isAllowed()` enforce) and switched on in the back
-     * office. Empty while no gateway is enabled, so the pages show nothing extra.
+     * The gateways to show: enabled (StorePaymentGateways::enabled(): chosen on
+     * the Payment methods page, else STORE_PAYMENT_GATEWAYS; the switch the
+     * routes and `isAllowed()` enforce) and offered by their Features activation
+     * switch. Empty while no gateway is enabled, so the pages show nothing extra.
      *
      * @return array<string, array{setting: string, image: string, name: string}>
      */
     public function available(): array
     {
-        $enabled = config('store.enabled_payment_gateways', []);
+        $enabled = StorePaymentGateways::enabled();
 
         return array_filter(
             self::GATEWAYS,
@@ -77,7 +81,7 @@ class PaymentOptions
 
         foreach (config('store.payment_gateway_controllers', []) as $gateway => $controllers) {
             if (in_array($controller, $controllers, true)) {
-                return in_array($gateway, config('store.enabled_payment_gateways', []), true);
+                return StorePaymentGateways::isEnabled($gateway);
             }
         }
 

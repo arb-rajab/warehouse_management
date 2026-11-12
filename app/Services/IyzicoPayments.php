@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\StoreUser;
+use App\Support\StorePaymentGateways;
 use Illuminate\Support\Facades\Log;
 use Iyzipay\Model\Address;
 use Iyzipay\Model\BasketItem;
@@ -26,8 +27,8 @@ class IyzicoPayments
     public function options(): Options
     {
         $options = new Options;
-        $options->setApiKey((string) config('services.iyzico.api_key'));
-        $options->setSecretKey((string) config('services.iyzico.secret_key'));
+        $options->setApiKey((string) StorePaymentGateways::get('iyzico', 'api_key'));
+        $options->setSecretKey((string) StorePaymentGateways::get('iyzico', 'secret_key'));
         $options->setBaseUrl(get_setting('iyzico_sandbox') == 1 ? 'https://sandbox-api.iyzipay.com' : 'https://api.iyzipay.com');
 
         return $options;
@@ -45,6 +46,15 @@ class IyzicoPayments
     public function locale(): string
     {
         return app()->getLocale() === 'tr' ? Locale::TR : Locale::EN;
+    }
+
+    /**
+     * The buyer identity number iyzico requires: `IYZICO_IDENTITY_NUMBER`, `.env` only, never a
+     * placeholder. Empty when unset, and iyzico then refuses to start a payment.
+     */
+    public function identityNumber(): string
+    {
+        return trim((string) config('services.iyzico.identity_number'));
     }
 
     /** Whether a payment of `$paymentType` can be started. */
@@ -81,7 +91,7 @@ class IyzicoPayments
         if (trim((string) $payer->phone) !== '') {
             $buyer->setGsmNumber((string) $payer->phone);
         }
-        $buyer->setIdentityNumber((string) config('services.iyzico.identity_number'));
+        $buyer->setIdentityNumber($this->identityNumber());
         $buyer->setRegistrationAddress($address);
         $buyer->setCity($city);
         $buyer->setCountry($country);
@@ -121,19 +131,25 @@ class IyzicoPayments
         return $request;
     }
 
-    /** iyzico's payment page for `$request`, or null (logged) when iyzico gives none. */
-    public function initialize(CreatePayWithIyzicoInitializeRequest $request): ?string
+    /**
+     * iyzico's payment page for `$request` and the checkout-form token iyzico will post
+     * back for it, or null (logged) when iyzico gives either none.
+     *
+     * @return array{url: string, token: string}|null
+     */
+    public function initialize(CreatePayWithIyzicoInitializeRequest $request): ?array
     {
         $result = PayWithIyzicoInitialize::create($request, $this->options());
         $url = $result->getPayWithIyzicoPageUrl();
+        $token = $result->getToken();
 
-        if (! is_string($url) || $url === '') {
+        if (! is_string($url) || $url === '' || ! is_string($token) || $token === '') {
             Log::error('iyzico gave no payment page.', ['status' => $result->getStatus(), 'error' => $result->getErrorMessage(), 'code' => $result->getErrorCode()]);
 
             return null;
         }
 
-        return $url;
+        return ['url' => $url, 'token' => $token];
     }
 
     /**

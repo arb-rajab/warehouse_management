@@ -278,7 +278,8 @@ test('the browser messages repeat the server wording', function (string $locale)
         expect($line)->toBe(Lang::get("validation.{$key}", [], $locale), "validation.{$key} ({$locale})");
     }
 
-    $attributes = Lang::get('validation.attributes', [], $locale) + Lang::get('validation.attributes', [], 'en');
+    // The server nests some attributes (`gateways.<gateway>.<field>`); the validator and the browser mirror look them up by their dotted key.
+    $attributes = Arr::dot(Lang::get('validation.attributes', [], $locale)) + Arr::dot(Lang::get('validation.attributes', [], 'en'));
     foreach ($mirror['attributes'] as $field => $line) {
         expect($line)->toBe($attributes[$field] ?? null, "validation.attributes.{$field} ({$locale})");
     }

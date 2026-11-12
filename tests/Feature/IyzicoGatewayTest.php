@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CombinedOrder;
+use App\Models\GatewayPayment;
 use App\Models\Order;
 use App\Models\StoreUser;
 use App\Models\Wallet;
@@ -58,7 +59,7 @@ function izServer(object $captured, ?string $url = 'https://pay.iyzico.test/page
         $mock->shouldReceive('initialize')->andReturnUsing(function (CreatePayWithIyzicoInitializeRequest $request) use ($captured, $url) {
             $captured->request = $request;
 
-            return $url;
+            return $url === null ? null : ['url' => $url, 'token' => 'IYZ-TOKEN-1'];
         });
     });
 }
@@ -128,7 +129,15 @@ test('the price is the converted amount to the cent, the same on the request, th
         ->and($request->getPaidPrice())->toBe('861.00')
         ->and($request->getBasketItems()[0]->getPrice())->toBe('861.00')
         ->and($request->getCallbackUrl())->toBe(route('iyzico.callback', ['payment_type' => 'wallet_payment']))
-        ->and(session('iyzico_basket_id'))->toBe($request->getBasketId());
+        ->and(session('iyzico_basket_id'))->toBeNull();
+
+    // What callback() will credit is recorded now, under the token iyzico issued.
+    $pending = GatewayPayment::query()->where('gateway', 'iyzico')->where('reference', 'IYZ-TOKEN-1')->sole();
+    expect($pending->completed_at)->toBeNull()
+        ->and($pending->payment_type)->toBe('wallet_payment')
+        ->and((float) $pending->amount)->toBe(24.6)
+        ->and((float) $pending->gateway_amount)->toBe(861.0)
+        ->and($pending->gateway_currency)->toBe('TRY');
 });
 
 test('a charge in the store currency is exact, never rounded to a whole unit', function () {
@@ -161,21 +170,21 @@ test('a currency the store has no active rate for is refused and iyzico is not c
     izTopUp($this, 25)->assertRedirect(route('cart'));
 
     expect($captured)->not->toHaveProperty('request')
-        ->and(session('iyzico_basket_id'))->toBeNull();
+        ->and(GatewayPayment::count())->toBe(0);
 })->with([
     'no row' => [null, 1],
     'an inactive row' => [35.0, 0],
     'a zero rate' => [0.0, 1],
 ]);
 
-test('an iyzico that gives no payment page is refused with a message and no basket is kept', function () {
+test('an iyzico that gives no payment page is refused with a message and nothing is recorded', function () {
     izCurrencies();
     actingAsStoreUser(izCustomer());
     izServer(new stdClass, url: null);
 
     izTopUp($this, 25)->assertRedirect(route('cart'));
 
-    expect(session('iyzico_basket_id'))->toBeNull()
+    expect(GatewayPayment::count())->toBe(0)
         ->and(session('flash_notification'))->not->toBeNull();
 });
 
@@ -202,41 +211,51 @@ function izStatuses(CombinedOrder $combined): array
     return Order::query()->where('combined_order_id', $combined->id)->pluck('payment_status')->unique()->values()->all();
 }
 
-test('a payment of the converted amount due pays the order once, in the store currency', function () {
-    izCurrencies(35.0);
-    $combined = izOrder(actingAsStoreUser(izCustomer()), 30);
-    izRetrieved(['paid_price' => 1050.0]);
-    $session = ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'iyzico_basket_id' => 'BASKET-1'];
+/** iyzico's return: a cross-site POST of the token, so no session comes with it. */
+function izReturn(mixed $test, string $paymentType = 'cart_payment', string $token = 'IYZ-TOKEN-1')
+{
+    return $test->post(route('iyzico.callback', ['payment_type' => $paymentType]), ['token' => $token]);
+}
 
-    $this->withSession($session)->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'T-1']);
-    $this->withSession($session)->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'T-1']);
+test('a payment of the recorded converted amount pays the recorded order once, in the store currency', function () {
+    izCurrencies(35.0);
+    $customer = izCustomer();
+    $combined = izOrder($customer, 30);
+    pendingGatewayReturn('iyzico', 'IYZ-TOKEN-1', $customer, 'cart_payment', 30, 1050.0, 'TRY', $combined->id);
+    izRetrieved(['paid_price' => 1050.0]);
+
+    izReturn($this)->assertStatus(303);
+    izReturn($this)->assertStatus(303);
 
     expect(izStatuses($combined))->toBe(['paid']);
 });
 
-test('a payment that is not the converted amount due, or not in the charge currency, pays nothing', function (float $paid, string $currency) {
+test('a payment that is not the recorded converted amount, or not in its currency, pays nothing', function (float $paid, string $currency) {
     izCurrencies(35.0);
-    $combined = izOrder(actingAsStoreUser(izCustomer()), 30);
+    $customer = izCustomer();
+    $combined = izOrder($customer, 30);
+    pendingGatewayReturn('iyzico', 'IYZ-TOKEN-1', $customer, 'cart_payment', 30, 1050.0, 'TRY', $combined->id);
     izRetrieved(['paid_price' => $paid, 'currency' => $currency]);
 
-    $this->withSession(['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'iyzico_basket_id' => 'BASKET-1'])
-        ->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'T-1']);
+    izReturn($this)->assertRedirect(route('gateway_payment.outcome', ['outcome' => 'unverified']));
 
-    expect(izStatuses($combined))->toBe(['unpaid']);
+    expect(izStatuses($combined))->toBe(['unpaid'])
+        ->and(GatewayPayment::query()->whereNull('completed_at')->count())->toBe(1);
 })->with([
     'the unconverted 30.00' => [30.0, 'TRY'],
     'a short 1000.00' => [1000.0, 'TRY'],
+    'a cent over' => [1050.01, 'TRY'],
     'the right figure in another currency' => [1050.0, 'EUR'],
 ]);
 
-test('a wallet top-up is credited the amount due, in the store currency, once', function () {
+test('a wallet top-up is credited the recorded amount, in the store currency, once', function () {
     izCurrencies(35.0);
-    $customer = actingAsStoreUser(izCustomer());
+    $customer = izCustomer();
+    pendingGatewayReturn('iyzico', 'IYZ-TOKEN-1', $customer, 'wallet_payment', 25, 875.0, 'TRY');
     izRetrieved(['paid_price' => 875.0]);
-    $session = ['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 25], 'iyzico_basket_id' => 'BASKET-1'];
 
-    $this->withSession($session)->post(route('iyzico.callback', ['payment_type' => 'wallet_payment']), ['token' => 'T-1']);
-    $this->withSession($session)->post(route('iyzico.callback', ['payment_type' => 'wallet_payment']), ['token' => 'T-1']);
+    izReturn($this, 'wallet_payment');
+    izReturn($this, 'wallet_payment');
 
     expect((float) Wallet::query()->where('user_id', $customer->id)->sum('amount'))->toBe(25.0)
         ->and(Wallet::query()->where('user_id', $customer->id)->count())->toBe(1);
@@ -245,13 +264,25 @@ test('a wallet top-up is credited the amount due, in the store currency, once', 
 test('a store whose gateway currency is its own still verifies the exact amount', function () {
     izCurrencies(null);
     config(['services.iyzico.currency' => 'EUR']);
-    $combined = izOrder(actingAsStoreUser(izCustomer()), 24.6);
+    $customer = izCustomer();
+    $combined = izOrder($customer, 24.6);
+    pendingGatewayReturn('iyzico', 'IYZ-TOKEN-1', $customer, 'cart_payment', 24.6, 24.6, 'EUR', $combined->id);
     izRetrieved(['paid_price' => 24.6, 'currency' => 'EUR']);
 
-    $this->withSession(['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'iyzico_basket_id' => 'BASKET-1'])
-        ->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'T-1']);
+    izReturn($this);
 
     expect(izStatuses($combined))->toBe(['paid']);
+});
+
+test('the payment type and amounts in the callback URL are ignored', function () {
+    izCurrencies(35.0);
+    $customer = izCustomer();
+    pendingGatewayReturn('iyzico', 'IYZ-TOKEN-1', $customer, 'wallet_payment', 25, 875.0, 'TRY');
+    izRetrieved(['paid_price' => 875.0]);
+
+    $this->post('/temp/iyzico/payment/callback/cart_payment/9999/iyzico/1', ['token' => 'IYZ-TOKEN-1']);
+
+    expect((float) Wallet::query()->where('user_id', $customer->id)->sum('amount'))->toBe(25.0);
 });
 
 // --- the mobile API ------------------------------------------------------------
@@ -278,6 +309,54 @@ test('the API refuses a currency with no active rate', function () {
     izServer($captured);
 
     $this->withToken(storeApiToken(izCustomer()))->getJson('/api/v1/store/iyzico/init?payment_type=wallet_payment&amount=25')->assertJsonPath('result', false);
+
+    expect($captured)->not->toHaveProperty('request');
+});
+
+// --- the identity number (IYZICO_IDENTITY_NUMBER, .env only) ------------------------
+
+test('the buyer carries the configured identity number, and the config holds no placeholder default', function () {
+    config(['services.iyzico.identity_number' => '12345678901']);
+    izCurrencies();
+    actingAsStoreUser(izCustomer());
+    $captured = new stdClass;
+    izServer($captured);
+
+    izTopUp($this, 25)->assertRedirect('https://pay.iyzico.test/page');
+
+    expect($captured->request->getBuyer()->getIdentityNumber())->toBe('12345678901')
+        ->and(file_get_contents(config_path('services.php')))->not->toContain('11111111111');
+});
+
+test('without IYZICO_IDENTITY_NUMBER the storefront refuses to start a payment and iyzico is not called', function (?string $number) {
+    config(['services.iyzico.identity_number' => $number]);
+    izCurrencies();
+    actingAsStoreUser(izCustomer());
+    $captured = new stdClass;
+    izServer($captured);
+
+    izTopUp($this, 25)->assertRedirect(route('cart'));
+
+    expect($captured)->not->toHaveProperty('request')
+        ->and(session('iyzico_basket_id'))->toBeNull()
+        ->and(session('flash_notification'))->not->toBeNull()
+        ->and(__('storefront.checkout.iyzico_unavailable'))->not->toBe('storefront.checkout.iyzico_unavailable')
+        ->and(__('storefront.checkout.iyzico_unavailable', [], 'ar'))->not->toBe(__('storefront.checkout.iyzico_unavailable', [], 'en'));
+})->with([
+    'unset' => [null],
+    'empty' => [''],
+    'blank' => ['  '],
+]);
+
+test('without IYZICO_IDENTITY_NUMBER the API refuses to start a payment and says why', function () {
+    config(['services.iyzico.identity_number' => null]);
+    izCurrencies();
+    $captured = new stdClass;
+    izServer($captured);
+
+    $this->withToken(storeApiToken(izCustomer()))->getJson('/api/v1/store/iyzico/init?payment_type=wallet_payment&amount=25')
+        ->assertJsonPath('result', false)
+        ->assertJsonPath('message', __('storefront.checkout.iyzico_unavailable'));
 
     expect($captured)->not->toHaveProperty('request');
 });

@@ -243,13 +243,18 @@ prefix. That is the single point every storefront asset URL goes through.
   every notification unless a secret and merchant id are configured, the
   merchant matches, the signature matches (`hash_equals`) and the status is
   success. `PaymentGatewayRoutesTest` covers all of it, and fails on a new
-  controller under `Payment/` the guard does not know about. **Before
-  enabling a gateway:** move its credentials to config (PayHere and iyzico are
-  done: bKash, Nagad, N-Genius, SSLCommerz, aamarpay and VoguePay still read
-  them through `env()`); the callbacks' verification is in "Gateway crediting"
-  below.
-  The admin checkout and settings pages still offer a gateway that
-  `business_settings` has switched on, and choosing one now gives a 404.
+  controller under `Payment/` the guard does not know about. **Credentials
+  (done 2026-11-10, then 2026-11-12):** no gateway reads `env()` any more
+  (`GatewayCredentialsFromConfigTest`); every gateway credential, currency and
+  `.env`-held mode is read through `App\Support\StorePaymentGateways::get()`:
+  saved on the admin's Payment methods page as one group per gateway
+  (encrypted secrets), else `config/services.php` / `config/nagad.php`. The
+  enabled list is `StorePaymentGateways::enabled()`: chosen on that page, else
+  `STORE_PAYMENT_GATEWAYS` (.ai/rules/admin-env-overrides.md, "Payment
+  gateways"). The callbacks' verification is in "Gateway crediting" below.
+  The checkout, the wallet top-up, the customer packages page and the app's
+  `GET payment-types` offer a gateway only while it is enabled and switched
+  on in Features activation.
 - **Gateway crediting.** Behind the 404, every gateway's callback credited what
   it was told: the order, the payer and the amount came from the request or the
   session, `checkout_done()`/`wallet_payment_done()` (and the API's global
@@ -266,27 +271,59 @@ prefix. That is the single point every storefront asset URL goes through.
   it a `VerifiedPayment` built only from the gateway's own server: SSLCommerz
   `orderValidate`/`sslcommerz_validate`, aamarpay's search API, bKash
   execute/status (status code 0000 required; the web `callback` sets a one-shot
-  session flag `success` pulls), iyzico retrieve (basket and paid price; one
-  token one payment; `App\Services\IyzicoPayments`, keys now in
+  session flag `success` pulls), iyzico retrieve (paid price and currency; one
+  token one payment, the token being the recorded reference on the web; `App\Services\IyzicoPayments`, keys now in
   `config('services.iyzico.*')`), PayHere's signed `order_id`
   (`<combined order>`, `W<user>-…`, `P<user>-<package>-…`) and `payment_id`,
   N-Genius/VoguePay/Nagad order lookups bound to a reference the session
   stored. Storefront callbacks finish the session's own payment
-  (`SessionGatewayPayment`); the API's `begin`/`init` endpoints and the app's
+  (`SessionGatewayPayment`), except SSLCommerz, aamarpay and iyzico, which
+  finish the payment recorded under their reference (`GatewayReturn`, below); the API's `begin`/`init` endpoints and the app's
   bKash/iyzico success calls need `auth:store_api` and price from the database
   (`ApiGatewayPayment`); the API's SSLCommerz and Nagad callbacks, which have no
   token, complete only a payment `begin` recorded as pending. The SSLCommerz
   IPN handler and route are gone. Tests: `LegacyGatewayPaymentCreditingTest`.
-  **Before enabling a storefront gateway that posts back** (SSLCommerz,
-  aamarpay, iyzico): with `SESSION_SAME_SITE=lax` the browser does not send the
-  session cookie on that cross-site POST, so the callback finds no session and
-  credits nothing (it fails safe; the payment then needs reconciling by hand).
+  **Gateways that post back (fixed 2026-11-12):** SSLCommerz, aamarpay and
+  iyzico return with a cross-site POST, which carries no session cookie under
+  `SESSION_SAME_SITE=lax`, so their callbacks credited nothing, and the fresh
+  session they answered with signed the customer out. Their `pay()` now
+  records the payment as pending in `wms_gateway_payments`
+  (`App\Services\GatewayReturn`; `gateway_amount`, `gateway_currency`,
+  `expires_at` added), keyed by the reference sent (`WEB-…`, iyzico's token);
+  the six return routes run outside the `web` group
+  (`routes/shop-gateway-returns.php`, throttled, no CSRF entry any more), read
+  only the reference, re-verify with the provider, require the recorded
+  converted amount and currency to the cent, credit the recorded owner once,
+  and 303 to a signed GET that lands the payer as before (or a neutral "payment
+  received, sign in" page). Rules: .ai/rules/payment-gateway-returns.md. Tests:
+  `GatewayReturnWithoutSessionTest`.
   **Mobile app:** `sslcommerz/begin`, `iyzico/init`, `iyzico/success` and
   `bkash/api/success` now need the bearer token, `bkash/api/process` and
   `nagad/process` are gone (Nagad completes in `nagad/verify`), and
   `user_id`/`amount` are no longer read except a top-up's amount. Seller-package
-  payments go through the same sink (it needs the seller's shop), but have no
-  test: this repository has no `seller_packages` migration.
+  payments go through the same sink (it needs the seller's shop). **Tested
+  2026-11-12** (`GatewayPackagePaymentCreditingTest`, seller and customer
+  packages through N-Genius on the web and the API's iyzico, SSLCommerz, Nagad
+  and bKash): the right owner, the exact converted amount, a replay credits
+  nothing, a wrong amount is refused, the package is activated only after a
+  verified credit. The web has no page that starts a seller package payment; it
+  reaches a gateway through the API (`payment_type=seller_package_payment`) or
+  a session that holds one. That test found `seller_purchase_payment_done()`
+  counting a renewal from the old end date, so a seller whose package had
+  expired paid and stayed expired; it now counts from today unless the package
+  is still active.
+  **PayHere's `/temp/payhere/{checkout,wallet,customer_package}/testing`
+  routes** (a signed test form for a made-up buyer) answer only while PayHere is
+  enabled, in sandbox mode (`payhere_sandbox`, effective value) and outside
+  production: `EnsurePaymentGatewaySandbox` (`payment.sandbox:payhere`),
+  otherwise 404. `PayhereTestingRoutesTest`.
+  **iyzico's buyer identity number** is `IYZICO_IDENTITY_NUMBER`, `.env` only,
+  with no default: the old placeholder `11111111111` was sent on every payment.
+  While it is unset (`IyzicoPayments::identityNumber()`) iyzico refuses to start
+  a payment, on the web and in the API, with `storefront.checkout.iyzico_unavailable`.
+  **Not confirmed with the providers, owner to confirm** (docs/qa/payment-gateway-sandbox-checklist.md,
+  "Needs your input"): N-Genius's live URLs (`NGENIUS_LIVE_*_URL`), and that
+  AamarPay's payment page accepts the GET redirect the store now sends.
 - User-written HTML was printed unescaped, so anyone who could write it could run
   script in the browser of whoever viewed it. The worst case was the **admin
   backend's** ticket page (`backend/support/support_tickets/show`), which printed
@@ -1776,16 +1813,17 @@ and 5). Each item says where its answer comes from.
   working (signed links replace them); a representative can no longer pay from a
   customer's wallet by sending that customer's `user_id`; the app's product
   coupons now count quantities.
-- [ ] **Move a payment gateway's credentials from `env()` to config** before it
-  is enabled in `STORE_PAYMENT_GATEWAYS` (about 140 reads remain; only PayHere
-  has moved). A gateway's server-to-server callbacks POST to the shop, and this
-  app has no CSRF exceptions (the legacy `VerifyCsrfToken` excluded
-  `/payhere*`, `/sslcommerz*`, `/iyzico*`, `/bkash*`, `/aamarpay*`,
-  `/apple-callback` and others), so they answer 419 until the enabled gateway's
-  callback paths are added to `validateCsrfTokens(except: [...])` in
-  `bootstrap/app.php`, under `temp/`. Exempt only a gateway that verifies the
-  callback itself (PayHere does; the others do not yet). `FORCE_HTTPS` is a decision, not a fix: behind a proxy that does
-  not report https it redirects forever.
+- [x] **Move a payment gateway's credentials from `env()` to config** (done:
+  no gateway reads `env()`; since 2026-11-12 they are read through
+  `StorePaymentGateways`, saved in the admin or else from config). The
+  callbacks' CSRF exemptions are in `bootstrap/app.php` under `temp/`
+  (SSLCommerz, PayHere, iyzico, AamarPay, bKash; Nagad, N-Genius and VoguePay
+  return by GET), and every callback verifies the payment with the gateway's
+  own server ("Gateway crediting" above). Still open: with
+  `SESSION_SAME_SITE=lax` the cross-site POST returns of SSLCommerz, AamarPay
+  and the iyzico storefront arrive without the session and credit nothing
+  (fail safe, reconcile by hand). `FORCE_HTTPS` is a decision, not a fix:
+  behind a proxy that does not report https it redirects forever.
 - [ ] **Legacy roles' guard** (`web` → `store`) and the pivots' `model_type`
   (→ `StoreUser`): the SQL check is in §6.7.1.
 - [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the

@@ -130,6 +130,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'password_resets',
         'payku_payments',
         'payku_transactions',
+        'payment_gateway_settings',
         'payments',
         'pickup_point_translations',
         'pickup_points',

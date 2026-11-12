@@ -10,6 +10,7 @@ use App\Models\GatewayPayment;
 use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -29,8 +30,8 @@ class SslCommerzController extends Controller
 
     public function __construct()
     {
-        $this->store_id = config('services.sslcommerz.store_id');
-        $this->store_pass = config('services.sslcommerz.store_password');
+        $this->store_id = StorePaymentGateways::get('sslcommerz', 'store_id');
+        $this->store_pass = StorePaymentGateways::get('sslcommerz', 'store_password');
     }
 
     /**

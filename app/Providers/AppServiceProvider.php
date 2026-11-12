@@ -156,6 +156,23 @@ class AppServiceProvider extends ServiceProvider
         // cache (two simultaneous requests both read the same count) and
         // was keyed on IP and path with a hand-rolled 429 body. Same budget, 5
         // sign-ups per IP per 15 minutes, on the framework's atomic limiter.
+        // SSLCommerz, AamarPay and iyzico's returns (routes/shop-gateway-returns.php): 30 a
+        // minute from one address, and 10 a minute for one reference, which caps how often a
+        // reference can make the store ask the gateway's server. A customer's browser returns
+        // once or twice; the gateways do not retry these from their servers.
+        RateLimiter::for('gateway-returns', function (Request $request): array {
+            $reference = collect([$request->input('tran_id'), $request->input('mer_txnid'), $request->input('token')])
+                ->first(fn (mixed $value): bool => is_scalar($value) && (string) $value !== '');
+
+            $limits = [Limit::perMinute(30)->by('gateway-returns-ip|'.$request->ip())];
+
+            if ($reference !== null) {
+                $limits[] = Limit::perMinute(10)->by('gateway-returns|'.$request->segment(2).'|'.sha1((string) $reference));
+            }
+
+            return $limits;
+        });
+
         RateLimiter::for('store-signup', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by('store-signup|'.$request->ip()));
 
         // `user('sanctum')`, never a bare `user()`: with no guard argument the

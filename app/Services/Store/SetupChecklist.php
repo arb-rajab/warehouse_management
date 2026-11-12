@@ -16,6 +16,7 @@ use App\Services\FcmPushService;
 use App\Support\GoogleMapsKey;
 use App\Support\StoreDefaultLanguage;
 use App\Support\StoreMailSettings;
+use App\Support\StorePaymentGateways;
 
 /**
  * The setup checklist of the store back office dashboard: every setting the
@@ -47,6 +48,7 @@ class SetupChecklist
     public const array PERMISSIONS = [
         'smtp' => ['smtp_settings'],
         'paymentMethod' => ['features_activation'],
+        'paymentGateways' => ['payment_methods_configurations'],
         'cashOnDeliveryProducts' => ['show_all_products'],
         'shipping' => ['shipping_configuration'],
         'firebasePush' => ['google_firebase_setting'],
@@ -69,6 +71,35 @@ class SetupChecklist
         'smtp.host' => ['smtp_settings.index', 'mail_host'],
         'smtp.username_and_password' => ['smtp_settings.index', 'mail_credentials'],
         'paymentMethod.none_enabled' => ['activation.index', 'cash_payment'],
+        // An enabled gateway without a required field: one reason per field
+        // (StorePaymentGateways::missing()), highlighting it on the Payment methods page.
+        'paymentGateways.bkash_app_key' => ['payment_method.index', 'bkash.app_key'],
+        'paymentGateways.bkash_app_secret' => ['payment_method.index', 'bkash.app_secret'],
+        'paymentGateways.bkash_username' => ['payment_method.index', 'bkash.username'],
+        'paymentGateways.bkash_password' => ['payment_method.index', 'bkash.password'],
+        'paymentGateways.bkash_currency' => ['payment_method.index', 'bkash.currency'],
+        'paymentGateways.nagad_merchant_id' => ['payment_method.index', 'nagad.merchant_id'],
+        'paymentGateways.nagad_pg_public_key' => ['payment_method.index', 'nagad.pg_public_key'],
+        'paymentGateways.nagad_merchant_private_key' => ['payment_method.index', 'nagad.merchant_private_key'],
+        'paymentGateways.nagad_mode' => ['payment_method.index', 'nagad.mode'],
+        'paymentGateways.sslcommerz_store_id' => ['payment_method.index', 'sslcommerz.store_id'],
+        'paymentGateways.sslcommerz_store_password' => ['payment_method.index', 'sslcommerz.store_password'],
+        'paymentGateways.sslcommerz_currency' => ['payment_method.index', 'sslcommerz.currency'],
+        'paymentGateways.iyzico_api_key' => ['payment_method.index', 'iyzico.api_key'],
+        'paymentGateways.iyzico_secret_key' => ['payment_method.index', 'iyzico.secret_key'],
+        'paymentGateways.iyzico_currency' => ['payment_method.index', 'iyzico.currency'],
+        // `.env` only (StorePaymentGateways::ENV_ONLY): the page shows it read-only, set or not set.
+        'paymentGateways.iyzico_identity_number' => ['payment_method.index', 'iyzico.identity_number'],
+        'paymentGateways.payhere_merchant_id' => ['payment_method.index', 'payhere.merchant_id'],
+        'paymentGateways.payhere_secret' => ['payment_method.index', 'payhere.secret'],
+        'paymentGateways.aamarpay_store_id' => ['payment_method.index', 'aamarpay.store_id'],
+        'paymentGateways.aamarpay_signature_key' => ['payment_method.index', 'aamarpay.signature_key'],
+        'paymentGateways.aamarpay_currency' => ['payment_method.index', 'aamarpay.currency'],
+        'paymentGateways.ngenius_outlet_id' => ['payment_method.index', 'ngenius.outlet_id'],
+        'paymentGateways.ngenius_api_key' => ['payment_method.index', 'ngenius.api_key'],
+        'paymentGateways.ngenius_currency' => ['payment_method.index', 'ngenius.currency'],
+        'paymentGateways.ngenius_mode' => ['payment_method.index', 'ngenius.mode'],
+        'paymentGateways.voguepay_merchant_id' => ['payment_method.index', 'voguepay.merchant_id'],
         'cashOnDeliveryProducts.no_product_allows_cod' => ['products.all', null],
         'shipping.type_unset' => ['shipping_configuration.index', 'shipping_type'],
         'shipping.flat_rate_cost' => ['shipping_configuration.index', 'flat_rate_shipping_cost'],
@@ -216,6 +247,7 @@ class SetupChecklist
         return match ($key) {
             'smtp' => $this->smtp(),
             'paymentMethod' => $this->paymentMethod(),
+            'paymentGateways' => $this->paymentGateways(),
             'cashOnDeliveryProducts' => $this->cashOnDeliveryProducts(),
             'shipping' => $this->shipping(),
             'firebasePush' => $this->firebasePush(),
@@ -258,19 +290,53 @@ class SetupChecklist
 
     /**
      * Whether GET /payment-types can list anything: the same settings it reads.
-     * Every one of them is a switch on Features activation.
+     * Every one of them is a switch on Features activation; a gateway's switch
+     * counts only while the gateway is also enabled (StorePaymentGateways:
+     * chosen on the Payment methods page, else STORE_PAYMENT_GATEWAYS), as the
+     * app lists it only then.
      *
      * @return list<string>
      */
     private function paymentMethod(): array
     {
-        foreach (['cash_payment', 'wallet_system', 'iyzico', 'bkash', 'nagad', 'sslcommerz_payment'] as $setting) {
+        foreach (['cash_payment', 'wallet_system'] as $setting) {
             if ($this->setting($setting) == 1) {
                 return [];
             }
         }
 
+        foreach (['iyzico' => 'iyzico', 'bkash' => 'bkash', 'nagad' => 'nagad', 'sslcommerz_payment' => 'sslcommerz'] as $setting => $gateway) {
+            if ($this->setting($setting) == 1 && StorePaymentGateways::isEnabled($gateway)) {
+                return [];
+            }
+        }
+
         return addon_is_activated('offline_payment') && ManualPaymentMethod::query()->exists() ? [] : ['none_enabled'];
+    }
+
+    /**
+     * Every enabled gateway has each required field in effect (saved on the
+     * Payment methods page, else `.env`) and each `.env`-only value
+     * (StorePaymentGateways::ENV_ONLY, iyzico's identity number): one reason per missing field,
+     * `<gateway>_<field>`, which the page highlights as `<gateway>.<field>`.
+     *
+     * @return list<string>
+     */
+    private function paymentGateways(): array
+    {
+        $reasons = [];
+
+        foreach (StorePaymentGateways::enabled() as $gateway) {
+            if (! isset(StorePaymentGateways::gateways()[$gateway]) || ! StorePaymentGateways::gateways()[$gateway]['flow']) {
+                continue;
+            }
+
+            foreach ([...StorePaymentGateways::missing($gateway), ...StorePaymentGateways::envOnlyMissing($gateway)] as $field) {
+                $reasons[] = "{$gateway}_{$field}";
+            }
+        }
+
+        return $reasons;
     }
 
     /**
