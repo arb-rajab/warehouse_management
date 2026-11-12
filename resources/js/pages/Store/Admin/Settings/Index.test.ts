@@ -5,7 +5,6 @@ import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/Dashboard
 import {
     updateActivation,
     updateFirebase,
-    updatePayments,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
@@ -115,24 +114,12 @@ const pages = {
         permission: 'google_firebase_setting',
         keys: ['google_firebase'],
     },
-    payments: {
-        permission: 'payment_methods_configurations',
-        keys: [
-            'bkash_sandbox',
-            'sslcommerz_sandbox',
-            'aamarpay_sandbox',
-            'iyzico_sandbox',
-            'payhere_sandbox',
-            'voguepay_sandbox',
-        ],
-    },
     filesystem: { permission: 'file_system_&_cache_configuration', keys: [] },
 };
 type Section = keyof typeof pages;
 const actions = {
     activation: updateActivation,
     firebase: updateFirebase,
-    payments: updatePayments,
 };
 function mountPage(
     section: Section,

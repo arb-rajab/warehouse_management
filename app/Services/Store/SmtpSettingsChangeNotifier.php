@@ -3,7 +3,6 @@
 namespace App\Services\Store;
 
 use App\Mail\SmtpSettingsChangedMail;
-use App\Models\Role;
 use App\Models\StoreUser;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
@@ -84,8 +83,7 @@ final class SmtpSettingsChangeNotifier
     }
 
     /**
-     * Every active Super Admin (the role on the store guard, back-office
-     * staff, not banned, with an email address), then the previous
+     * Every active Super Admin (SuperAdminRecipients), then the previous
      * from-address when the from address changed and it is not one of theirs.
      *
      * @param  array<string, string>  $changes
@@ -94,29 +92,11 @@ final class SmtpSettingsChangeNotifier
      */
     public function recipients(array $changes, array $previous): array
     {
-        $recipients = [];
-        $seen = [];
-
-        $superAdmins = StoreUser::query()
-            ->whereHas('roles', fn ($roles) => $roles->where($roles->qualifyColumn('name'), Role::SUPER_ADMIN))
-            ->whereIn('user_type', StoreUser::ADMIN_USER_TYPES)
-            ->where(fn ($query) => $query->whereNull('banned')->orWhere('banned', 0))
-            ->whereNotNull('email')
-            ->orderBy('id')
-            ->get();
-
-        foreach ($superAdmins as $admin) {
-            $email = trim((string) $admin->email);
-            if (! $this->validEmail($email) || isset($seen[Str::lower($email)])) {
-                continue;
-            }
-
-            $seen[Str::lower($email)] = true;
-            $recipients[] = ['email' => $email, 'user' => $admin];
-        }
+        $recipients = app(SuperAdminRecipients::class)->all();
+        $seen = array_fill_keys(array_map(fn (array $recipient): string => Str::lower($recipient['email']), $recipients), true);
 
         $previousFrom = trim((string) ($previous['from_address']['value'] ?? ''));
-        if (array_key_exists('from_address', $changes) && $this->validEmail($previousFrom) && ! isset($seen[Str::lower($previousFrom)])) {
+        if (array_key_exists('from_address', $changes) && SuperAdminRecipients::validEmail($previousFrom) && ! isset($seen[Str::lower($previousFrom)])) {
             $recipients[] = ['email' => $previousFrom, 'user' => null];
         }
 
@@ -151,10 +131,5 @@ final class SmtpSettingsChangeNotifier
         ]]);
 
         return self::MAILER;
-    }
-
-    private function validEmail(string $email): bool
-    {
-        return $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false && ! preg_match('/[\r\n]/', $email);
     }
 }

@@ -83,7 +83,7 @@ return [
     'order_updated_title' => 'Order updated',
     'order_updated_body' => 'Order :code was updated. Please review it in the app.',
     'role_permission_not_held' => 'You can only give a role permissions that you hold yourself.',
-    'role_permission_super_admin_only' => 'Only a Super Admin can give or remove a sensitive permission, such as the SMTP settings.',
+    'role_permission_super_admin_only' => 'Only a Super Admin can give or remove a sensitive permission, such as the SMTP or payment gateway settings.',
     'staff_role_not_assignable' => 'You can only give a role that grants nothing beyond your own permissions, and you cannot change your own role.',
     'seller_payout_full_request' => 'Pay the full requested amount (:amount), or ask the seller to submit a new request. Partial payments are not supported.',
     'seller_payout_balance_limit' => 'The amount cannot exceed the available balance for this payment method (:amount).',

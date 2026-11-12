@@ -54,7 +54,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         // which UpdatePasswordRequest uses — without this it lands in plaintext in
         // database/telescope.sqlite on every failed (and, in local, every successful)
         // password-change request.
-        Telescope::hideRequestParameters(['_token', 'current_password']);
+        Telescope::hideRequestParameters(['_token', 'current_password', 'gateways']);
 
         Telescope::hideRequestHeaders([
             'cookie',

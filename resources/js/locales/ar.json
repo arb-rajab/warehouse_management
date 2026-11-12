@@ -1201,7 +1201,7 @@
                 "newPassword": "كلمة المرور الجديدة",
                 "confirmPassword": "تأكيد كلمة المرور",
                 "passwordPlaceholder": "اتركه فارغًا للإبقاء على كلمة المرور الحالية",
-                "roleSensitive": "{name} (حساس: يتيح قراءة كل البريد الصادر)"
+                "roleSensitive": "{name} (حساس: يتحكم في البريد الصادر أو المدفوعات)"
             }
         },
         "roles": {
@@ -1214,7 +1214,7 @@
                 "edit": "تعديل",
                 "delete": "حذف",
                 "sensitiveBadge": "حساس",
-                "sensitiveBadgeHint": "يتضمن صلاحية لا يمنحها إلا المدير العام: تتيح قراءة كل البريد الصادر."
+                "sensitiveBadgeHint": "يتضمن صلاحية لا يمنحها إلا المدير العام: تتيح قراءة كل البريد الصادر أو تحويل المدفوعات."
             },
             "create": {
                 "title": "إضافة دور",
@@ -1232,7 +1232,7 @@
                 "nameTranslationHint": "الاسم باللغة الافتراضية هو اسم الدور نفسه، وأي لغة أخرى تترجمه فقط.",
                 "permissions": "الصلاحيات",
                 "sensitive": "حساسة",
-                "sensitiveWarning": "تتيح قراءة كل البريد الصادر، بما فيه رسائل إعادة تعيين كلمة المرور. لا يمنحها إلا المدير العام (Super Admin)."
+                "sensitiveWarning": "تتحكم في وجهة بريد المتجر أو مدفوعاته: من يملكها يستطيع قراءة كل البريد الصادر (بما فيه رسائل إعادة تعيين كلمة المرور) أو تحويل المدفوعات. لا يمنحها إلا المدير العام (Super Admin)."
             }
         },
         "reference": {
@@ -1396,7 +1396,7 @@
             "enabled": "مفعّل",
             "disabled": "معطّل",
             "environmentReadOnly": "تُدار إعدادات البيئة على الخادم. لا تُعرض بيانات الاعتماد هنا ولا تُعدّل.",
-            "gatewayNotice": "تُدار إتاحة بوابات الدفع على الخادم وتتطلب التحقق من بيانات الاعتماد وإشعارات الدفع.",
+            "gatewayNotice": "لا تُعرض بوابة الدفع المفعّلة هنا عند الدفع إلا إذا كانت مفعّلة أيضًا في صفحة طرق الدفع، حيث تُضبط بيانات اعتمادها.",
             "testEmail": "البريد الإلكتروني لمستلم الاختبار",
             "sendTest": "إرسال بريد تجريبي",
             "sendingTest": "جارٍ الإرسال…",
@@ -1628,6 +1628,117 @@
                         "set": "أُضيف",
                         "changed": "تغيّر",
                         "removed": "حُذف"
+                    }
+                }
+            },
+            "payments": {
+                "intro": "القيم المحفوظة هنا تتقدّم على ملف .env في الخادم، لكل بوابة على حدة: بمجرد حفظ أي حقل لبوابة هنا، تؤخذ كل إعداداتها من هذه الصفحة ولا شيء من .env. اترك كل حقول البوابة فارغة لاستخدام .env. تُحفظ القيم السرية مشفّرة ولا تُعرض مرة أخرى.",
+                "enabledSource": "البوابات التي تعمل",
+                "enabledSources": {
+                    "env": "اتباع STORE_PAYMENT_GATEWAYS في .env ({list})",
+                    "admin": "الاختيار هنا بمفتاح كل بوابة"
+                },
+                "enabledSourceHelp": "أثناء اتباع .env تعرض المفاتيح قائمة .env ولا يمكن تغييرها. عند الاختيار هنا مع إيقاف كل المفاتيح لا تعمل أي بوابة.",
+                "none": "لا شيء",
+                "tabs": "بوابات الدفع",
+                "enabled": "مفعّلة: تعمل صفحة الدفع والردود الخاصة بها",
+                "noFlow": "لا يوجد مسار دفع بعد: تُحفظ المفاتيح جاهزة لربط مستقبلي. لا تُعرض هذه البوابة على العملاء ولا يمكن تفعيلها.",
+                "offered": "معروضة عند الدفع (تفعيل الميزات): {state}",
+                "offeredStates": {
+                    "on": "مفعّلة",
+                    "off": "متوقفة"
+                },
+                "openActivation": "غيّرها في تفعيل الميزات",
+                "notOffered": "{gateway} مفعّلة لكنها متوقفة في تفعيل الميزات، لذلك لا تُعرض على العملاء.",
+                "mode": "الوضع",
+                "modes": {
+                    "sandbox": "تجريبي (مدفوعات اختبار)",
+                    "live": "فعلي"
+                },
+                "modeFromEnv": "غير محفوظ هنا (.env: {mode})",
+                "modeDerived": "الوضع (من المفاتيح): {mode}",
+                "modeUnknown": "لا يوجد مفتاح بعد",
+                "currencyFixed": "العملة: {code}، وهي العملة الوحيدة التي تقبلها هذه البوابة.",
+                "currencyStore": "فارغ: عملة المتجر نفسها.",
+                "currencyNoRate": "لا يوجد سعر صرف مفعّل لـ {code} في العملات: تُرفض المدفوعات حتى يُضاف.",
+                "missing": "{gateway} مفعّلة لكن {field} غير مضبوط هنا ولا في .env.",
+                "groupHelp": "الحقول المعلّمة بـ * مطلوبة بمجرد إدخال أي حقل لـ {gateway} هنا. اترك كل الحقول فارغة لاستخدام .env؛ وإفراغ {identifying} يحذف كل إعدادات {gateway} المحفوظة، بما فيها القيم السرية.",
+                "envHint": ".env ({env}): {value}",
+                "envHintSecret": ".env ({env}): {state}",
+                "secretSaved": "محفوظ هنا. اترك الحقل فارغًا للإبقاء عليه.",
+                "secretNotSaved": "غير محفوظ هنا.",
+                "secretUnreadable": "لم يعد من الممكن قراءة القيمة المحفوظة (تغيّر مفتاح التطبيق). أدخلها مرة أخرى.",
+                "secretKeep": "اتركه فارغًا للإبقاء على القيمة المحفوظة",
+                "secretAgain": "يُطلب مرة أخرى عند تغيير {identifying}.",
+                "removeSecret": "حذف {field} المحفوظ",
+                "keyHelp": "الصق المفتاح مع سطري BEGIN/END أو بدونهما؛ تُحذف المسافات وفواصل الأسطر.",
+                "effective": {
+                    "title": "الإعدادات الفعلية: {gateway}",
+                    "source": "مصدر الإعدادات",
+                    "sources": {
+                        "admin": "محفوظ في لوحة الإدارة",
+                        "env": "من .env"
+                    },
+                    "enabled": "مفعّلة",
+                    "listSources": {
+                        "admin": "تم اختيارها هنا",
+                        "env": "من .env"
+                    },
+                    "enabledValue": "{state} ({source})",
+                    "yes": "نعم",
+                    "no": "لا",
+                    "set": "مضبوط",
+                    "notSet": "غير مضبوط"
+                },
+                "fields": {
+                    "app_key": "مفتاح التطبيق",
+                    "app_secret": "سر التطبيق",
+                    "username": "اسم المستخدم",
+                    "password": "كلمة المرور",
+                    "currency": "العملة",
+                    "merchant_id": "معرّف التاجر",
+                    "merchant_number": "رقم التاجر",
+                    "pg_public_key": "المفتاح العام للبوابة",
+                    "merchant_private_key": "المفتاح الخاص بالتاجر",
+                    "mode": "الوضع",
+                    "store_id": "معرّف المتجر",
+                    "store_password": "كلمة مرور المتجر",
+                    "api_key": "مفتاح API",
+                    "secret_key": "المفتاح السري",
+                    "secret": "سر التاجر",
+                    "signature_key": "مفتاح التوقيع",
+                    "outlet_id": "معرّف المنفذ",
+                    "category_code": "رمز الفئة",
+                    "user_secret_key": "المفتاح السري للمستخدم",
+                    "publishable_key": "المفتاح القابل للنشر",
+                    "merchant_key": "مفتاح التاجر",
+                    "merchant_website": "موقع التاجر",
+                    "channel": "القناة",
+                    "industry_type": "نوع النشاط",
+                    "enabled": "التفعيل"
+                },
+                "currentPassword": "كلمة المرور الحالية",
+                "currentPasswordHelp": "مطلوبة للحفظ: هذه الإعدادات تحدد وجهة مدفوعات العملاء. يتم التحقق منها عند كل حفظ.",
+                "audit": {
+                    "title": "التغييرات الأخيرة",
+                    "help": "آخر 10 عمليات حفظ وكلمات مرور مرفوضة في هذه الصفحة. لا تُسجَّل القيم أبدًا.",
+                    "when": "الوقت",
+                    "who": "الموظف",
+                    "ip": "عنوان IP",
+                    "what": "ما الذي تغيّر",
+                    "empty": "لم تُسجَّل أي تغييرات على بوابات الدفع بعد.",
+                    "passwordFailed": "كلمة المرور الحالية خاطئة، لم يُحفظ شيء",
+                    "deletedUser": "الحساب رقم {id} لم يعد موجودًا",
+                    "fieldChange": "{field} ({change})",
+                    "gatewayField": "{field} في {gateway}",
+                    "enabledSource": "مصدر البوابات المفعّلة",
+                    "separator": "، ",
+                    "kinds": {
+                        "set": "أُضيف",
+                        "changed": "تغيّر",
+                        "removed": "حُذف",
+                        "enabled": "فُعّلت",
+                        "disabled": "أُوقفت"
                     }
                 }
             }
@@ -2937,6 +3048,9 @@
                     "paymentMethod": {
                         "label": "طرق الدفع"
                     },
+                    "paymentGateways": {
+                        "label": "إعدادات بوابات الدفع"
+                    },
                     "cashOnDeliveryProducts": {
                         "label": "منتجات الدفع عند الاستلام"
                     },
@@ -2974,7 +3088,34 @@
                         "username_and_password": "لا يوجد اسم مستخدم أو كلمة مرور SMTP محفوظة في لوحة الإدارة أو مضبوطة على الخادم (MAIL_USERNAME وMAIL_PASSWORD)، لذلك لا يستطيع المتجر إرسال الرسائل."
                     },
                     "paymentMethod": {
-                        "none_enabled": "لا توجد طريقة دفع مفعّلة في تفعيل الميزات، لذلك لا يستطيع العملاء تقديم طلب في التطبيق."
+                        "none_enabled": "لا توجد طريقة دفع مفعّلة في تفعيل الميزات (تُحتسب بوابة الدفع الإلكتروني فقط إذا كانت مفعّلة أيضًا في صفحة طرق الدفع)، لذلك لا يستطيع العملاء تقديم طلب في التطبيق."
+                    },
+                    "paymentGateways": {
+                        "bkash_app_key": "bKash مفعّلة لكن مفتاح التطبيق غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "bkash_app_secret": "bKash مفعّلة لكن سر التطبيق غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "bkash_username": "bKash مفعّلة لكن اسم المستخدم غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "bkash_password": "bKash مفعّلة لكن كلمة المرور غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "bkash_currency": "bKash مفعّلة لكن العملة غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "nagad_merchant_id": "Nagad مفعّلة لكن معرّف التاجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "nagad_pg_public_key": "Nagad مفعّلة لكن المفتاح العام للبوابة غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "nagad_merchant_private_key": "Nagad مفعّلة لكن المفتاح الخاص بالتاجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "nagad_mode": "Nagad مفعّلة لكن الوضع غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "sslcommerz_store_id": "SSLCommerz مفعّلة لكن معرّف المتجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "sslcommerz_store_password": "SSLCommerz مفعّلة لكن كلمة مرور المتجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "sslcommerz_currency": "SSLCommerz مفعّلة لكن العملة غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "iyzico_api_key": "iyzico مفعّلة لكن مفتاح API غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "iyzico_secret_key": "iyzico مفعّلة لكن المفتاح السري غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "iyzico_currency": "iyzico مفعّلة لكن العملة غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "payhere_merchant_id": "PayHere مفعّلة لكن معرّف التاجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "payhere_secret": "PayHere مفعّلة لكن سر التاجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "aamarpay_store_id": "AamarPay مفعّلة لكن معرّف المتجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "aamarpay_signature_key": "AamarPay مفعّلة لكن مفتاح التوقيع غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "aamarpay_currency": "AamarPay مفعّلة لكن العملة غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "ngenius_outlet_id": "N-Genius مفعّلة لكن معرّف المنفذ غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "ngenius_api_key": "N-Genius مفعّلة لكن مفتاح API غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "ngenius_currency": "N-Genius مفعّلة لكن العملة غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "ngenius_mode": "N-Genius مفعّلة لكن الوضع غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات.",
+                        "voguepay_merchant_id": "VoguePay مفعّلة لكن معرّف التاجر غير مضبوط في صفحة طرق الدفع ولا في .env، لذلك لا يمكنها استقبال المدفوعات."
                     },
                     "cashOnDeliveryProducts": {
                         "no_product_allows_cod": "الدفع النقدي مفعّل، لكن لا يسمح أي منتج بالدفع عند الاستلام. فعّل «الدفع عند الاستلام» في المنتجات التي تقبل النقد."
@@ -3767,7 +3908,76 @@
             "code": "الرمز",
             "address": "العنوان",
             "password": "كلمة المرور",
-            "current_password": "كلمة المرور الحالية"
+            "current_password": "كلمة المرور الحالية",
+            "enabled_source": "مصدر البوابات المفعّلة",
+            "gateways.bkash.enabled": "تفعيل bKash",
+            "gateways.bkash.mode": "الوضع (bKash)",
+            "gateways.bkash.app_key": "مفتاح التطبيق (bKash)",
+            "gateways.bkash.app_secret": "سر التطبيق (bKash)",
+            "gateways.bkash.app_secret_clear": "حذف سر التطبيق المحفوظ (bKash)",
+            "gateways.bkash.username": "اسم المستخدم (bKash)",
+            "gateways.bkash.password": "كلمة المرور (bKash)",
+            "gateways.bkash.password_clear": "حذف كلمة المرور المحفوظ (bKash)",
+            "gateways.bkash.currency": "العملة (bKash)",
+            "gateways.nagad.enabled": "تفعيل Nagad",
+            "gateways.nagad.merchant_id": "معرّف التاجر (Nagad)",
+            "gateways.nagad.merchant_number": "رقم التاجر (Nagad)",
+            "gateways.nagad.pg_public_key": "المفتاح العام للبوابة (Nagad)",
+            "gateways.nagad.merchant_private_key": "المفتاح الخاص بالتاجر (Nagad)",
+            "gateways.nagad.merchant_private_key_clear": "حذف المفتاح الخاص بالتاجر المحفوظ (Nagad)",
+            "gateways.nagad.mode": "الوضع (Nagad)",
+            "gateways.sslcommerz.enabled": "تفعيل SSLCommerz",
+            "gateways.sslcommerz.mode": "الوضع (SSLCommerz)",
+            "gateways.sslcommerz.store_id": "معرّف المتجر (SSLCommerz)",
+            "gateways.sslcommerz.store_password": "كلمة مرور المتجر (SSLCommerz)",
+            "gateways.sslcommerz.store_password_clear": "حذف كلمة مرور المتجر المحفوظ (SSLCommerz)",
+            "gateways.sslcommerz.currency": "العملة (SSLCommerz)",
+            "gateways.iyzico.enabled": "تفعيل iyzico",
+            "gateways.iyzico.mode": "الوضع (iyzico)",
+            "gateways.iyzico.api_key": "مفتاح API (iyzico)",
+            "gateways.iyzico.secret_key": "المفتاح السري (iyzico)",
+            "gateways.iyzico.secret_key_clear": "حذف المفتاح السري المحفوظ (iyzico)",
+            "gateways.iyzico.currency": "العملة (iyzico)",
+            "gateways.payhere.enabled": "تفعيل PayHere",
+            "gateways.payhere.mode": "الوضع (PayHere)",
+            "gateways.payhere.merchant_id": "معرّف التاجر (PayHere)",
+            "gateways.payhere.secret": "سر التاجر (PayHere)",
+            "gateways.payhere.secret_clear": "حذف سر التاجر المحفوظ (PayHere)",
+            "gateways.payhere.currency": "العملة (PayHere)",
+            "gateways.aamarpay.enabled": "تفعيل AamarPay",
+            "gateways.aamarpay.mode": "الوضع (AamarPay)",
+            "gateways.aamarpay.store_id": "معرّف المتجر (AamarPay)",
+            "gateways.aamarpay.signature_key": "مفتاح التوقيع (AamarPay)",
+            "gateways.aamarpay.signature_key_clear": "حذف مفتاح التوقيع المحفوظ (AamarPay)",
+            "gateways.aamarpay.currency": "العملة (AamarPay)",
+            "gateways.ngenius.enabled": "تفعيل N-Genius",
+            "gateways.ngenius.outlet_id": "معرّف المنفذ (N-Genius)",
+            "gateways.ngenius.api_key": "مفتاح API (N-Genius)",
+            "gateways.ngenius.api_key_clear": "حذف مفتاح API المحفوظ (N-Genius)",
+            "gateways.ngenius.currency": "العملة (N-Genius)",
+            "gateways.ngenius.mode": "الوضع (N-Genius)",
+            "gateways.voguepay.enabled": "تفعيل VoguePay",
+            "gateways.voguepay.mode": "الوضع (VoguePay)",
+            "gateways.voguepay.merchant_id": "معرّف التاجر (VoguePay)",
+            "gateways.voguepay.currency": "العملة (VoguePay)",
+            "gateways.toyyibpay.enabled": "تفعيل ToyyibPay",
+            "gateways.toyyibpay.category_code": "رمز الفئة (ToyyibPay)",
+            "gateways.toyyibpay.user_secret_key": "المفتاح السري للمستخدم (ToyyibPay)",
+            "gateways.toyyibpay.user_secret_key_clear": "حذف المفتاح السري للمستخدم المحفوظ (ToyyibPay)",
+            "gateways.toyyibpay.mode": "الوضع (ToyyibPay)",
+            "gateways.stripe.enabled": "تفعيل Stripe",
+            "gateways.stripe.publishable_key": "المفتاح القابل للنشر (Stripe)",
+            "gateways.stripe.secret_key": "المفتاح السري (Stripe)",
+            "gateways.stripe.secret_key_clear": "حذف المفتاح السري المحفوظ (Stripe)",
+            "gateways.stripe.currency": "العملة (Stripe)",
+            "gateways.paytm.enabled": "تفعيل Paytm",
+            "gateways.paytm.merchant_id": "معرّف التاجر (Paytm)",
+            "gateways.paytm.merchant_key": "مفتاح التاجر (Paytm)",
+            "gateways.paytm.merchant_key_clear": "حذف مفتاح التاجر المحفوظ (Paytm)",
+            "gateways.paytm.merchant_website": "موقع التاجر (Paytm)",
+            "gateways.paytm.channel": "القناة (Paytm)",
+            "gateways.paytm.industry_type": "نوع النشاط (Paytm)",
+            "gateways.paytm.mode": "الوضع (Paytm)"
         }
     },
     "warehouses": {

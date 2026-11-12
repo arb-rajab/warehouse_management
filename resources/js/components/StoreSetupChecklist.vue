@@ -11,6 +11,7 @@ import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/P
 import {
     activation,
     firebase,
+    payments,
     smtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shipping } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
@@ -48,6 +49,7 @@ const routes: Record<
     (options?: RouteQueryOptions) => RouteDefinition<'get'>
 > = {
     'smtp_settings.index': smtp,
+    'payment_method.index': payments,
     'activation.index': activation,
     'products.all': allProducts,
     'shipping_configuration.index': shipping,

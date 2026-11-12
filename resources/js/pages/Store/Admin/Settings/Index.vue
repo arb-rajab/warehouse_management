@@ -5,7 +5,6 @@ import { computed } from 'vue';
 import {
     updateActivation,
     updateFirebase,
-    updatePayments,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -17,8 +16,7 @@ import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreServerSettings } from '@/types/store';
 const props = defineProps<{
-    section:
-        'activation' | 'socialLogin' | 'firebase' | 'payments' | 'filesystem';
+    section: 'activation' | 'socialLogin' | 'firebase' | 'filesystem';
     settings: Record<string, boolean>;
     /** The option or section a button sent the admin here to change, if any. */
     highlight?: string | null;
@@ -26,9 +24,10 @@ const props = defineProps<{
     server?: StoreServerSettings | null;
 }>();
 // The read-only block of server values each page shows, by its deep-link key.
-// The SMTP, Analytics, Facebook chat, Facebook comments and reCAPTCHA pages are
-// their own components (Settings/Smtp.vue, Analytics.vue, FacebookChat.vue,
-// FacebookComments.vue, Recaptcha.vue): they edit values saved over `.env`.
+// The SMTP, Analytics, Facebook chat, Facebook comments, reCAPTCHA and Payment
+// methods pages are their own components (Settings/Smtp.vue, Analytics.vue,
+// FacebookChat.vue, FacebookComments.vue, Recaptcha.vue, Payments.vue): they
+// edit values saved over `.env`.
 const serverAnchors = {
     firebase: 'firebase_server',
 } as const;
@@ -36,13 +35,11 @@ const access = useStoreAccess();
 const actions = {
     activation: updateActivation,
     firebase: updateFirebase,
-    payments: updatePayments,
 };
 const permissions = {
     activation: 'features_activation',
     socialLogin: 'social_media_logins',
     firebase: 'google_firebase_setting',
-    payments: 'payment_methods_configurations',
     filesystem: 'file_system_&_cache_configuration',
 };
 const action = computed(() =>
@@ -69,7 +66,7 @@ const canWrite = computed(() => access.value.can(permissions[props.section]));
                     t('store.settings.environmentReadOnly')
                 }}
             </p>
-            <p v-if="section === 'payments' || section === 'activation'">
+            <p v-if="section === 'activation'">
                 {{ t('store.settings.gatewayNotice') }}
             </p>
             <FieldError :message="errors.settings" />

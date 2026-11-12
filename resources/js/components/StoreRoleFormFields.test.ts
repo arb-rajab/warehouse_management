@@ -137,7 +137,7 @@ describe('StoreRoleFormFields sensitive permissions', () => {
             wrapper.get('input[value="10"]').attributes('aria-describedby'),
         ).toBeUndefined();
         expect(t('store.roles.fields.sensitiveWarning')).toBe(
-            'Can read all outgoing email, password-reset emails included. Only a Super Admin can grant it.',
+            "Controls where the shop's email or payments go: whoever holds it can read all outgoing email (password-reset emails included) or redirect payments. Only a Super Admin can grant it.",
         );
     });
 });

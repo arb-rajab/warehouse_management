@@ -1086,6 +1086,7 @@ export type StoreSetupChecklistKey =
 /** The pages a setup checklist reason links to (Laravel route names). */
 export type StoreSetupChecklistRoute =
     | 'smtp_settings.index'
+    | 'payment_method.index'
     | 'activation.index'
     | 'products.all'
     | 'shipping_configuration.index'
@@ -1157,8 +1158,9 @@ export interface StoreSmtpEffectivePresence {
     source: StoreSmtpSource;
 }
 
-/** How an audited field changed (AdminAuditLog::CHANGE_KINDS). */
-export type StoreAuditChangeKind = 'set' | 'changed' | 'removed';
+/** How an audited field changed (AdminAuditLog::CHANGE_KINDS); a payment gateway switch is `enabled`/`disabled`. */
+export type StoreAuditChangeKind =
+    'set' | 'changed' | 'removed' | 'enabled' | 'disabled';
 
 /**
  * One row of the SMTP page's recent changes (AdminAuditLog): who, when, from
@@ -1187,6 +1189,88 @@ export interface StoreSmtpEffectiveSettings {
     password: StoreSmtpEffectivePresence;
     from_address: StoreSmtpEffectiveValue;
     from_name: StoreSmtpEffectiveValue;
+}
+
+/** Where a payment gateway's settings, or the enabled list, come from. */
+export type StorePaymentGatewaySource = 'admin' | 'env';
+
+/** A payment gateway mode on the page's scale (each gateway maps it to its own value). */
+export type StorePaymentGatewayMode = 'sandbox' | 'live';
+
+/**
+ * One field of a gateway's group (StorePaymentGateways::GATEWAYS). A secret is
+ * never sent: only whether one is saved here (`set`) and still readable.
+ */
+export interface StorePaymentGatewayField {
+    key: string;
+    secret: boolean;
+    /** Required once any field of the gateway is entered (`required_with`). */
+    required: boolean;
+    textarea: boolean;
+    max: number | null;
+    /** A choice field (`mode`, Paytm's channel). */
+    options: string[] | null;
+    /** The `.env` variable the field falls back to. */
+    env: string;
+    /** What is saved here (null: nothing; always null for a secret). */
+    value: string | null;
+    set: boolean;
+    unreadable: boolean;
+    /** The `.env` value of a public field, as a hint (never a secret's). */
+    environment: string | null;
+}
+
+/** An effective value with its source; a secret only as set or not set. */
+export interface StorePaymentGatewayEffectiveValue {
+    value?: string | null;
+    set?: boolean;
+    source: StorePaymentGatewaySource;
+}
+
+/** One gateway as the Payment methods page shows it. */
+export interface StorePaymentGateway {
+    key: string;
+    name: string;
+    /** The store has a payment flow for it; without one it cannot be enabled. */
+    flow: boolean;
+    identifying: string;
+    source: StorePaymentGatewaySource;
+    enabled: boolean;
+    /** The Features activation switch that offers it at checkout, and its state. */
+    offered_setting: string | null;
+    offered: boolean | null;
+    /** `setting`: an admin-only sandbox switch; `field`: the group's mode field; `derived`: from the keys. */
+    mode_kind: 'setting' | 'field' | 'derived';
+    mode: StorePaymentGatewayMode | null;
+    fixed_currency: string | null;
+    /** The effective currency when no active `currencies` row has it. */
+    currency_without_rate: string | null;
+    fields: StorePaymentGatewayField[];
+    effective: Record<string, StorePaymentGatewayEffectiveValue>;
+    /** Required fields with no effective value (here or in `.env`). */
+    missing: string[];
+}
+
+export interface StorePaymentGatewaySettings {
+    enabledSource: StorePaymentGatewaySource;
+    /** STORE_PAYMENT_GATEWAYS as the server has it. */
+    environmentEnabled: string[];
+    gateways: StorePaymentGateway[];
+}
+
+/** One row of the Payment methods page's recent changes (AdminAuditLog). */
+export interface StorePaymentGatewayAuditEntry {
+    id: number;
+    action:
+        | 'payment_gateway_settings.updated'
+        | 'payment_gateway_settings.password_failed';
+    changed_fields: Record<string, StoreAuditChangeKind>;
+    user_name: string | null;
+    user_email: string | null;
+    user_deleted: boolean;
+    user_id: number;
+    ip_address: string | null;
+    created_at: string | null;
 }
 
 /** Where an effective integration value comes from: saved in the admin, or `.env`. */

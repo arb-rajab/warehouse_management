@@ -20,7 +20,8 @@ use Illuminate\Validation\ValidationException;
  * holds everything, so it is never limited. The permissions a staff member
  * holds are the direct ones and those of their roles.
  *
- * The sensitive permissions (StorePermissions::SENSITIVE, `smtp_settings`)
+ * The sensitive permissions (StorePermissions::SENSITIVE: `smtp_settings`,
+ * `payment_methods_configurations`)
  * only a Super Admin grants, even to someone who holds them: anyone else can
  * neither tick them onto a role, nor take them off one, nor give a role that
  * carries one. Existing grants are never revoked.

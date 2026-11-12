@@ -7,18 +7,22 @@ use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\TestSmtpRequest;
 use App\Http\Requests\Store\Admin\UpdateIntegrationIdsRequest;
+use App\Http\Requests\Store\Admin\UpdatePaymentGatewaySettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateRecaptchaSettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateSmtpSettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateStoreSettingsRequest;
 use App\Mail\EmailManager;
 use App\Models\AdminAuditLog;
 use App\Models\BusinessSetting;
+use App\Models\Currency;
 use App\Models\StoreUser;
 use App\Services\FcmPushService;
+use App\Services\Store\PaymentGatewaySettingsChangeNotifier;
 use App\Services\Store\SmtpSettingsChangeNotifier;
 use App\Support\StoreIntegrationIds;
 use App\Support\StoreLocale;
 use App\Support\StoreMailSettings;
+use App\Support\StorePaymentGateways;
 use App\Support\StoreRecaptchaSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,7 +56,9 @@ class SettingsController extends Controller implements HasMiddleware
      * the ID fields). `component` is a dedicated page that replaces the plain
      * switch list; `ids` pairs a switch with the public ID it prints
      * (StoreIntegrationIds). The SMTP page is not one of these pages: it edits
-     * StoreMailSettings.
+     * StoreMailSettings. The payments page's `keys` are its sandbox switches;
+     * it edits them with every gateway's settings (StorePaymentGateways) and
+     * marks the keys of paymentHighlights().
      *
      * @var array<string, array{permission: string, index: string, keys: list<string>, sections?: list<string>, component?: string, ids?: array<string, string>}>
      */
@@ -147,7 +153,13 @@ class SettingsController extends Controller implements HasMiddleware
             'sections' => ['recaptcha_site_key', 'recaptcha_secret_key'], 'component' => 'Store/Admin/Settings/Recaptcha',
         ],
         'firebase' => ['permission' => 'google_firebase_setting', 'index' => 'google-firebase.index', 'keys' => ['google_firebase'], 'sections' => ['firebase_server']],
-        'payments' => ['permission' => 'payment_methods_configurations', 'index' => 'payment_method.index', 'keys' => ['bkash_sandbox', 'sslcommerz_sandbox', 'aamarpay_sandbox', 'iyzico_sandbox', 'payhere_sandbox', 'voguepay_sandbox']],
+        // The six sandbox switches are edited per gateway with the gateway's
+        // credentials (StorePaymentGateways), not as a switch list.
+        'payments' => [
+            'permission' => 'payment_methods_configurations', 'index' => 'payment_method.index',
+            'keys' => ['bkash_sandbox', 'sslcommerz_sandbox', 'aamarpay_sandbox', 'iyzico_sandbox', 'payhere_sandbox', 'voguepay_sandbox'],
+            'component' => 'Store/Admin/Settings/Payments',
+        ],
         'filesystem' => ['permission' => 'file_system_&_cache_configuration', 'index' => 'file_system.index', 'keys' => []],
     ];
 
@@ -215,20 +227,33 @@ class SettingsController extends Controller implements HasMiddleware
                 'from_address' => $this->shown($effective['from_address']),
                 'from_name' => $this->shown($effective['from_name']),
             ],
-            'auditEntries' => AdminAuditLog::recent([AdminAuditLog::SMTP_SETTINGS_UPDATED, AdminAuditLog::SMTP_SETTINGS_PASSWORD_FAILED])
-                ->map(fn (AdminAuditLog $entry): array => [
-                    'id' => $entry->id,
-                    'action' => $entry->action,
-                    'changed_fields' => (object) $entry->changed_fields,
-                    'user_name' => $entry->user->name ?? $entry->user_name,
-                    'user_email' => $entry->user->email ?? $entry->user_email,
-                    'user_deleted' => $entry->user === null,
-                    'user_id' => $entry->user_id,
-                    'ip_address' => $entry->ip_address,
-                    'created_at' => $entry->created_at?->toIso8601String(),
-                ])
-                ->all(),
+            'auditEntries' => $this->auditEntries([AdminAuditLog::SMTP_SETTINGS_UPDATED, AdminAuditLog::SMTP_SETTINGS_PASSWORD_FAILED]),
         ]);
+    }
+
+    /**
+     * The last 10 rows of these audit actions: who, when, the IP and the field
+     * names with how each changed; never a value or the user agent.
+     *
+     * @param  list<string>  $actions
+     * @return list<array<string, mixed>>
+     */
+    private function auditEntries(array $actions): array
+    {
+        return AdminAuditLog::recent($actions)
+            ->map(fn (AdminAuditLog $entry): array => [
+                'id' => $entry->id,
+                'action' => $entry->action,
+                'changed_fields' => (object) $entry->changed_fields,
+                'user_name' => $entry->user->name ?? $entry->user_name,
+                'user_email' => $entry->user->email ?? $entry->user_email,
+                'user_deleted' => $entry->user === null,
+                'user_id' => $entry->user_id,
+                'ip_address' => $entry->ip_address,
+                'created_at' => $entry->created_at?->toIso8601String(),
+            ])
+            ->values()
+            ->all();
     }
 
     /**
@@ -333,14 +358,42 @@ class SettingsController extends Controller implements HasMiddleware
         return $this->save($request, 'firebase');
     }
 
+    /**
+     * The Payment methods page: where the enabled list comes from and, per
+     * gateway, its switch, mode, currency and credentials with the effective
+     * values and their source. Saved secrets are never sent: only whether each
+     * is saved and readable, and whether one is in effect.
+     */
     public function payments(Request $request): Response
     {
         return $this->page('payments', $request);
     }
 
-    public function updatePayments(UpdateStoreSettingsRequest $request): RedirectResponse
+    /**
+     * Saves the page once the staff member's own password checked out
+     * (UpdatePaymentGatewaySettingsRequest). When something changed, the audit
+     * row is written in the save's transaction and every Super Admin is mailed
+     * (field names only); a mail that fails is logged and never undoes the
+     * save. A save that changes nothing records and mails nothing.
+     */
+    public function updatePayments(UpdatePaymentGatewaySettingsRequest $request, PaymentGatewaySettingsChangeNotifier $notifier): RedirectResponse
     {
-        return $this->save($request, 'payments');
+        /** @var StoreUser $actor */
+        $actor = $request->user('store');
+
+        $changes = StorePaymentGateways::save(
+            $request->safe()->except(['current_password']),
+            (int) $actor->getKey(),
+            fn (array $changes) => AdminAuditLog::record($actor, AdminAuditLog::PAYMENT_GATEWAY_SETTINGS_UPDATED, $changes, $request),
+        );
+
+        if ($changes !== []) {
+            $notifier->notify($actor, $changes, $request->ip(), now());
+        }
+
+        $this->flashSuccess('payment_method_settings_have_been_updated_successfully');
+
+        return redirect()->route('payment_method.index');
     }
 
     public function filesystem(): Response
@@ -380,8 +433,9 @@ class SettingsController extends Controller implements HasMiddleware
      */
     private function page(string $page, ?Request $request = null): Response
     {
+        $sections = $page === 'payments' ? self::paymentHighlights() : (self::PAGES[$page]['sections'] ?? []);
         $highlight = $request === null ? null
-            : $this->highlight($request, [...self::PAGES[$page]['keys'], ...(self::PAGES[$page]['sections'] ?? [])]);
+            : $this->highlight($request, [...self::PAGES[$page]['keys'], ...$sections]);
 
         $settings = BusinessSetting::query()->whereIn('type', self::PAGES[$page]['keys'])
             ->select(['type', 'value'])->pluck('value', 'type');
@@ -406,6 +460,17 @@ class SettingsController extends Controller implements HasMiddleware
      */
     private function integration(string $page): array
     {
+        if ($page === 'payments') {
+            return [
+                'payments' => [
+                    'enabledSource' => StorePaymentGateways::enabledSource(),
+                    'environmentEnabled' => StorePaymentGateways::environmentEnabled(),
+                    'gateways' => $this->paymentGateways(),
+                ],
+                'auditEntries' => $this->auditEntries([AdminAuditLog::PAYMENT_GATEWAY_SETTINGS_UPDATED, AdminAuditLog::PAYMENT_GATEWAY_SETTINGS_PASSWORD_FAILED]),
+            ];
+        }
+
         if ($page === 'recaptcha') {
             $recaptcha = app(StoreRecaptchaSettings::class);
             $stored = $recaptcha->stored();
@@ -431,6 +496,97 @@ class SettingsController extends Controller implements HasMiddleware
             'value' => StoreIntegrationIds::stored($field),
             'effective' => StoreIntegrationIds::effective($field),
         ])->all()];
+    }
+
+    /**
+     * The keys the Payment methods page can mark: the enabled-list source and
+     * every gateway's switch, mode and fields (`<gateway>.<field>`, the setup
+     * checklist's targets).
+     *
+     * @return list<string>
+     */
+    public static function paymentHighlights(): array
+    {
+        $keys = ['enabled_source'];
+
+        foreach (StorePaymentGateways::GATEWAYS as $gateway => $spec) {
+            $keys[] = "{$gateway}.".StorePaymentGateways::ENABLED;
+            $keys[] = "{$gateway}.mode";
+            foreach (array_keys($spec['fields']) as $field) {
+                $keys[] = "{$gateway}.{$field}";
+            }
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    /**
+     * Every gateway as the Payment methods page shows it. Public values are
+     * sent in full (what is saved, and the `.env` value as a hint); a secret
+     * only as saved / unreadable, and in `effective` as set or not set.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function paymentGateways(): array
+    {
+        $enabled = StorePaymentGateways::enabled();
+        $offered = BusinessSetting::query()
+            ->whereIn('type', array_values(array_filter(array_column(StorePaymentGateways::GATEWAYS, 'offered'))))
+            ->orderByRaw('lang IS NOT NULL')->orderBy('id')->get(['type', 'value'])
+            ->unique('type')->pluck('value', 'type');
+        $rates = Currency::query()->where('status', 1)->pluck('code')
+            ->map(fn ($code): string => strtoupper((string) $code))->all();
+        $gateways = [];
+
+        foreach (StorePaymentGateways::GATEWAYS as $gateway => $spec) {
+            $stored = StorePaymentGateways::stored()[$gateway] ?? [];
+            $fields = [];
+
+            foreach ($spec['fields'] as $field => $fieldSpec) {
+                $environment = config($fieldSpec['config']);
+
+                $fields[] = [
+                    'key' => $field,
+                    'secret' => $fieldSpec['secret'],
+                    'required' => $fieldSpec['required'],
+                    'textarea' => ! empty($fieldSpec['textarea']),
+                    'max' => $fieldSpec['max'] ?? null,
+                    'options' => isset($fieldSpec['modes']) ? StorePaymentGateways::MODES : ($fieldSpec['in'] ?? null),
+                    'env' => $fieldSpec['env'],
+                    'value' => $fieldSpec['secret'] ? null : ($stored[$field]['value'] ?? null),
+                    'set' => $fieldSpec['secret'] && isset($stored[$field]),
+                    'unreadable' => $fieldSpec['secret'] && StorePaymentGateways::secretUnreadable($gateway, $field),
+                    'environment' => match (true) {
+                        $fieldSpec['secret'] => null,
+                        isset($fieldSpec['modes']) => StorePaymentGateways::normalizeMode($gateway, $environment),
+                        default => filled($environment) ? (string) $environment : null,
+                    },
+                ];
+            }
+
+            $currency = isset($spec['fields']['currency']) ? StorePaymentGateways::currency($gateway) : ($spec['fixed_currency'] ?? '');
+            $modeKind = isset($spec['mode']['setting']) ? 'setting' : (isset($spec['mode']['derived']) ? 'derived' : 'field');
+
+            $gateways[] = [
+                'key' => $gateway,
+                'name' => $spec['name'],
+                'flow' => $spec['flow'],
+                'identifying' => $spec['identifying'],
+                'source' => StorePaymentGateways::usesAdmin($gateway) ? 'admin' : 'env',
+                'enabled' => in_array($gateway, $enabled, true),
+                'offered_setting' => $spec['offered'],
+                'offered' => $spec['offered'] === null ? null : (string) $offered->get($spec['offered'], '0') === '1',
+                'mode_kind' => $modeKind,
+                'mode' => StorePaymentGateways::mode($gateway),
+                'fixed_currency' => $spec['fixed_currency'] ?? null,
+                'currency_without_rate' => $currency !== '' && ! in_array($currency, $rates, true) ? $currency : null,
+                'fields' => $fields,
+                'effective' => StorePaymentGateways::effective($gateway),
+                'missing' => StorePaymentGateways::missing($gateway),
+            ];
+        }
+
+        return $gateways;
     }
 
     /**
