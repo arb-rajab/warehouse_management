@@ -137,6 +137,7 @@ test('the dashboard sends no SMTP or checkout banner props: the setup checklist 
 test('the dashboard passes the setup checklist for the checks the staff member can fix', function () {
     config(['mail.mailers.smtp.username' => null, 'mail.mailers.smtp.password' => null]);
     storeSetting('bkash', 1);
+    config(['store.enabled_payment_gateways' => ['bkash']]);
     actingAsStoreUser(createStoreStaff('admin_dashboard', 'smtp_settings', 'features_activation', 'currency_setup'));
 
     $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
@@ -160,7 +161,7 @@ test('the setup checklist is empty without a setup permission and lists every ch
 
     actingAsStoreUser(createStoreAdmin());
     $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
-        ->has('setupChecklist.items', 11)->where('setupChecklist.total', 11)
+        ->has('setupChecklist.items', 12)->where('setupChecklist.total', 12)
         ->has('setupChecklist.items.0', fn (Assert $item) => $item->where('key', 'smtp')->where('done', false)
             ->where('reasons', [['key' => 'smtp.username_and_password', 'route' => 'smtp_settings.index', 'highlight' => 'mail_credentials']]))
         ->whereType('setupChecklist.done', 'integer'));

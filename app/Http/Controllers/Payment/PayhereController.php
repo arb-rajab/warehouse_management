@@ -178,7 +178,8 @@ class PayhereController extends Controller
      * secret, and reports a completed payment.
      *
      * The three notify handlers each rebuilt the signature from
-     * env('PAYHERE_SECRET'), which is null once config is cached, so the
+     * `PAYHERE_SECRET` read straight from the environment, which is null once
+     * config is cached, so the
      * "secret" was empty and anyone could sign a payment-complete call for any
      * order. They also took the merchant id from the request. With no secret or
      * merchant id configured (StorePaymentGateways: saved on the Payment
