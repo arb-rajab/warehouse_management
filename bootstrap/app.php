@@ -62,11 +62,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // gateway's signature or its API). The store lives under /temp, so the paths carry it. The
         // list used to sit in a VerifyCsrfToken class that nothing registered, so every such POST
         // answered 419 and a customer who had paid at the gateway never had the order completed.
+        // SSLCommerz, AamarPay and iyzico are not listed: their return routes run outside the
+        // `web` group (routes/shop-gateway-returns.php), so no CSRF check runs on them at all,
+        // and any other route under those paths keeps it.
         $middleware->preventRequestForgery(except: [
-            'temp/sslcommerz*',
             'temp/payhere*',
-            'temp/iyzico*',
-            'temp/aamarpay*',
             'temp/bkash*',
             'temp/apple-callback',
         ]);

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Payment;
 
 use App\Http\Controllers\Controller;
 use App\Services\GatewayCurrency;
-use App\Services\GatewayPaymentService;
+use App\Services\GatewayReturn;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
 use App\Support\StorePaymentGateways;
@@ -13,8 +13,6 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Session;
 
 class AamarpayController extends Controller
 {
@@ -28,7 +26,8 @@ class AamarpayController extends Controller
      * order of the signed-in customer, a package's price, the top-up asked for), is converted to
      * aamarpay's currency and kept to the cent. A currency the store has no active rate for, or
      * an aamarpay that does not answer with a payment page, is refused with a message and nothing
-     * is kept.
+     * is kept. Otherwise the payment is recorded as pending under the transaction id sent to
+     * aamarpay (GatewayReturn), which is all success() reads from the return.
      */
     public function pay()
     {
@@ -40,18 +39,18 @@ class AamarpayController extends Controller
 
         $email = Auth::user()->email ?: config('mail.from.address');
 
-        $due = app(SessionGatewayPayment::class)->amountDue();
+        $payment = app(SessionGatewayPayment::class)->pending();
         $currency = GatewayCurrency::forGateway('aamarpay');
-        $converted = $due === null ? null : $currency->fromStore($due);
+        $converted = $payment === null ? null : $currency->fromStore($payment['amount']);
 
-        if ($converted === null) {
+        if ($payment === null || $converted === null) {
             Log::error('aamarpay refused: nothing due, or the store has no active rate for the gateway currency.', ['currency' => $currency->chargeCode()]);
 
             return $this->failed();
         }
 
-        // The transaction id success() checks against aamarpay's search API.
-        $tran_id = Str::random(20);
+        // The transaction id success() looks the payment up by, and checks against aamarpay's search API.
+        $tran_id = GatewayReturn::newReference();
 
         $fields = [
             'store_id' => StorePaymentGateways::get('aamarpay', 'store_id'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
@@ -80,9 +79,9 @@ class AamarpayController extends Controller
             'success_url' => route('aamarpay.success'), //your success route
             'fail_url' => route('aamarpay.fail'), //your fail route
             'cancel_url' => route('cart'), //your cancel url
-            'opt_a' => Session::get('payment_type'),  //optional paramter
-            'opt_b' => Session::get('combined_order_id'),
-            'opt_c' => json_encode(Session::get('payment_data')),
+            'opt_a' => $payment['payment_type'],  //optional paramter (not read back)
+            'opt_b' => '',
+            'opt_c' => '',
             'opt_d' => '',
             'signature_key' => StorePaymentGateways::get('aamarpay', 'signature_key'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature
         ];
@@ -102,7 +101,7 @@ class AamarpayController extends Controller
             return $this->failed();
         }
 
-        Session::put('aamarpay_tran_id', $tran_id);
+        app(GatewayReturn::class)->begin('aamarpay', $tran_id, $payment, $converted, $currency->chargeCode());
 
         return redirect()->away($this->baseUrl().ltrim($path, '/'));
     }
@@ -115,37 +114,40 @@ class AamarpayController extends Controller
     }
 
     /**
-     * aamarpay posts the customer back here, and the post used to be trusted for
-     * everything: the payment type, the order (`opt_b`) and the top-up amount
-     * (`opt_c`). The transaction must be the one this session started, and
-     * aamarpay's search API (by `mer_txnid`) must report it paid for at least the
-     * amount due; what it reports is credited to the signed-in customer, once.
+     * aamarpay posts the customer back here, cross-site, so the post carries no session (this
+     * route runs without one: routes/shop-gateway-returns.php), and the post used to be trusted
+     * for everything: the payment type, the order (`opt_b`) and the top-up amount (`opt_c`).
+     * Only `mer_txnid` is read now: it must name a pending aamarpay payment pay() recorded,
+     * aamarpay's search API must report it paid, and the reported amount and currency must be
+     * the recorded converted amount to the cent. The recorded payer is credited, once.
      */
     public function success(Request $request){
-        $tran_id = (string) Session::get('aamarpay_tran_id');
-        $amountDue = app(SessionGatewayPayment::class)->amountDue();
+        $returns = app(GatewayReturn::class);
+        $tran_id = (string) $request->input('mer_txnid');
+        $pending = $returns->find('aamarpay', $tran_id);
 
-        if ($tran_id === '' || $amountDue === null || ! hash_equals($tran_id, (string) $request->input('mer_txnid'))) {
-            return app(SessionGatewayPayment::class)->notVerified();
+        if (is_string($pending)) {
+            return $returns->refuse($pending, 'aamarpay', $tran_id);
+        }
+
+        if ($pending->completed_at !== null) {
+            return $returns->finished($pending);
         }
 
         $transaction = $this->searchTransaction($tran_id);
-        $currency = GatewayCurrency::forGateway('aamarpay');
-        $reported = is_array($transaction) ? (float) ($transaction['amount'] ?? 0) : 0.0;
 
-        // Paid, for the amount due: exactly in the store's own currency, else the converted amount to the cent.
         $isPaid = is_array($transaction)
             && ($transaction['pay_status'] ?? null) === 'Successful'
-            && hash_equals($tran_id, (string) ($transaction['mer_txnid'] ?? ''))
-            && ($currency->isStoreCurrency() ? GatewayPaymentService::covers($reported, $amountDue) : $currency->matchesDue($reported, $amountDue));
+            && hash_equals($tran_id, (string) ($transaction['mer_txnid'] ?? ''));
 
         if (! $isPaid) {
-            return app(SessionGatewayPayment::class)->notVerified();
+            return $returns->refuse('not_verified', 'aamarpay', $tran_id, $pending);
         }
 
-        Session::forget('aamarpay_tran_id');
+        // The search API names the charge currency `currency` (`currency_merchant` on some accounts).
+        $reportedCurrency = (string) ($transaction['currency'] ?? $transaction['currency_merchant'] ?? '');
 
-        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('aamarpay', $tran_id, $currency->paidInStoreCurrency($reported, $amountDue), json_encode($transaction)));
+        return $returns->complete($pending, (float) ($transaction['amount'] ?? 0), $reportedCurrency, json_encode($transaction));
     }
 
     /**
@@ -166,7 +168,6 @@ class AamarpayController extends Controller
     }
 
     public function fail(Request $request){
-        flash(__('storefront.checkout.payment_failed'))->error();
-    	return redirect()->route('cart');
+        return app(GatewayReturn::class)->outcome('failed');
     }
 }

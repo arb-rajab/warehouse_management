@@ -83,6 +83,12 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware([SendNoIndexHeader::class.':always', 'web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-seller.php'));
 
+            // SSLCommerz, AamarPay and iyzico's cross-site POST returns: no `web`
+            // group, so no session (a fresh one's cookie signed the customer out),
+            // no cookies and no CSRF check. See that file and App\Services\GatewayReturn.
+            Route::middleware([SendNoIndexHeader::class.':always', 'throttle:gateway-returns'])
+                ->group(base_path('routes/shop-gateway-returns.php'));
+
             Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-web.php'));
         });

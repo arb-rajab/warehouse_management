@@ -19,6 +19,7 @@ use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\DigitalProductController;
 use App\Http\Controllers\FollowSellerController;
+use App\Http\Controllers\GatewayPaymentLandingController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\Store\LanguageController;
@@ -26,13 +27,11 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Store\OffersCatalogDownloadController;
 use App\Http\Controllers\PageController;
-use App\Http\Controllers\Payment\AamarpayController;
 use App\Http\Controllers\Payment\BkashController;
 use App\Http\Controllers\Payment\IyzicoController;
 use App\Http\Controllers\Payment\NagadController;
 use App\Http\Controllers\Payment\NgeniusController;
 use App\Http\Controllers\Payment\PayhereController;
-use App\Http\Controllers\Payment\SslcommerzController;
 use App\Http\Controllers\Payment\VoguepayController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseHistoryController;
@@ -228,13 +227,13 @@ Route::controller(CartController::class)->group(function () {
     Route::post('/cart/update_item_price', 'update_item_price')->name('cart.update_item_price');
 });
 
-// SSLCOMMERZ Start
-Route::controller(SslcommerzController::class)->group(function () {
-    Route::POST('/sslcommerz/success', 'success')->name('sslcommerz.success');
-    Route::POST('/sslcommerz/fail', 'fail')->name('sslcommerz.fail');
-    Route::POST('/sslcommerz/cancel', 'cancel')->name('sslcommerz.cancel');
+// SSLCommerz, AamarPay and iyzico return with a cross-site POST: those routes run
+// without the session, in routes/shop-gateway-returns.php. They send the browser
+// on to one of these, which carry the session (App\Services\GatewayReturn).
+Route::controller(GatewayPaymentLandingController::class)->group(function () {
+    Route::get('/payment/finished/{payment}', 'finished')->middleware('signed')->whereNumber('payment')->name('gateway_payment.finished');
+    Route::get('/payment/outcome/{outcome}', 'outcome')->whereIn('outcome', ['failed', 'cancelled', 'unverified'])->name('gateway_payment.outcome');
 });
-//SSLCOMMERZ END
 
 // Compare
 Route::controller(CompareController::class)->group(function () {
@@ -390,9 +389,6 @@ Route::controller(VoguepayController::class)->group(function () {
 });
 
 
-//Iyzico
-Route::any('/iyzico/payment/callback/{payment_type}/{amount?}/{payment_method?}/{combined_order_id?}/{customer_package_id?}/{seller_package_id?}', [IyzicoController::class, 'callback'])->name('iyzico.callback');
-
 Route::get('/customer-products/admin', [IyzicoController::class, 'initPayment'])->name('profile.edit');
 
 //payhere below
@@ -435,12 +431,6 @@ Route::controller(BkashController::class)->group(function () {
 
 //Nagad
 Route::get('/nagad/callback', [NagadController::class, 'verify'])->name('nagad.callback');
-
-//aamarpay
-Route::controller(AamarpayController::class)->group(function () {
-    Route::post('/aamarpay/success','success')->name('aamarpay.success');
-    Route::post('/aamarpay/fail','fail')->name('aamarpay.fail');
-});
 
 //Blog Section
 Route::controller(BlogController::class)->group(function () {

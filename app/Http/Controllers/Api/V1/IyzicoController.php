@@ -48,16 +48,16 @@ class IyzicoController extends Controller
             return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
         }
 
-        $url = $iyzico->initialize($iyzico->buildInitializeRequest(
+        $page = $iyzico->initialize($iyzico->buildInitializeRequest(
             $payer, $payment['payment_type'], $converted, $currency->chargeCode(),
             route('api.iyzico.callback'), Str::random(20), (string) $request->ip(),
         ));
 
-        if ($url === null) {
+        if ($page === null) {
             return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
         }
 
-        return Redirect::to($url);
+        return Redirect::to($page['url']);
     }
 
     /**

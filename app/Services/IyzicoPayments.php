@@ -131,19 +131,25 @@ class IyzicoPayments
         return $request;
     }
 
-    /** iyzico's payment page for `$request`, or null (logged) when iyzico gives none. */
-    public function initialize(CreatePayWithIyzicoInitializeRequest $request): ?string
+    /**
+     * iyzico's payment page for `$request` and the checkout-form token iyzico will post
+     * back for it, or null (logged) when iyzico gives either none.
+     *
+     * @return array{url: string, token: string}|null
+     */
+    public function initialize(CreatePayWithIyzicoInitializeRequest $request): ?array
     {
         $result = PayWithIyzicoInitialize::create($request, $this->options());
         $url = $result->getPayWithIyzicoPageUrl();
+        $token = $result->getToken();
 
-        if (! is_string($url) || $url === '') {
+        if (! is_string($url) || $url === '' || ! is_string($token) || $token === '') {
             Log::error('iyzico gave no payment page.', ['status' => $result->getStatus(), 'error' => $result->getErrorMessage(), 'code' => $result->getErrorCode()]);
 
             return null;
         }
 
-        return $url;
+        return ['url' => $url, 'token' => $token];
     }
 
     /**

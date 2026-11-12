@@ -100,6 +100,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Gateway Return Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | How long, in minutes, a storefront SSLCommerz, AamarPay or iyzico payment
+    | can come back after it was started. Its pending row in wms_gateway_payments
+    | (App\Services\GatewayReturn) is refused after that, and pruned 90 days
+    | later. See .ai/rules/payment-gateway-returns.md.
+    |
+    */
+
+    'gateway_return_ttl_minutes' => 180,
+
+    /*
+    |--------------------------------------------------------------------------
     | Content-Security-Policy for the Store's Blade Pages
     |--------------------------------------------------------------------------
     |
