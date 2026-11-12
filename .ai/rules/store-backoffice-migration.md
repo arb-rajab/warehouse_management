@@ -284,9 +284,10 @@ Super Admin role/account invariants still apply. Who receives staff-edit powers
 is an owner decision; removing one's own held permissions can still lock one out.
 
 Sensitive permissions (`StorePermissions::SENSITIVE`, today `smtp_settings`, which
-can read all outgoing mail) only a Super Admin grants: anyone else neither adds
+can read all outgoing mail, and `payment_methods_configurations`, which can
+redirect payments) only a Super Admin grants: anyone else neither adds
 nor removes them on a role nor gives a role carrying one, even when holding it
-(2026-11-11, [admin-env-overrides.md](admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail)).
+(2026-11-11 and 2026-11-12, [admin-env-overrides.md](admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail)).
 Existing grants are never revoked by a migration; the owner reviews the holders.
 
 ## 5. Conflict decisions and retained work
@@ -313,7 +314,12 @@ Existing grants are never revoked by a migration; the owner reviews the holders.
   content language on the Languages page (`StoreDefaultLanguage`, laid over
   `config('app.default_language')` on web requests and queued jobs only, never at
   console boot; the Languages page, its guards and the setup checklist read the
-  class). The README's Deployment section lists the
+  class). The payment gateways (all 11: credentials, currency, mode, and which
+  are enabled) are saved on the Payment methods page (2026-11-12,
+  `StorePaymentGateways`, `Settings/Payments.vue`) in their own
+  `payment_gateway_settings` table, one group per gateway, read through the
+  class by every gateway consumer and hardened like SMTP (sensitive permission,
+  current password, audit, Super Admin mail). The README's Deployment section lists the
   superseded `.env` keys.
 - Website script fields remain plain code on the restricted compatibility endpoint
   with existing rendering, appearance gate and WAF behavior. New script policy,
@@ -519,7 +525,9 @@ redirect and launch steps remain in the go-live checklist.
   migration. `migrate --pretend` still creates migration bookkeeping, so it is
   unsafe before that rename; `migrate:status --pending` is read-only. Follow the
   [README deployment procedure](../../README.md#deployment) and go-live checklist.
-- Production setup, data rehearsals, external delivery/payments, gateway activation,
+- Production setup, data rehearsals, external delivery/payments, gateway activation
+  (the Payment methods page can enable a gateway; which one, with which merchant
+  account, is the owner's decision),
   fetch-button policy, finance/impersonation grants, accepted risks and search-engine
   setup remain owner/system decisions. Repository checks cannot certify those.
 - Product barcodes are one table, `product_barcodes`, shared with the WMS

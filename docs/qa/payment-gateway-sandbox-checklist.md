@@ -12,7 +12,7 @@ Mark each check `[x]` pass, `[!]` fail (write what you saw), `[-]` not applicabl
 
 - **Staging only. Sandbox keys only. Never a live key, never a real card.** A live key on staging charges real money.
 - Nothing is enabled by default. A gateway is on only when **both** its name is in `STORE_PAYMENT_GATEWAYS` **and** its store setting is `1` (section 2).
-- Test one gateway at a time. After each, remove it from `STORE_PAYMENT_GATEWAYS` again (the rollback in section 7).
+- Test one gateway at a time. After each, disable it again (remove it from `STORE_PAYMENT_GATEWAYS`, or switch it off on the Payment methods page when the list is chosen there; the rollback in section 7).
 - Use a throwaway customer account and a cheap in-stock product. Note the starting stock so you can check it afterwards.
 - The server running staging must be reachable by the gateway: **public HTTPS** with a valid certificate (gateway servers POST to it).
 
@@ -65,9 +65,9 @@ Read before choosing. The store prices in **euros** and serves customers in the 
 ## 2. Enabling one gateway on staging
 
 - [ ] Deploy a build that contains PR #555 (CSRF exemptions for the callbacks under `/temp`). Without it, every POST callback answers 419.
-- [ ] Set the gateway's env keys (section 4) in staging's `.env`, then `php artisan config:cache` (the deploy runs it, and the keys are only read from the cached config).
-- [ ] Add the gateway name to `STORE_PAYMENT_GATEWAYS` (comma separated: `payhere`, `sslcommerz`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`).
-- [ ] In the back office set the matching setting to `1` (`payhere`, `sslcommerz_payment`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`) and the `<gateway>_sandbox` setting where it exists.
+- [ ] Set the gateway's keys (section 4): either in staging's `.env`, then `php artisan config:cache` (the deploy runs it), or on the back office's Payment methods page (`/temp/admin/payment-method`; a Super Admin, or a role a Super Admin gave `payment_methods_configurations`, with the current password). A gateway saved on that page takes all its settings from there and none from `.env`; check its "Effective configuration" list says "Saved in admin" or "From .env" as intended.
+- [ ] Enable the gateway: add its name to `STORE_PAYMENT_GATEWAYS` (comma separated: `payhere`, `sslcommerz`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`), or on the Payment methods page choose "Choose here" and switch it on (that list then wins over `.env`).
+- [ ] In Features activation set the matching switch to on (`payhere`, `sslcommerz_payment`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`), and on the Payment methods page set the gateway's mode to Sandbox.
 - [ ] Register the gateway's callback URLs in its merchant dashboard (section 4). They must be `https://<staging-host>/temp/...`.
 - [ ] Confirm the routes answer: before enabling, `GET /temp/payhere/checkout/cancel` (any gateway route) must be **404**; after enabling, it must **not** be 404.
 - [ ] Confirm the store's currency, and that the test product's price in the gateway's currency is at or above the gateway's minimum charge.

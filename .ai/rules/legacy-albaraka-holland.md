@@ -243,13 +243,18 @@ prefix. That is the single point every storefront asset URL goes through.
   every notification unless a secret and merchant id are configured, the
   merchant matches, the signature matches (`hash_equals`) and the status is
   success. `PaymentGatewayRoutesTest` covers all of it, and fails on a new
-  controller under `Payment/` the guard does not know about. **Before
-  enabling a gateway:** move its credentials to config (PayHere and iyzico are
-  done: bKash, Nagad, N-Genius, SSLCommerz, aamarpay and VoguePay still read
-  them through `env()`); the callbacks' verification is in "Gateway crediting"
-  below.
-  The admin checkout and settings pages still offer a gateway that
-  `business_settings` has switched on, and choosing one now gives a 404.
+  controller under `Payment/` the guard does not know about. **Credentials
+  (done 2026-11-10, then 2026-11-12):** no gateway reads `env()` any more
+  (`GatewayCredentialsFromConfigTest`); every gateway credential, currency and
+  `.env`-held mode is read through `App\Support\StorePaymentGateways::get()`:
+  saved on the admin's Payment methods page as one group per gateway
+  (encrypted secrets), else `config/services.php` / `config/nagad.php`. The
+  enabled list is `StorePaymentGateways::enabled()`: chosen on that page, else
+  `STORE_PAYMENT_GATEWAYS` (.ai/rules/admin-env-overrides.md, "Payment
+  gateways"). The callbacks' verification is in "Gateway crediting" below.
+  The checkout, the wallet top-up, the customer packages page and the app's
+  `GET payment-types` offer a gateway only while it is enabled and switched
+  on in Features activation.
 - **Gateway crediting.** Behind the 404, every gateway's callback credited what
   it was told: the order, the payer and the amount came from the request or the
   session, `checkout_done()`/`wallet_payment_done()` (and the API's global
@@ -1776,16 +1781,17 @@ and 5). Each item says where its answer comes from.
   working (signed links replace them); a representative can no longer pay from a
   customer's wallet by sending that customer's `user_id`; the app's product
   coupons now count quantities.
-- [ ] **Move a payment gateway's credentials from `env()` to config** before it
-  is enabled in `STORE_PAYMENT_GATEWAYS` (about 140 reads remain; only PayHere
-  has moved). A gateway's server-to-server callbacks POST to the shop, and this
-  app has no CSRF exceptions (the legacy `VerifyCsrfToken` excluded
-  `/payhere*`, `/sslcommerz*`, `/iyzico*`, `/bkash*`, `/aamarpay*`,
-  `/apple-callback` and others), so they answer 419 until the enabled gateway's
-  callback paths are added to `validateCsrfTokens(except: [...])` in
-  `bootstrap/app.php`, under `temp/`. Exempt only a gateway that verifies the
-  callback itself (PayHere does; the others do not yet). `FORCE_HTTPS` is a decision, not a fix: behind a proxy that does
-  not report https it redirects forever.
+- [x] **Move a payment gateway's credentials from `env()` to config** (done:
+  no gateway reads `env()`; since 2026-11-12 they are read through
+  `StorePaymentGateways`, saved in the admin or else from config). The
+  callbacks' CSRF exemptions are in `bootstrap/app.php` under `temp/`
+  (SSLCommerz, PayHere, iyzico, AamarPay, bKash; Nagad, N-Genius and VoguePay
+  return by GET), and every callback verifies the payment with the gateway's
+  own server ("Gateway crediting" above). Still open: with
+  `SESSION_SAME_SITE=lax` the cross-site POST returns of SSLCommerz, AamarPay
+  and the iyzico storefront arrive without the session and credit nothing
+  (fail safe, reconcile by hand). `FORCE_HTTPS` is a decision, not a fix:
+  behind a proxy that does not report https it redirects forever.
 - [ ] **Legacy roles' guard** (`web` → `store`) and the pivots' `model_type`
   (→ `StoreUser`): the SQL check is in §6.7.1.
 - [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the

@@ -34,5 +34,6 @@ The dashboard setup checklist (`StoreSetupChecklist.vue`) links every reason in 
 - Google map (`google_map_api_key`), Currencies (`system_default_currency`) and General settings (`site_name`)
 - Website header (`header_logo`) and footer (`contact_email`, `contact_phone`)
 - Languages (`default_language`, the default-language control: a select of active languages and a save button)
+- Payment methods (`<gateway>.<field>` for every gateway field, `<gateway>.enabled`, `<gateway>.mode`, `enabled_source`, the sandbox switch keys; `SettingsController::paymentHighlights()`): the page opens the gateway's tab before `StoreHighlight` marks the field
 
 The product, category and tax lists hold no single option to mark, so their links carry no highlight.

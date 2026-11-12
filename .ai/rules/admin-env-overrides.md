@@ -42,6 +42,22 @@ paths:
   - 'resources/js/components/{StoreRoleFormFields,StoreStaffFormFields}.vue'
   - 'resources/js/pages/Store/Admin/Staff/Roles/Index.vue'
   - 'database/seeders/StoreAccountFilterSeeder.php'
+  - 'app/Support/StorePaymentGateways.php'
+  - 'app/Models/PaymentGatewaySetting.php'
+  - 'database/migrations/*payment_gateway_settings*'
+  - 'app/Http/Requests/Store/Admin/UpdatePaymentGatewaySettingsRequest.php'
+  - 'app/Http/Requests/Store/Admin/Concerns/ConfirmsCurrentPassword.php'
+  - 'app/Services/Store/{PaymentGatewaySettingsChangeNotifier,SuperAdminRecipients}.php'
+  - 'app/Mail/PaymentGatewaySettingsChangedMail.php'
+  - 'resources/views/shop/emails/payment_gateway_settings_changed.blade.php'
+  - 'resources/views/shop/emails/plain/payment_gateway_settings_changed.blade.php'
+  - 'resources/js/pages/Store/Admin/Settings/Payments.vue'
+  - 'resources/js/lib/paymentGatewaySettings*'
+  - 'app/Http/Middleware/EnsurePaymentGatewayEnabled.php'
+  - 'app/Services/PaymentOptions.php'
+  - 'app/Services/GatewayCurrency.php'
+  - 'app/Http/Controllers/Api/V1/PaymentTypesController.php'
+  - 'config/{services,nagad,toyyibpay,store}.php'
 ---
 
 # A setting that only `.env` held may be saved in the admin: saved value first, `.env` as the fallback
@@ -135,7 +151,8 @@ Added 2026-11-11 (owner-approved). Whoever chooses the mail server can redirect,
 and so read, every email the shop sends, password-reset emails included. Three
 mitigations hold together; keep all three when touching the SMTP page.
 
-- **A sensitive permission.** `StorePermissions::SENSITIVE` (`smtp_settings`)
+- **A sensitive permission.** `StorePermissions::SENSITIVE` (`smtp_settings`, and
+  since 2026-11-12 `payment_methods_configurations`, see "Payment gateways")
   only a Super Admin grants. `StaffPrivileges::grantablePermissionIds()` leaves
   it out for everyone else, so they cannot tick it onto a new or edited role
   (`messages.role_permission_super_admin_only`), cannot take it off a role (the
@@ -163,7 +180,8 @@ mitigations hold together; keep all three when touching the SMTP page.
   `current_password` (`current_password:store`), with a field error. Wrong ones
   are counted per account (`passwordLimiterKey()`, 5 per 15 minutes): a
   locked-out account is refused in `prepareForValidation()`, before the password
-  is checked (`store_admin.smtp_current_password_throttled`). A counted failure is
+  is checked (`store_admin.smtp_current_password_throttled`). The counter lives in
+  `Concerns\ConfirmsCurrentPassword` and is shared with the Payment methods page. A counted failure is
   logged (user id and IP) and written to the audit log as
   `smtp_settings.password_failed`, only while the count is within the limit, so a
   flood adds at most 5 rows per account per window. The password is never saved,
@@ -197,6 +215,69 @@ mitigations hold together; keep all three when touching the SMTP page.
   `failover`/`roundrobin`'s `smtp` leg already has the new values). The `.env`
   mailer gets no extra copy. A mail that fails is logged by exception class only
   and never undoes or fails the save.
+
+## Payment gateways: one group per gateway, in their own table
+
+Added 2026-11-12 (owner-approved). All 11 gateways (bKash, Nagad, SSLCommerz,
+iyzico, PayHere, AamarPay, N-Genius, VoguePay, ToyyibPay, Stripe, Paytm) are edited
+on the Payment methods page (`Settings/Payments.vue`, permission
+`payment_methods_configurations`): credentials, currency, mode and an enable switch.
+`App\Support\StorePaymentGateways::GATEWAYS` is the one spec (fields, `.env` name,
+secret or public, required, format, mode source).
+
+- **Storage.** `payment_gateway_settings` (`PaymentGatewaySetting`), one row per
+  gateway and field, not `business_settings`: its `type` is a `string(30)` and
+  its rows can be read by the public endpoint. Secrets are `Crypt::encryptString()`
+  ciphertext (`is_secret`); the model hides `value`. Nothing about it is in
+  `PublicSettingsGuard` because no public endpoint reads the table. Cached under
+  `payment_gateway_settings` (secrets still encrypted); `StorePaymentGateways::forget()`
+  also forgets `business_settings`.
+- **Group precedence.** Once a gateway's identifying field (bKash app key, Nagad
+  merchant id, SSLCommerz/AamarPay store id, iyzico API key, PayHere/VoguePay/Paytm
+  merchant id, N-Genius outlet id, ToyyibPay category code, Stripe publishable key)
+  is saved, every field of that gateway comes from the admin, an empty one too,
+  and none from `.env`; otherwise all come from config. Emptying the identifying
+  field deletes the whole group, secrets included. A changed identifying field (or
+  a `tied` one: bKash username, Paytm website) asks for the saved secrets again.
+- **Read through the class, never laid over config.** Every consumer reads
+  `StorePaymentGateways::get($gateway, $field)` (the controllers, `NagadUtility`,
+  `NgeniusUtility`, `PayhereUtility`, `IyzicoPayments`, `SSLCommerz`, the PayHere
+  forms) and `GatewayCurrency::forGateway()` reads `currency()`. With nothing saved
+  it returns `config()`, so tests that set config and `.env` keep working.
+- **Mode.** The six `<gateway>_sandbox` switches (bKash, SSLCommerz, iyzico, PayHere,
+  AamarPay, VoguePay) were never `.env`: they stay `business_settings` rows, edited
+  in the gateway's tab and audited as `<gateway>.mode`. Nagad (`NAGAD_MODE`),
+  N-Genius (`NGENIUS_MODE`, `uat`/`live`), Paytm (`PAYTM_ENVIRONMENT`) and ToyyibPay
+  (`TOYYIBPAY_MODE`) have a `mode` field in the group, stored as `sandbox`/`live`
+  and mapped to the gateway's own value. Stripe's mode is read from its key prefix
+  and both keys must agree.
+- **Enabled list.** `enabled_source` chooses: follow `STORE_PAYMENT_GATEWAYS`
+  (no `enabled` rows) or the switches (every gateway gets an `enabled` row, so
+  "chosen here, all off" means none). `EnsurePaymentGatewayEnabled`,
+  `PaymentOptions` (checkout, wallet, packages), `GET payment-types` and the setup
+  checklist read `enabled()`. Stripe, Paytm and ToyyibPay have no payment flow:
+  their keys can be stored, their switch is locked off (`payment_gateway_has_no_flow`).
+  The Features activation switches (`bkash`, `sslcommerz_payment`, ...) stay the
+  "offered at checkout" switch; the page shows their state and links there.
+- **Still `.env` only:** `IYZICO_IDENTITY_NUMBER`, `NGENIUS_*_URL`,
+  `NAGAD_CALLBACK_URL` (a redirect target), `NAGAD_CURRENCY` (BDT only).
+- **Hardening (as SMTP).** `payment_methods_configurations` is in
+  `StorePermissions::SENSITIVE`. `UpdatePaymentGatewaySettingsRequest` requires
+  `current_password` through `ConfirmsCurrentPassword`, whose limiter key
+  (`sensitive-settings-password|<id>`, 5 per 15 minutes) the SMTP request shares,
+  so the two pages do not double the guesses; a counted failure writes
+  `payment_gateway_settings.password_failed`. A save writes
+  `payment_gateway_settings.updated` with `<gateway>.<field>` => `set`/`changed`/
+  `removed`, `<gateway>.enabled` => `enabled`/`disabled`, `enabled_source` =>
+  `set`/`removed` (never a value) in its transaction, then
+  `PaymentGatewaySettingsChangeNotifier` mails every active Super Admin
+  (`SuperAdminRecipients`, shared with SMTP) at once through the current mailer
+  (this page never changes mail settings). A no-op save writes and mails nothing.
+  `gateways` is in `dontFlash` and Telescope's hidden parameters. The page's
+  required marks follow `required_with` (a secret: once the identifying field is
+  typed and no readable saved one is kept); the browser copy is
+  `lib/paymentGatewaySettingsRules.json`. To list the holders, run the SMTP query
+  above with `p.name = 'payment_methods_configurations'`.
 
 ## Every `business_settings` key is classified (`PublicSettingsGuard`)
 
@@ -265,6 +346,18 @@ the social-login list filter through it as well.
 | Order configuration page: delivery lead days (whole days, 0 to 30) | `STORE_DELIVERY_LEAD_DAYS` | `delivery_lead_days` |
 | Order configuration page: delivery timezone (a PHP identifier, `DateTimeZone::listIdentifiers()`) | `STORE_DELIVERY_TIMEZONE` | `delivery_timezone` |
 | Languages page: default content language (an existing, active language) | `DEFAULT_LANGUAGE` | `default_language` |
+| Payment methods page: which gateways answer (`enabled_source` + a switch per gateway) | `STORE_PAYMENT_GATEWAYS` | `payment_gateway_settings` rows `<gateway>.enabled` |
+| Payment methods page, bKash (one group) | `BKASH_CHECKOUT_APP_KEY`, `BKASH_CHECKOUT_APP_SECRET`, `BKASH_CHECKOUT_USER_NAME`, `BKASH_CHECKOUT_PASSWORD`, `BKASH_CURRENCY` | `payment_gateway_settings` (secrets encrypted) |
+| Payment methods page, Nagad (one group) | `NAGAD_MERCHANT_ID`, `NAGAD_MERCHANT_NUMBER`, `NAGAD_PG_PUBLIC_KEY`, `NAGAD_MERCHANT_PRIVATE_KEY`, `NAGAD_MODE` | same |
+| Payment methods page, SSLCommerz (one group) | `SSLCZ_STORE_ID`, `SSLCZ_STORE_PASSWD`, `SSLCZ_CURRENCY` | same |
+| Payment methods page, iyzico (one group) | `IYZICO_API_KEY`, `IYZICO_SECRET_KEY`, `IYZICO_CURRENCY_CODE` | same |
+| Payment methods page, PayHere (one group) | `PAYHERE_MERCHANT_ID`, `PAYHERE_SECRET`, `PAYHERE_CURRENCY` | same |
+| Payment methods page, AamarPay (one group) | `AAMARPAY_STORE_ID`, `AAMARPAY_SIGNATURE_KEY`, `AAMARPAY_CURRENCY` | same |
+| Payment methods page, N-Genius (one group) | `NGENIUS_OUTLET_ID`, `NGENIUS_API_KEY`, `NGENIUS_CURRENCY`, `NGENIUS_MODE` | same |
+| Payment methods page, VoguePay (one group) | `VOGUE_MERCHANT_ID`, `VOGUE_CURRENCY` | same |
+| Payment methods page, ToyyibPay (one group, no payment flow) | `TOYYIBPAY_CATEGORY`, `TOYYIBPAY_KEY`, `TOYYIBPAY_MODE` | same |
+| Payment methods page, Stripe (one group, no payment flow) | `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_CURRENCY` | same |
+| Payment methods page, Paytm (one group, no payment flow) | `PAYTM_MERCHANT_ID`, `PAYTM_MERCHANT_KEY`, `PAYTM_MERCHANT_WEBSITE`, `PAYTM_CHANNEL`, `PAYTM_INDUSTRY_TYPE`, `PAYTM_ENVIRONMENT` | same |
 | reCAPTCHA page: site key and secret key (one pair) | `CAPTCHA_KEY`, `CAPTCHA_SECRET`: with a site key saved, both come from the admin and `CAPTCHA_SECRET` is not used | `recaptcha_site_key`, `recaptcha_secret_key_encrypted` (encrypted) |
 
 The IDs and the reCAPTCHA key are optional in the form (`.env` may hold them), so
@@ -326,7 +419,17 @@ other mailers' keys, and the from address of the health and backup notifications
   Their parity tests (`DeliverySettingsClientValidationParityTest`,
   `DefaultLanguageClientValidationParityTest`) check the browser rules.
 - `tests/Feature/Store/SetupChecklistTest.php`: the checklist reads the effective
-  settings, the language reasons name the code.
+  settings, the language reasons name the code, the payment checks follow the
+  enabled list and name each missing gateway field.
+- `tests/Feature/Store/Admin/PaymentGatewaySettingsTest.php` (save, group
+  precedence, fallback, encryption, keep/replace/remove, re-entry for another
+  account, formats, the enabled list and its consumers, the gateway consumers
+  reading the admin values, the page, highlights, authorization),
+  `PaymentGatewaySettingsSecurityTest.php` (the sensitive permission, the shared
+  password limiter, audit kinds, no-op saves, the Super Admin mail),
+  `PaymentGatewaySettingsClientValidationParityTest.php`,
+  `Database/CreatePaymentGatewaySettingsTableTest.php`, and
+  `resources/js/pages/Store/Admin/Settings/Payments.test.ts`.
 - `resources/js/pages/Store/Admin/Settings/Smtp.test.ts`, `Analytics.test.ts` (also
   the chat and comments pages) and `Recaptcha.test.ts`: the pages.
   `OrderConfiguration/Index.test.ts` (the delivery form) and
