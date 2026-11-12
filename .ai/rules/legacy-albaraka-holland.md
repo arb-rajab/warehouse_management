@@ -271,21 +271,32 @@ prefix. That is the single point every storefront asset URL goes through.
   it a `VerifiedPayment` built only from the gateway's own server: SSLCommerz
   `orderValidate`/`sslcommerz_validate`, aamarpay's search API, bKash
   execute/status (status code 0000 required; the web `callback` sets a one-shot
-  session flag `success` pulls), iyzico retrieve (basket and paid price; one
-  token one payment; `App\Services\IyzicoPayments`, keys now in
+  session flag `success` pulls), iyzico retrieve (paid price and currency; one
+  token one payment, the token being the recorded reference on the web; `App\Services\IyzicoPayments`, keys now in
   `config('services.iyzico.*')`), PayHere's signed `order_id`
   (`<combined order>`, `W<user>-…`, `P<user>-<package>-…`) and `payment_id`,
   N-Genius/VoguePay/Nagad order lookups bound to a reference the session
   stored. Storefront callbacks finish the session's own payment
-  (`SessionGatewayPayment`); the API's `begin`/`init` endpoints and the app's
+  (`SessionGatewayPayment`), except SSLCommerz, aamarpay and iyzico, which
+  finish the payment recorded under their reference (`GatewayReturn`, below); the API's `begin`/`init` endpoints and the app's
   bKash/iyzico success calls need `auth:store_api` and price from the database
   (`ApiGatewayPayment`); the API's SSLCommerz and Nagad callbacks, which have no
   token, complete only a payment `begin` recorded as pending. The SSLCommerz
   IPN handler and route are gone. Tests: `LegacyGatewayPaymentCreditingTest`.
-  **Before enabling a storefront gateway that posts back** (SSLCommerz,
-  aamarpay, iyzico): with `SESSION_SAME_SITE=lax` the browser does not send the
-  session cookie on that cross-site POST, so the callback finds no session and
-  credits nothing (it fails safe; the payment then needs reconciling by hand).
+  **Gateways that post back (fixed 2026-11-12):** SSLCommerz, aamarpay and
+  iyzico return with a cross-site POST, which carries no session cookie under
+  `SESSION_SAME_SITE=lax`, so their callbacks credited nothing, and the fresh
+  session they answered with signed the customer out. Their `pay()` now
+  records the payment as pending in `wms_gateway_payments`
+  (`App\Services\GatewayReturn`; `gateway_amount`, `gateway_currency`,
+  `expires_at` added), keyed by the reference sent (`WEB-…`, iyzico's token);
+  the six return routes run outside the `web` group
+  (`routes/shop-gateway-returns.php`, throttled, no CSRF entry any more), read
+  only the reference, re-verify with the provider, require the recorded
+  converted amount and currency to the cent, credit the recorded owner once,
+  and 303 to a signed GET that lands the payer as before (or a neutral "payment
+  received, sign in" page). Rules: .ai/rules/payment-gateway-returns.md. Tests:
+  `GatewayReturnWithoutSessionTest`.
   **Mobile app:** `sslcommerz/begin`, `iyzico/init`, `iyzico/success` and
   `bkash/api/success` now need the bearer token, `bkash/api/process` and
   `nagad/process` are gone (Nagad completes in `nagad/verify`), and

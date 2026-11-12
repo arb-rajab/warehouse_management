@@ -71,6 +71,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/**, app/Http/Resources/RowResource.php, app/Http/Controllers/Api/V1/**, app/Models/Product.php | .ai/rules/resources.md |
 | routes/web.php, routes/api.php, routes/console.php, routes/shop-*.php | .ai/rules/routes.md |
+| app/Http/Controllers/Payment/**, app/Services/*Gateway*, app/Services/IyzicoPayments.php, app/Http/Controllers/GatewayPaymentLandingController.php, routes/shop-gateway-returns.php | .ai/rules/payment-gateway-returns.md |
 | app/Http/Controllers/Admin/RowController.php,resources/js/pages/Admin/Rows/Index.vue,resources/js/components/ActionErrorBanner.vue | .ai/rules/rows-js-components.md |
 | database/seeders/** | .ai/rules/seeders.md |
 | tests/** | .ai/rules/tests.md |
