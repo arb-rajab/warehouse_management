@@ -61,6 +61,7 @@ function stored(slug: string, expression: string): unknown {
 
 test('a post is written, formatted by keyboard, saved and reloaded with a table and a canonical image under the strict CSP', async ({
     page,
+    baseURL,
 }) => {
     resetBlog();
     await loginAsStoreAdmin(page);
@@ -174,8 +175,12 @@ test('a post is written, formatted by keyboard, saved and reloaded with a table 
         /<p style="text-align: center"><strong>Bold words<\/strong><\/p>/,
     );
     expect(body).toMatch(/<th><p>Head<\/p><\/th>/);
+    // The stored URL is absolute on APP_URL, which follows the run's E2E_PORT.
+    const origin = String(baseURL).replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
     expect(body).toMatch(
-        /<p>Photo <img src="https:\/\/127\.0\.0\.1:8010\/uploads\/all\/[^"]+" alt="blog-photo"><\/p>/,
+        new RegExp(
+            `<p>Photo <img src="${origin}/uploads/all/[^"]+" alt="blog-photo"></p>`,
+        ),
     );
     expect(body).not.toMatch(/data:|min-width/);
 

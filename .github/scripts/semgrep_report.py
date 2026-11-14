@@ -16,6 +16,11 @@ would otherwise report green while silently covering nothing. Scan errors
 alongside a non-empty result set are still just reported, not gated on:
 a single file that failed to parse is common and shouldn't fail runs that
 otherwise produced real findings.
+
+Also exits 1 if the report lists the files it scanned and that list is empty:
+Semgrep runs natively on the Windows CI runners, where its support is newer
+than on Linux, and a scan that found no target files must not pass as clean.
+The number of scanned files goes into the summary, so a drop is visible.
 """
 
 import json
@@ -35,9 +40,14 @@ def main() -> int:
 
     findings = report.get("results", [])
     errors = report.get("errors", [])
+    scanned = report.get("paths", {}).get("scanned")
     severity_counts = Counter(f.get("extra", {}).get("severity", "UNKNOWN") for f in findings)
 
     lines = ["# Semgrep results", ""]
+
+    if isinstance(scanned, list):
+        lines.append(f"Scanned {len(scanned)} file(s).")
+        lines.append("")
 
     if not findings:
         lines.append("No findings.")
@@ -63,6 +73,10 @@ def main() -> int:
 
     with open(summary_path, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
+
+    if isinstance(scanned, list) and not scanned:
+        print("Semgrep scanned no files — the scan covered nothing, failing the job.", file=sys.stderr)
+        return 1
 
     error_findings = [f for f in findings if f.get("extra", {}).get("severity") == "ERROR"]
     if error_findings:

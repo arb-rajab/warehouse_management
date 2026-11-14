@@ -19,6 +19,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
+# Both jobs run on the team VPS's self-hosted Windows runners, like tests.yml
+# (docs/self-hosted-runner.md): CI_RUNNER_LABELS overrides the labels, and every
+# `run:` step is Git for Windows' bash, so the scripts stay POSIX and identical
+# on a Linux runner. Git Bash has no jq; gh's own --jq does that job.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # Merging a PR into main/develop lands a merge commit whose tree is usually
   # identical to the PR head this workflow already scanned — the merge adds no
@@ -47,7 +55,8 @@ jobs:
   # are completely unchanged.
   resolve-scanned-commit:
     name: Check for an existing scan of this tree
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
+    timeout-minutes: 5
     permissions:
       contents: read
       actions: read
@@ -64,15 +73,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          head_json="$RUNNER_TEMP/head-commit.json"
-
-          if ! gh api "repos/$REPO/commits/$HEAD_SHA" > "$head_json"; then
+          # One call for the tree and the merged head (empty unless the commit
+          # has exactly two parents), on one line.
+          if ! head_commit="$(gh api "repos/$REPO/commits/$HEAD_SHA" \
+            --jq '.commit.tree.sha + " " + (if (.parents | length) == 2 then .parents[1].sha else "" end)')"; then
             echo "Could not read $HEAD_SHA; scanning."
             exit 0
           fi
 
-          head_tree="$(jq -r '.commit.tree.sha' "$head_json")"
-          pr_head="$(jq -r 'if (.parents | length) == 2 then .parents[1].sha else "" end' "$head_json")"
+          read -r head_tree pr_head <<< "$head_commit"
 
           if [ -z "$pr_head" ]; then
             echo "$HEAD_SHA is not a two-parent merge commit; scanning."
@@ -100,12 +109,25 @@ jobs:
             echo "No successful sast run for $pr_head; scanning."
           fi
 
+  # Semgrep runs natively, not in the semgrep/semgrep image: job containers run
+  # only on Linux runners. Semgrep publishes an official win_amd64 wheel for
+  # this exact version (with Windows in its PyPI classifiers and a pywin32
+  # dependency for win32), and its docs install the Windows CLI with pipx or
+  # uv, i.e. into a virtual environment, which is what the install step does:
+  # a fresh venv per job under RUNNER_TEMP, so the several runner instances on
+  # the VPS never share or race over an install. Semgrep's Windows support is
+  # newer than its Linux one; the summary prints how many files were scanned,
+  # and semgrep_report.py fails a scan that covered none.
   semgrep:
     needs: resolve-scanned-commit
     if: needs.resolve-scanned-commit.outputs.already-scanned != 'true'
-    runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep:1.155.0
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
+    timeout-minutes: 30
+    env:
+      SEMGREP_VERSION: 1.155.0
+      # Windows Python reads files, pipes and arguments in the ANSI code page
+      # unless UTF-8 mode is on; the scanned sources are UTF-8.
+      PYTHONUTF8: '1'
 
     steps:
       - name: Checkout code
@@ -113,13 +135,56 @@ jobs:
         with:
           persist-credentials: false
 
+      # python.org's Windows installer provides `python` and `py`, not
+      # `python3` (where `python3` exists it may be the Microsoft Store alias,
+      # which only opens the Store), so use the first that really runs 3.10+,
+      # which Semgrep also requires. Same as the plan job in tests.yml.
+      - name: Find Python
+        run: |
+          for candidate in python3 python py; do
+            if "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 10))' > /dev/null 2>&1; then
+              echo "PYTHON=$candidate" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo '::error::No Python 3.10+ on PATH (tried python3, python and py).'
+          exit 1
+
       - name: Test the Semgrep report script
-        run: python3 .github/scripts/semgrep_report_test.py -v
+        run: '"$PYTHON" .github/scripts/semgrep_report_test.py -v'
+
+      # --only-binary keeps pip from ever building Semgrep from source (that
+      # needs OCaml); it must install the published wheel. Semgrep's settings
+      # and version cache go to per-job folders instead of the runner user's
+      # home, which every runner instance on the VPS shares.
+      - name: Install Semgrep
+        run: |
+          set -euo pipefail
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/semgrep-config" XDG_CACHE_HOME="$RUNNER_TEMP/semgrep-cache"
+          mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME"
+          venv="$RUNNER_TEMP/semgrep-venv"
+          "$PYTHON" -m venv "$venv"
+          if [ -d "$venv/Scripts" ]; then bin="$venv/Scripts"; else bin="$venv/bin"; fi
+          "$bin/python" -m pip install --disable-pip-version-check --quiet \
+            --only-binary semgrep "semgrep==$SEMGREP_VERSION"
+
+          installed="$("$bin/semgrep" --version | tr -d '\r')"
+          if [ "$installed" != "$SEMGREP_VERSION" ]; then
+            echo "::error::Installed Semgrep reports '$installed', expected $SEMGREP_VERSION."
+            exit 1
+          fi
+
+          {
+            echo "SEMGREP=$bin/semgrep"
+            echo "XDG_CONFIG_HOME=$XDG_CONFIG_HOME"
+            echo "XDG_CACHE_HOME=$XDG_CACHE_HOME"
+          } >> "$GITHUB_ENV"
+          echo "Semgrep $installed in $venv"
 
       - name: Run Semgrep
         continue-on-error: true
         run: >
-          semgrep scan
+          "$SEMGREP" scan
           --config p/security-audit
           --config p/owasp-top-ten
           --config p/secrets
@@ -130,7 +195,7 @@ jobs:
           --output semgrep-results.json
 
       - name: Summarize results and enforce ERROR severity gate
-        run: python3 .github/scripts/semgrep_report.py semgrep-results.json "$GITHUB_STEP_SUMMARY"
+        run: '"$PYTHON" .github/scripts/semgrep_report.py semgrep-results.json "$GITHUB_STEP_SUMMARY"'
 
       - name: Upload full Semgrep report
         if: always()

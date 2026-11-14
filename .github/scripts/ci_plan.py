@@ -46,7 +46,8 @@ so any later content change makes it stale. `--attested-message-file` and
 merged tree equals its head tree. It is ignored when the change touches
 .github/, so a workflow change is still exercised by the run that introduces it.
 With --require-attestation, ordinary code changes fail instead of falling back
-to paid CI when any required group is missing or the merged tree differs.
+to running every group when a required group is missing or the merged tree
+differs.
 
 Usage (CI): changed paths on stdin, one per line; prints `group=true|false`
 lines for $GITHUB_OUTPUT. An empty list prints all-true: an empty answer from
@@ -183,7 +184,7 @@ def main(argv: list[str]) -> int:
                 if not tree or not merged_tree or merged_tree != tree:
                     error = 'The merged tree differs from the PR head or its hash is unavailable. Update the branch first.'
                 else:
-                    message = Path(message_file).read_text() if message_file else ''
+                    message = Path(message_file).read_text(encoding='utf-8') if message_file else ''
                     vouched = attested_groups(message, tree)
                     missing = [group for group in GROUPS if needed[group] and group not in vouched]
                     if missing:
@@ -197,7 +198,7 @@ def main(argv: list[str]) -> int:
 
         # Never for a change under .github/: it must run everything it touches.
         if paths and message_file and tree and not any(path.startswith('.github/') for path in paths):
-            vouched = attested_groups(Path(message_file).read_text(), tree)
+            vouched = attested_groups(Path(message_file).read_text(encoding='utf-8'), tree)
             skipped = sorted(group for group in vouched if needed[group])
 
             for group in skipped:

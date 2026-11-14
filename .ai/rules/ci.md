@@ -1,6 +1,6 @@
 ---
 paths:
-  - '.github/**,.claude/scripts/pre_push_check.py,.claude/scripts/install_playwright.py,.claude/hooks/session-start.sh'
+  - '.github/**,.github/runner-setup/**,docs/self-hosted-runner.md,.claude/scripts/pre_push_check.py,.claude/scripts/install_playwright.py,.claude/hooks/session-start.sh'
 ---
 
 # CI check selection and attested pre-push verification
@@ -80,8 +80,8 @@ everything they started. Constraints this imposes:
   Playwright empties `test-results/` when it starts, and Pint walking the repo in
   another lane dies on the vanished directory.
 - Stopping a lane kills its whole process tree, not just the process group: the
-  Playwright web server (`node` plus `php artisan serve` on 8010/8011) runs in its
-  own session and would otherwise keep the port, failing the next run.
+  Playwright web server (`node` plus `php artisan serve` on `E2E_PORT` and
+  `E2E_BACKEND_PORT`, default 8010/8011) runs in its own session and would otherwise keep the port, failing the next run.
 - E2E keeps normal CPU priority and the other lanes run under `nice`: its 5s
   expectations are timing-sensitive and the machine has 4 cores that Pest, Vitest
   and the browser all want. Do not add Playwright workers (measured: flaky).
@@ -96,7 +96,7 @@ Constraints that keep it honest:
   trailer; ordinary code PRs reject that partial coverage. A failing check
   records nothing.
 - It is self-attested: CI cannot prove the local run happened, and the sandbox
-  differs from CI (local MySQL 8.0 against `mysql:8.4`). Do not amend a trailer
+  differs from CI (local MySQL 8.0 against MySQL 8.4). Do not amend a trailer
   in by hand.
 - Jobs that `needs` Pint or Prettier must accept a skipped result, or an
   attested php/js group would silently skip Pest, MySQL and E2E too.
@@ -120,8 +120,9 @@ before planning). Its docstring is the rule list. The constraints behind it:
 - The MySQL job runs only the migration/schema tests, so it has its own `mysql`
   group (`database/`, `tests/Feature/Database/`, `config/database.php`,
   composer manifests) instead of riding on `php`.
-- Billing rounds every job up to a whole minute, and sharding repeats setup per
-  shard, so it costs more minutes than it saves: Playwright stays one job and
+- Sharding repeats setup per shard and each shard takes one of the few runner
+  instances sharing the VPS (GitHub-hosted billing also rounds every job up to
+  a whole minute), so it costs more than it saves: Playwright stays one job and
   Vitest runs inside `js-checks` (Wayfinder types, ESLint, vue-tsc, Vitest in
   one job, each step reporting even if an earlier one failed). Prettier and Pint
   stay separate cheap gates ahead of Pest and Playwright. Prefer more workers on
@@ -142,9 +143,56 @@ before planning). Its docstring is the rule list. The constraints behind it:
   everything. `workflow_dispatch` and deployment workflow calls run everything
   without requiring a trailer, retaining a way to validate merged content.
 - PR API failures, an empty file list and the API's 3000-file limit fail closed
-  instead of falling back to paid CI. The three jobs using `!cancelled()` also
+  instead of falling back to running every job. The three jobs using `!cancelled()` also
   require a successful plan. Skipping uses job-level `if:`, never narrower `on:`
   filters. Do not rename jobs: branch protection may require their check names.
+
+## No containers: the runners are native Windows
+
+Service and job containers run only on Linux runners, so no workflow uses
+`services:` or `container:`. `Pest (MySQL migrations)` uses the VPS's one native
+MySQL 8.4, shared by every runner instance: `.github/scripts/ci-mysql.php`
+checks it (failing with the missing `CI_MYSQL_*` setting or the address it
+could not reach), creates a `whci_<runner>_<run>_<attempt>` database, exports
+`DB_*` to later steps, and drops it in an `if: always()` step. Credentials come
+from the runner's environment, never the repository. A runner runs one job at
+a time, so `create` drops whatever its own runner left behind; runner names
+must therefore be unique. On a GitHub-hosted runner the job starts `mysql:8.4`
+with `docker run` and points `CI_MYSQL_*` at it. Semgrep runs from the official
+wheel in a per-job venv, and `semgrep_report.py` fails a scan of zero files.
+
+Runner instances also share ports. Each sets its own `E2E_PORT` and
+`E2E_BACKEND_PORT` in its `.env` (runner N: 8010+2N and 8011+2N); the
+Playwright config, `serve-https.mjs` and specs derive every URL from them
+through `tests/e2e/support/ports.mjs`, and the E2E job's port check fails,
+naming the setting, when they are taken. `reuseExistingServer` stays false so a
+run never adopts another runner's server. The `webServer` command must stay
+cmd.exe-safe (`node ... && ...`); its setup is `prepare-e2e.mjs`, not shell.
+
+`deploy.yml` runs all its jobs on the same `CI_RUNNER_LABELS` expression
+(`test-merged-content` is a `uses:` call, so the called `tests.yml` jobs pick
+it up). Its deploy job keeps the SSH key and pinned `known_hosts` in
+`$RUNNER_TEMP/deploy-ssh`, never the shared `~/.ssh`, and removes them in an
+`if: always()` step. It calls `/usr/bin/ssh` (Git for Windows' ssh, not
+Windows' OpenSSH, which wants NTFS ACLs on the key) with `-F /dev/null`,
+`IdentitiesOnly`, `IdentityAgent=none`, `UserKnownHostsFile` set to that file,
+`GlobalKnownHostsFile=/dev/null` and `StrictHostKeyChecking=yes`; it refuses a
+temp path with whitespace or `%`, which ssh options cannot carry. Scripts sent
+to the host need LF endings: `.gitattributes` (`eol=lf`) overrides Windows Git's
+`core.autocrlf=true`; keep it.
+
+`Deploy script` sets `MSYS=winsymlinks:sys`: the script and its test need real
+symlinks, one of them dangling, and Git for Windows' `ln -s` copies by default.
+MSYS system-file symlinks need no Windows privilege and may dangle, but only
+MSYS tools follow them; `nativestrict` refuses a missing target (msys2-runtime
+`symlink_native`). The test stops first if `ln -s` does not make real links.
+
+## The VPS and its provisioning scripts
+
+The runbook is [docs/self-hosted-runner.md](../../docs/self-hosted-runner.md) and the scripts are in
+[.github/runner-setup/](../../.github/runner-setup/README.md); neither has run on Windows yet. When a
+workflow starts needing something new from a runner (a tool, a host, an environment variable, a changed
+error message, the `require-php.sh` extension list), update the scripts and the runbook's table too.
 
 ## `deploy-remote.sh` and the host's privileges
 

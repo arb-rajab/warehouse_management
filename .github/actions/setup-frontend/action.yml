@@ -3,12 +3,19 @@ description: Install Node and npm dependencies, with npm downloads cached across
 
 runs:
   using: composite
+  # setup-node installs Node into the runner's own tool cache, which is per
+  # runner instance, so it is safe on the VPS's several self-hosted runners.
+  # There npm's cache directory persists between jobs and is shared by every
+  # runner under one account, so the actions/cache restore (`cache: npm`),
+  # which would extract into it while another job reads it, runs only on
+  # GitHub-hosted runners.
   steps:
     - name: Setup Node
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: '22'
-        cache: npm
+        cache: ${{ runner.environment == 'github-hosted' && 'npm' || '' }}
+        package-manager-cache: ${{ runner.environment == 'github-hosted' }}
 
     - name: Install npm dependencies
       shell: bash

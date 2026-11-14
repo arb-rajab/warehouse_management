@@ -4,12 +4,14 @@ import http from 'node:http';
 import https from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { portSetting } from './ports.mjs';
 
 // Enforced CSP upgrades Inertia redirects to HTTPS. Serve real TLS locally
 // instead of weakening the application's policy for browser tests.
 const publicURL = new URL(process.env.APP_URL);
 const port = Number(publicURL.port || 443);
-const backendPort = port + 1;
+// playwright.config.ts passes E2E_BACKEND_PORT; run by hand it is the next port.
+const backendPort = portSetting(process.env, 'E2E_BACKEND_PORT', port + 1);
 const certificateDirectory = mkdtempSync(join(tmpdir(), 'wms-e2e-tls-'));
 const keyPath = join(certificateDirectory, 'key.pem');
 const certificatePath = join(certificateDirectory, 'certificate.pem');
@@ -159,6 +161,13 @@ backend.on('error', (error) => {
 backend.on('exit', (code) => stop(code ?? 1));
 server.on('error', (error) => {
     console.error(error.message);
+
+    if (error.code === 'EADDRINUSE') {
+        console.error(
+            `Port ${port} is taken. Runner instances sharing a machine each need their own E2E_PORT/E2E_BACKEND_PORT pair (see tests/e2e/support/ports.mjs).`,
+        );
+    }
+
     stop(1);
 });
 process.on('SIGTERM', () => stop());

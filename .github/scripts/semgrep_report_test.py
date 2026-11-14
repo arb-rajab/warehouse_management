@@ -78,6 +78,20 @@ class SemgrepReportTest(unittest.TestCase):
         )
         self.assertEqual(exit_code, 0)
 
+    def test_scan_of_no_files_fails(self):
+        """A native scan that found no target files (a path or ignore
+        problem on the runner) must not report green."""
+        exit_code, summary = _run({"results": [], "errors": [], "paths": {"scanned": []}})
+        self.assertEqual(exit_code, 1)
+        self.assertIn("Scanned 0 file(s).", summary)
+
+    def test_scanned_file_count_is_reported(self):
+        exit_code, summary = _run(
+            {"results": [], "errors": [], "paths": {"scanned": ["app/Models/Example.php", "routes/web.php"]}}
+        )
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Scanned 2 file(s).", summary)
+
 
 if __name__ == "__main__":
     unittest.main()

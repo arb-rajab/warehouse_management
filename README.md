@@ -123,7 +123,7 @@ The integrated app owns the `products` schema. Under **Option A**, `products:syn
 
 **Production environment file.** Start the server's `.env` from [`.env.production.example`](.env.production.example), never from `.env.example`: that one is for local development and CI, and its `APP_DEBUG=true`, `SESSION_SECURE_COOKIE=false`, `CSP_REPORT_ONLY=true`, `TELESCOPE_ENABLED=true`, `MAIL_MAILER=log` and `DB_CONNECTION=sqlite` override the safe production defaults. The template holds only placeholders; the go-live checklist ([`.ai/go-live-checklist-20261021.md`](.ai/go-live-checklist-20261021.md), section 2) says what each value means. Create the first admin with `php artisan store:create-admin <email>`; never run `db:seed` in production.
 
-Staging deploys automatically from `develop` (`.github/workflows/deploy-staging.yml`, on a green `tests` run) and runs `php artisan migrate --force` as part of that. So the three items below have to be settled *before* merging, not after.
+Every push to `develop`, `staging` or `main` deploys automatically to that branch's Hostinger environment (`.github/workflows/deploy.yml`, once a successful `tests` run covers the pushed content, or after running the suite on it) and runs `php artisan migrate --force` as part of that. So the three items below have to be settled *before* merging, not after.
 
 ### 1. Rename the migration bookkeeping table (existing databases only)
 

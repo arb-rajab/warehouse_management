@@ -17,11 +17,15 @@ name: deploy
 # keeps the guarantee the old re-run provided while skipping it in the ~92% of
 # merges where it verified something already verified.
 #
-# Deploys used to run on a self-hosted Windows runner on a VPS we controlled,
-# which is why every step below was once `cmd`/`powershell` against a local
-# `C:\sites\...` checkout. That VPS is gone and the app is hosted on Hostinger,
-# so the runner is now `ubuntu-latest` everywhere and the deploy is an SSH
-# session into the Hostinger host running the same sequence in bash.
+# Where it runs: every job here, like tests.yml and sast.yml, runs on the team
+# VPS's self-hosted native Windows runners (docs/self-hosted-runner.md), several
+# runner instances on one machine sharing one user home, one job at a time each.
+# The repository variable CI_RUNNER_LABELS overrides the labels for all jobs at
+# once (JSON, e.g. ["self-hosted","windows","warehouse-vps"] or "ubuntu-latest");
+# unset, the jobs wait for the VPS, with no hosted fallback. The app itself is
+# hosted on Hostinger: the deploy is an SSH session from the runner into the
+# Hostinger host that runs .github/scripts/deploy-remote.sh there in bash. The
+# runner only needs Git for Windows (bash, ssh) and gh; nothing is installed.
 on:
   push:
     branches:
@@ -43,6 +47,13 @@ concurrency:
   group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
+# Every `run:` step is bash: Git for Windows' bash on the VPS, so the scripts
+# stay POSIX and identical on a Linux runner. Git Bash has no jq; gh's own
+# --jq does that job.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # A merge into develop/staging/main normally lands a merge commit whose tree
   # matches the PR head `tests` already ran against, because the merge
@@ -57,15 +68,11 @@ jobs:
   # closed on an API error, since a gate that cannot verify must not promote:
   # `set -e` plus a non-zero `gh api` is what enforces that.
   #
-  # It used to run on the self-hosted Windows runner, justified at the time by
-  # deploy needing no GitHub-hosted minutes anyway, so putting the gate on
-  # `ubuntu-latest` would have made every promotion depend on hosted-runner
-  # availability. With the self-hosted runner decommissioned there is nothing
-  # left to piggyback on -- the deploy job below is hosted regardless -- so that
-  # justification is void and the gate runs alongside everything else.
+  # It runs on the same runners as everything else, so a promotion never
+  # depends on GitHub-hosted availability, and it needs no checkout: gh alone.
   verify-tested:
     name: Check for an existing tests run
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     outputs:
       tested: ${{ steps.lookup.outputs.tested }}
 
@@ -97,14 +104,23 @@ jobs:
             [ "$successes" -gt 0 ]
           }
 
-          head_commit="$(gh api "repos/$REPO/commits/$HEAD_SHA")"
-          head_tree="$(jq -r '.commit.tree.sha' <<< "$head_commit")"
-          parent_count="$(jq -r '.parents | length' <<< "$head_commit")"
+          # One call, tab-separated: tree, parent count, second parent (empty
+          # for a non-merge). Assigned on its own line so a failing `gh api`
+          # still stops the step under `set -e`; a here-string would hide it.
+          head_commit="$(gh api "repos/$REPO/commits/$HEAD_SHA" \
+            --jq '[.commit.tree.sha, (.parents | length), (.parents[1].sha // "")] | @tsv')"
+          IFS=$'\t' read -r head_tree parent_count merged_head <<< "$head_commit"
+
+          case "$head_tree:$parent_count" in
+            :* | *: | *:*[!0-9]*)
+              echo "::error::Could not read the tree and parents of $HEAD_SHA (got '$head_commit')."
+              exit 1
+              ;;
+          esac
 
           candidates=("$HEAD_SHA")
 
           if [ "$parent_count" -eq 2 ]; then
-            merged_head="$(jq -r '.parents[1].sha' <<< "$head_commit")"
             merged_tree="$(gh api "repos/$REPO/commits/$merged_head" --jq '.commit.tree.sha')"
 
             if [ "$merged_tree" = "$head_tree" ]; then
@@ -125,7 +141,9 @@ jobs:
 
   # The ~8% case: the merged content was never tested as a unit, so run the suite
   # against it now, before anything is promoted. This is the one job that the old
-  # unconditional post-merge run was actually buying.
+  # unconditional post-merge run was actually buying. A `uses:` job has no
+  # `runs-on`: the called tests.yml jobs pick their runners from the same
+  # CI_RUNNER_LABELS expression, and `vars` there resolves in this repository.
   test-merged-content:
     name: Test the merged commit
     needs: verify-tested
@@ -167,12 +185,18 @@ jobs:
       needs.verify-tested.result == 'success' &&
       (needs.test-merged-content.result == 'success' ||
        needs.test-merged-content.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     environment: ${{ github.ref_name }}
 
     steps:
+      # The key and the pinned host key live in a directory of this job's own
+      # under RUNNER_TEMP, never in ~/.ssh: the runner instances on the VPS
+      # share one user home, so a key there would be overwritten or deleted by
+      # a deploy on another instance and outlive the job. RUNNER_TEMP is per
+      # instance and emptied between jobs; the last step removes it anyway.
       - name: Authorise the runner against the Hostinger host
         env:
+          SSH_DIR: ${{ runner.temp }}/deploy-ssh
           SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.HOSTINGER_SSH_KNOWN_HOSTS }}
           # Passed as an environment variable rather than interpolated into the
@@ -189,20 +213,31 @@ jobs:
             exit 1
           fi
 
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          # Never readable by other users from the moment it exists. On
+          # Windows the modes are nominal (Git Bash mounts without ACLs, and
+          # its ssh skips the permission check there). The other runner
+          # instances run as the same user, so nothing here hides the key
+          # from them; the per-job directory only keeps them from clobbering
+          # it, and the cleanup step keeps it from lingering.
+          umask 077
+          rm -rf "$SSH_DIR"
+          mkdir -p "$SSH_DIR"
+          chmod 700 "$SSH_DIR"
 
           # A trailing newline is mandatory: OpenSSH rejects a key file whose
           # final line is unterminated, and GitHub strips it from the secret.
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$SSH_DIR/deploy_key"
+          chmod 600 "$SSH_DIR/deploy_key"
 
           # Pinning the host key here is what lets StrictHostKeyChecking stay on
           # below. Without it the first connection would either fail or, worse,
           # be told to trust whatever answers on that address.
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$SSH_DIR/known_hosts"
+          chmod 600 "$SSH_DIR/known_hosts"
 
+      # deploy-remote.sh reaches the host with LF endings even on Windows,
+      # where Git for Windows defaults to core.autocrlf=true: .gitattributes
+      # sets `eol=lf` for every text file, which overrides it.
       - name: Check out the deploy script
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -212,6 +247,7 @@ jobs:
 
       - name: Deploy to Hostinger over SSH
         env:
+          SSH_DIR: ${{ runner.temp }}/deploy-ssh
           SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
           SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
@@ -238,13 +274,48 @@ jobs:
             exit 1
           fi
 
+          # Git for Windows' own ssh, which shares Git Bash's view of paths
+          # and files, rather than whichever ssh.exe comes first on PATH
+          # (Windows' OpenSSH would want NTFS ACLs on the key). /usr/bin/ssh
+          # is the same program on a Linux runner.
+          ssh=/usr/bin/ssh
+          if [ ! -x "$ssh" ]; then
+            echo "::error::$ssh is missing; this runner's bash must be Git for Windows' (docs/self-hosted-runner.md)."
+            exit 1
+          fi
+
+          # RUNNER_TEMP is a Windows path on the VPS (C:\...); hand ssh the
+          # POSIX form. ssh splits UserKnownHostsFile at whitespace and expands
+          # `%` in it, so refuse such a path instead of reading the wrong file.
+          ssh_dir="$SSH_DIR"
+          if command -v cygpath > /dev/null; then
+            ssh_dir="$(cygpath -u "$SSH_DIR")"
+          fi
+          case "$ssh_dir" in
+            *[[:space:]%]*)
+              echo "::error::The runner's temp directory ($ssh_dir) contains whitespace or '%', which ssh options cannot carry; install the runner under a plain path."
+              exit 1
+              ;;
+          esac
+
+          # Only this job's key and pinned host keys count: -F /dev/null skips
+          # the shared home's ~/.ssh/config and the system one, IdentitiesOnly
+          # and IdentityAgent=none keep any running ssh-agent's keys out, and
+          # both known-hosts files are pinned so ~/.ssh/known_hosts (shared,
+          # writable by every instance) is never read or written.
+          #
           # The script is fed on stdin rather than copied to the host, so the
           # version that runs is always the one from the commit being deployed
           # and nothing is left behind on failure. A login shell so the profile
           # that puts nvm's node/npm and composer on PATH is sourced; a bare
           # `bash -s` gets neither on Hostinger.
-          ssh -i ~/.ssh/deploy_key \
+          "$ssh" -F /dev/null \
+              -i "$ssh_dir/deploy_key" \
               -p "$SSH_PORT" \
+              -o IdentitiesOnly=yes \
+              -o IdentityAgent=none \
+              -o UserKnownHostsFile="$ssh_dir/known_hosts" \
+              -o GlobalKnownHostsFile=/dev/null \
               -o StrictHostKeyChecking=yes \
               -o BatchMode=yes \
               "$SSH_USER@$SSH_HOST" \
@@ -257,4 +328,6 @@ jobs:
 
       - name: Remove deploy credentials from the runner
         if: always()
-        run: rm -f ~/.ssh/deploy_key
+        env:
+          SSH_DIR: ${{ runner.temp }}/deploy-ssh
+        run: rm -rf "$SSH_DIR"
