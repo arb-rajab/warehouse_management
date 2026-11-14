@@ -126,7 +126,7 @@ for arg in "\$@"; do
     break
   fi
 done
-exec $(command -v git) "\$@"
+exec $(printf '%q' "$(command -v git)") "\$@"
 STUB
 
     # Ghostscript step. `id`, `sudo` and the package managers are stubbed so no
@@ -191,6 +191,21 @@ deploy() {
 published() { basename "$(readlink "$WORK/host/current")"; }
 tables()    { tr '\n' ' ' < "$WORK/dbstate"; }
 maintenance_state() { [ -f "$WORK/maint" ] && echo on || echo off; }
+
+# The script and these cases need real symlinks, dangling ones included, that
+# readlink reports as written. Git for Windows' bash copies on `ln -s` unless
+# MSYS=winsymlinks:sys (tests.yml sets it); stop here, once and clearly, rather
+# than with a failure in every case below.
+mkdir "$WORK/probe"
+if ! ln -s "$WORK/probe" "$WORK/probe-link" 2>/dev/null \
+    || [ ! -L "$WORK/probe-link" ] || [ "$(readlink "$WORK/probe-link")" != "$WORK/probe" ] \
+    || ! ln -s "$WORK/probe-missing" "$WORK/probe-dangling" 2>/dev/null \
+    || [ ! -L "$WORK/probe-dangling" ]; then
+    echo "ln -s does not make real symlinks here (one to a missing target included)." >&2
+    echo "On Git for Windows, run this with MSYS=winsymlinks:sys." >&2
+    exit 1
+fi
+rm -rf "$WORK/probe" "$WORK/probe-link" "$WORK/probe-dangling"
 
 # --------------------------------------------------------------------------
 # Cases
@@ -453,9 +468,24 @@ install_calls() { { cat "$WORK/install.log" 2>/dev/null || true; } | tr '\n' '|'
 manager_installs() { { grep -E '^(apt-get|dnf|yum) install ' "$WORK/install.log" 2>/dev/null || true; } | wc -l | tr -d ' '; }
 
 # A PATH holding every system command except Ghostscript and the package
-# managers, for the hosts that have none of them.
+# managers, for the hosts that have none of them. Where /usr/bin and /bin hold
+# none of those (Git for Windows), they serve as they are: a native Windows
+# program such as git, which finds sh on PATH, cannot see the MSYS symlinks
+# the loop below would make.
 restricted_path() {
-    local dir="$WORK/restricted" entry
+    local dir="$WORK/restricted" entry name clean=yes
+
+    for name in apt-get dnf yum gs; do
+        if [ -e "/usr/bin/$name" ] || [ -e "/bin/$name" ]; then
+            clean=no
+        fi
+    done
+
+    if [ "$clean" = yes ]; then
+        echo "$WORK/bin:/usr/bin:/bin"
+        return
+    fi
+
     mkdir -p "$dir"
     for entry in /usr/bin/* /bin/*; do
         case "$(basename "$entry")" in apt-get | dnf | yum | gs) continue ;; esac

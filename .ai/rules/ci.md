@@ -80,8 +80,8 @@ everything they started. Constraints this imposes:
   Playwright empties `test-results/` when it starts, and Pint walking the repo in
   another lane dies on the vanished directory.
 - Stopping a lane kills its whole process tree, not just the process group: the
-  Playwright web server (`node` plus `php artisan serve` on 8010/8011) runs in its
-  own session and would otherwise keep the port, failing the next run.
+  Playwright web server (`node` plus `php artisan serve` on `E2E_PORT` and
+  `E2E_BACKEND_PORT`, default 8010/8011) runs in its own session and would otherwise keep the port, failing the next run.
 - E2E keeps normal CPU priority and the other lanes run under `nice`: its 5s
   expectations are timing-sensitive and the machine has 4 cores that Pest, Vitest
   and the browser all want. Do not add Playwright workers (measured: flaky).
@@ -159,6 +159,20 @@ a time, so `create` drops whatever its own runner left behind; runner names
 must therefore be unique. On a GitHub-hosted runner the job starts `mysql:8.4`
 with `docker run` and points `CI_MYSQL_*` at it. Semgrep runs from the official
 wheel in a per-job venv, and `semgrep_report.py` fails a scan of zero files.
+
+Runner instances also share ports. Each sets its own `E2E_PORT` and
+`E2E_BACKEND_PORT` in its `.env` (runner N: 8010+2N and 8011+2N); the
+Playwright config, `serve-https.mjs` and specs derive every URL from them
+through `tests/e2e/support/ports.mjs`, and the E2E job's port check fails,
+naming the setting, when they are taken. `reuseExistingServer` stays false so a
+run never adopts another runner's server. The `webServer` command must stay
+cmd.exe-safe (`node ... && ...`); its setup is `prepare-e2e.mjs`, not shell.
+
+`Deploy script` sets `MSYS=winsymlinks:sys`: the script and its test need real
+symlinks, one of them dangling, and Git for Windows' `ln -s` copies by default.
+MSYS system-file symlinks need no Windows privilege and may dangle, but only
+MSYS tools follow them; `nativestrict` refuses a missing target (msys2-runtime
+`symlink_native`). The test stops first if `ln -s` does not make real links.
 
 ## `deploy-remote.sh` and the host's privileges
 

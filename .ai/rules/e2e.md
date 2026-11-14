@@ -7,9 +7,12 @@ paths:
 
 ## Enforced CSP browser tests use local HTTPS
 
-The default Playwright URL is `https://127.0.0.1:8010`. The harness starts
-`tests/e2e/support/serve-https.mjs`, which generates a temporary certificate
-with OpenSSL and proxies to a session-owned PHP server on the next port.
+The default Playwright URL is `https://127.0.0.1:8010` (`E2E_PORT`; see
+`support/ports.mjs`). The harness runs `support/prepare-e2e.mjs` (database reset
+and seeding, no shell) and then `tests/e2e/support/serve-https.mjs`, which
+generates a temporary certificate with OpenSSL and proxies to a session-owned
+PHP server on `E2E_BACKEND_PORT` (default the next port). Never hard-code a
+port or origin in a spec: use the `baseURL` fixture.
 Only the loopback proxy is trusted. Its certificate and server processes are
 removed on shutdown. Keep CSP enforced: `upgrade-insecure-requests` upgrades
 Inertia redirects, so a plain HTTP PHP server cannot verify these workflows.

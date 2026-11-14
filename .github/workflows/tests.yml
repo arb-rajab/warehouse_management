@@ -242,12 +242,21 @@ jobs:
   # a real deploy -- nothing else would catch a regression in it before one. Its
   # rollback path drops every table and reloads a dump, so that is not a failure
   # mode to discover in production.
+  #
+  # The script and its test need real symlinks (`current`, shared storage,
+  # .env and public entries, one of them dangling). Git for Windows' bash
+  # copies on `ln -s` by default; winsymlinks:sys makes it write MSYS symlinks,
+  # which every bash tool here sees as symlinks, need no Windows privilege and
+  # may dangle. Native symlinks (nativestrict) refuse a missing target. No
+  # effect on Linux.
   test-deploy-script:
     name: Deploy script
     needs: plan
     if: needs.plan.outputs.deploy-script == 'true'
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
+    env:
+      MSYS: winsymlinks:sys
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -541,6 +550,13 @@ jobs:
           else
             npx playwright install chromium
           fi
+
+      # Runner instances sharing the VPS can run this job at the same time, so
+      # each needs its own E2E_PORT/E2E_BACKEND_PORT pair in its .env (runner N:
+      # 8010+2N and 8011+2N; tests/e2e/support/ports.mjs). Fail here, naming the
+      # setting, rather than with Playwright's "already used".
+      - name: Check the E2E ports are free
+        run: node tests/e2e/support/ports.mjs --check
 
       - name: Run E2E Tests
         run: npm run test:e2e
