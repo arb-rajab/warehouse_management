@@ -299,12 +299,10 @@ class PalletActionService
     /**
      * Store a new pallet into an Empty cell, transitioning it to Full — or straight to
      * Opened when first-level opening is allowed (see targetStateForCell()).
-     *
-     * @param  array{image_review_status: string, image_source: ?string, image_review_note?: ?string}|null  $imageReview
      */
-    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note, ?array $imageReview = null): Pallet
+    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note): Pallet
     {
-        return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note, $imageReview) {
+        return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note) {
             $cell = $this->lockCell($cellId);
 
             if ($cell->state !== CellState::Empty) {
@@ -317,10 +315,6 @@ class PalletActionService
                 ->select(['id'])
                 ->with('setting:product_id,boxes_count')
                 ->findOrFail($productId);
-
-            if ($imageReview !== null) {
-                app(ProductImageReviewService::class)->record($productId, $userId, $imageReview);
-            }
 
             $pallet = Pallet::create([
                 'product_id' => $product->id,

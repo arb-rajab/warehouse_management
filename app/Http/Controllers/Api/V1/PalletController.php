@@ -182,7 +182,6 @@ class PalletController extends Controller
             $request->input('expiration_date'),
             $user->id,
             $request->input('note'),
-            $request->imageReviewData(),
         );
 
         return (new PalletResource($pallet->load(self::EAGER_LOAD)))
