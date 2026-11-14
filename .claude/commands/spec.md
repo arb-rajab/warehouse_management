@@ -10,7 +10,7 @@ Work through these phases in order.
 
 ## 1. Interview
 
-Ask whatever questions you need and keep asking until you have no more. Research the codebase first (`.ai/rules`, `CLAUDE.md`, sibling files) so you only ask what the code cannot answer. Do not generate any prompt until the user confirms there is nothing left to clarify. Also ask testing questions the code cannot answer: which behaviours, edge cases, permissions and failure paths must be covered, and whether anything needs browser (Playwright) or migration (MySQL) coverage. Research the existing tests next to the code you will touch (`tests/`, `.ai/rules` on testing) so new tests follow sibling patterns.
+Ask whatever questions you need and keep asking until you have no more. Research the codebase first (`.ai/rules`, `CLAUDE.md`, sibling files) so you only ask what the code cannot answer. Do not generate any prompt until the user confirms there is nothing left to clarify. Never ask the user about testing: decide yourself which tests are required (behaviours, edge cases, permissions, failure paths, Playwright or MySQL migration coverage) and include them without approval, researching the existing tests next to the code you will touch (`tests/`, `.ai/rules` on testing) so new tests follow sibling patterns.
 
 ## 2. Rough outline
 
