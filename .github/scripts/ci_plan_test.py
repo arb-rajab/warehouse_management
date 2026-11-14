@@ -115,13 +115,17 @@ class AttestationTest(unittest.TestCase):
         self.assertEqual(ci_plan.attested_groups(f'{first}\n{last}', TREE), {'php'})
 
 
-def _planned_with(message: str, tree: str, *paths: str) -> str:
-    import tempfile
+def _message_file(directory: str, message: str) -> str:
+    """Write `message` to a closed file. Windows cannot reopen an open NamedTemporaryFile."""
+    path = Path(directory) / 'message.txt'
+    path.write_text(message, encoding='utf-8')
+    return str(path)
 
-    with tempfile.NamedTemporaryFile('w', suffix='.txt') as handle:
-        handle.write(message)
-        handle.flush()
-        return _cli(['--attested-message-file', handle.name, '--tree', tree], '\n'.join(paths) + '\n')
+
+def _planned_with(message: str, tree: str, *paths: str) -> str:
+    with tempfile.TemporaryDirectory() as directory:
+        return _cli(['--attested-message-file', _message_file(directory, message), '--tree', tree],
+                    '\n'.join(paths) + '\n')
 
 
 def _true_groups(output: str) -> set[str]:
@@ -165,14 +169,12 @@ class CliTest(unittest.TestCase):
 
 class RequiredAttestationTest(unittest.TestCase):
     def run_gate(self, paths, message='', tree=TREE, merged_tree=TREE, extra=()):
-        with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write(message)
-            handle.flush()
+        with tempfile.TemporaryDirectory() as directory:
             return subprocess.run(
                 [sys.executable, str(_MODULE_PATH), '--require-attestation',
-                 '--attested-message-file', handle.name, '--tree', tree,
+                 '--attested-message-file', _message_file(directory, message), '--tree', tree,
                  '--merged-tree', merged_tree, *extra],
-                input='\n'.join(paths), capture_output=True, text=True,
+                input='\n'.join(paths), capture_output=True, encoding='utf-8',
             )
 
     def test_missing_stale_malformed_and_partial_attestations_fail_without_outputs(self):
@@ -222,38 +224,51 @@ class WorkflowGateTest(unittest.TestCase):
     def run_plan(self, paths=('routes/web.php',), message='', merged_tree=TREE,
                  event='pull_request', failure=''):
         root = _MODULE_PATH.parents[2]
-        workflow = (root / '.github/workflows/tests.yml').read_text()
+        workflow = (root / '.github/workflows/tests.yml').read_text(encoding='utf-8')
         step = workflow.split('        id: plan\n', 1)[1]
         shell = step.split('        run: |\n', 1)[1].split('\n  format-js:', 1)[0]
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            gh = directory / 'gh'
-            gh.write_text(f'#!{sys.executable}\n' + textwrap.dedent('''\
-                import json, os, sys
+            # The fake answers like `gh api ... --jq <expression>` would.
+            (directory / 'gh.py').write_text(textwrap.dedent('''\
+                import os, sys
+                from pathlib import Path
                 args = ' '.join(sys.argv[1:])
                 if os.environ['FAKE_FAILURE'] and os.environ['FAKE_FAILURE'] in args:
                     sys.exit(1)
                 if '/files?' in args:
-                    print(os.environ['FAKE_FILES'])
+                    print(Path(os.environ['FAKE_FILES']).read_text(encoding='utf-8'))
                 elif '/commits/merge' in args:
                     print(os.environ['FAKE_MERGED_TREE'])
+                elif '/commits/head' in args and '.commit.message' in args:
+                    print(os.environ['FAKE_MESSAGE'])
                 elif '/commits/head' in args:
-                    print(json.dumps({'commit': {'tree': {'sha': os.environ['FAKE_TREE']},
-                                                 'message': os.environ['FAKE_MESSAGE']}}))
+                    print(os.environ['FAKE_TREE'])
                 else:
                     sys.exit(2)
-                '''))
+                '''), encoding='utf-8')
+            # A bash wrapper rather than a shebang naming the interpreter: on
+            # Windows that path is C:\...\python.exe, often with a space in it.
+            # Bytes, so Windows text mode cannot turn the newlines into CRLF.
+            gh = directory / 'gh'
+            gh.write_bytes(('#!/usr/bin/env bash\n'
+                            f'exec "{Path(sys.executable).as_posix()}" "{(directory / "gh.py").as_posix()}" "$@"\n').encode())
             gh.chmod(0o755)
+            # A file, not an environment variable: Windows caps a variable at
+            # 32767 characters, and the 3000-file case is longer than that.
+            files = directory / 'files.txt'
+            files.write_text('\n'.join(paths), encoding='utf-8')
             output = directory / 'outputs'
             env = {**os.environ, 'PATH': f'{directory}{os.pathsep}{os.environ["PATH"]}',
+                   'PYTHON': Path(sys.executable).as_posix(),
                    'REPO': 'owner/repo', 'EVENT_NAME': event, 'PR_NUMBER': '1',
                    'HEAD_SHA': 'head', 'MERGE_SHA': 'merge', 'RUNNER_TEMP': temporary,
-                   'GITHUB_OUTPUT': str(output), 'FAKE_FILES': '\n'.join(paths),
+                   'GITHUB_OUTPUT': str(output), 'FAKE_FILES': str(files),
                    'FAKE_TREE': TREE, 'FAKE_MERGED_TREE': merged_tree,
                    'FAKE_MESSAGE': message, 'FAKE_FAILURE': failure}
             result = subprocess.run(['bash', '-c', textwrap.dedent(shell)], cwd=root,
-                                    env=env, capture_output=True, text=True)
-            return result, output.read_text() if output.exists() else ''
+                                    env=env, capture_output=True, encoding='utf-8')
+            return result, output.read_text(encoding='utf-8') if output.exists() else ''
 
     def test_missing_attestation_blocks_the_workflow_without_job_outputs(self):
         result, outputs = self.run_plan()

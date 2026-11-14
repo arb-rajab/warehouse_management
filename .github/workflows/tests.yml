@@ -35,6 +35,23 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
+# Every job runs on the team VPS's self-hosted Windows runners
+# (docs/self-hosted-runner.md), never on GitHub-hosted minutes. The repository
+# variable CI_RUNNER_LABELS overrides the labels for all jobs at once; it holds
+# JSON, e.g. ["self-hosted","windows","warehouse-vps"] or "ubuntu-latest".
+# Unset, the jobs wait for the VPS: there is no hosted fallback. Under
+# workflow_call (deploy.yml) `vars` resolves in the caller's repository, which
+# is this one. Steps that differ by runner test runner.environment
+# ('github-hosted' or 'self-hosted'): a self-hosted runner brings PHP, Python,
+# gh and Git Bash itself and keeps its own tool, Composer, npm and Playwright
+# caches, so actions/cache and setup-php run only on GitHub-hosted runners.
+#
+# Every `run:` step is bash: Git for Windows' bash on the VPS, so the scripts
+# stay POSIX and identical on a Linux runner.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # Enforces local attestation before any expensive job can start. Ordinary
   # code PRs need every planned group on the exact head and merged tree;
@@ -46,12 +63,16 @@ jobs:
   plan:
     name: Plan CI jobs
     if: github.event.pull_request.draft != true
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 5
     permissions:
       contents: read
       actions: read
       pull-requests: read
+    env:
+      # Windows Python reads files, pipes and arguments in the ANSI code page
+      # unless UTF-8 mode is on; commit messages and paths are UTF-8.
+      PYTHONUTF8: '1'
     outputs:
       php: ${{ steps.plan.outputs.php }}
       mysql: ${{ steps.plan.outputs.mysql }}
@@ -69,8 +90,22 @@ jobs:
             .github/workflows/tests.yml
           sparse-checkout-cone-mode: false
 
+      # python.org's Windows installer provides `python` and `py`, not
+      # `python3` (where `python3` exists it may be the Microsoft Store alias,
+      # which only opens the Store), so use the first that really runs 3.10+.
+      - name: Find Python
+        run: |
+          for candidate in python3 python py; do
+            if "$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 10))' > /dev/null 2>&1; then
+              echo "PYTHON=$candidate" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo '::error::No Python 3.10+ on PATH (tried python3, python and py).'
+          exit 1
+
       - name: Test the planner
-        run: python3 .github/scripts/ci_plan_test.py
+        run: '"$PYTHON" .github/scripts/ci_plan_test.py'
 
       - name: Decide which jobs this change needs
         id: plan
@@ -84,9 +119,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Windows Python prints CRLF; a `true\r` output would never equal
+          # 'true' and would skip every job, so strip the CR before the runner
+          # reads the outputs. jq is not used: Git Bash does not ship it, and
+          # gh's own --jq does the same job.
           finish() {
             echo "$1"
-            python3 .github/scripts/ci_plan.py "${@:2}" | tee -a "$GITHUB_OUTPUT"
+            "${PYTHON:-python3}" .github/scripts/ci_plan.py "${@:2}" | tr -d '\r' | tee -a "$GITHUB_OUTPUT"
             exit 0
           }
 
@@ -98,13 +137,11 @@ jobs:
             gh api "repos/$REPO/commits/$1" --jq '.commit.tree.sha'
           }
 
-          if ! merge_tree="$(tree_of "$MERGE_SHA")" || ! head_json="$(gh api "repos/$REPO/commits/$HEAD_SHA")"; then
+          if ! merge_tree="$(tree_of "$MERGE_SHA")" || ! head_tree="$(tree_of "$HEAD_SHA")" \
+            || ! gh api "repos/$REPO/commits/$HEAD_SHA" --jq '.commit.message' > "$RUNNER_TEMP/head-message.txt"; then
             echo '::error::Could not read the PR commits; refusing to start paid CI without verifying attestation.'
             exit 1
           fi
-
-          head_tree="$(jq -r '.commit.tree.sha' <<< "$head_json")"
-          jq -r '.commit.message' <<< "$head_json" > "$RUNNER_TEMP/head-message.txt"
 
           # The files API lists at most 3000 files; incomplete coverage cannot
           # establish either an exemption or a valid attestation.
@@ -128,7 +165,7 @@ jobs:
     name: Prettier
     needs: plan
     if: needs.plan.outputs.js == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -155,7 +192,7 @@ jobs:
     name: JS checks (ESLint, vue-tsc, Vitest)
     needs: plan
     if: needs.plan.outputs.js == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 30
     steps:
       - name: Checkout code
@@ -187,7 +224,7 @@ jobs:
     name: Pint
     needs: plan
     if: needs.plan.outputs.php == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -209,7 +246,7 @@ jobs:
     name: Deploy script
     needs: plan
     if: needs.plan.outputs.deploy-script == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -224,7 +261,7 @@ jobs:
     name: PHPStan
     needs: plan
     if: needs.plan.outputs.php == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -251,7 +288,7 @@ jobs:
       needs.plan.outputs.php == 'true' &&
       contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -302,7 +339,7 @@ jobs:
       needs.plan.outputs.mysql == 'true' &&
       contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     services:
       mysql:
@@ -378,7 +415,7 @@ jobs:
     name: Dependency audit
     needs: plan
     if: needs.plan.outputs.audit == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -386,12 +423,20 @@ jobs:
         with:
           persist-credentials: false
 
+      # setup-php warns against several self-hosted runners on one machine
+      # (parallel jobs conflict over its global PHP install), so a self-hosted
+      # runner brings its own PHP; see the same split in setup-backend.
       - name: Setup PHP
+        if: runner.environment == 'github-hosted'
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
           php-version: '8.5'
           tools: composer:v2
           coverage: none
+
+      - name: Check the runner's PHP
+        if: runner.environment != 'github-hosted'
+        run: bash .github/scripts/require-php.sh 8.5
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -416,7 +461,7 @@ jobs:
       needs.plan.outputs.e2e == 'true' &&
       contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
     steps:
       - name: Checkout code
@@ -441,14 +486,35 @@ jobs:
         id: playwright-version
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
 
+      # One browser directory per runner: the tool cache is per runner
+      # instance, so runners sharing the VPS never install into the same
+      # directory, and a self-hosted runner keeps its browser between jobs.
+      # The default (~/.cache/ms-playwright on Linux, %LOCALAPPDATA% on
+      # Windows) would be shared by every runner under one account.
+      - name: Locate Playwright browsers
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TOOL_CACHE/ms-playwright" >> "$GITHUB_ENV"
+
       - name: Cache Playwright browsers
+        if: runner.environment == 'github-hosted'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/ms-playwright
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
+      # --with-deps installs system libraries with apt on Linux, and on Windows
+      # Server runs Install-WindowsFeature Server-Media-Foundation, which needs
+      # administrator rights. A self-hosted runner is provisioned with those
+      # once (docs/self-hosted-runner.md) instead of on every job. A missing
+      # library breaks the browser and fails the tests; it cannot pass one.
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        env:
+          HOSTED_RUNNER: ${{ runner.environment == 'github-hosted' }}
+        run: |
+          if [ "$HOSTED_RUNNER" = true ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install chromium
+          fi
 
       - name: Run E2E Tests
         run: npm run test:e2e
