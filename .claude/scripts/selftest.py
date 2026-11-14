@@ -293,6 +293,17 @@ export default laravel({
             'the MySQL files attest runs are the ones the CI job runs',
             all(path in workflow for path in pre_push_check.MYSQL_TESTS),
         )
+        no_groups = dict.fromkeys(pre_push_check.ci_plan.GROUPS, False)
+        check(
+            'attest always adds the dependency audit when anything runs',
+            pre_push_check.attest_groups({**no_groups, 'php': True}) == ['php', 'audit']
+            and pre_push_check.attest_groups({**no_groups, 'js': True, 'php': True, 'audit': True}) == ['js', 'php', 'audit'],
+            str(pre_push_check.attest_groups({**no_groups, 'php': True})),
+        )
+        check(
+            'attest adds nothing when no group is needed',
+            pre_push_check.attest_groups(no_groups) == [],
+        )
         check(
             'attest runs groups in dependency order',
             pre_push_check.ATTEST_ORDER == ('js', 'php', 'mysql', 'e2e', 'audit', 'deploy-script')

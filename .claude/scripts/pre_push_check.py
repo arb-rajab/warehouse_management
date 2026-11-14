@@ -46,7 +46,10 @@ and fails loudly when it cannot.
 says the branch needs, unscoped and in full, *including* the ones the modes
 above leave to CI: the migration tests on a local MySQL (install_mysql.sh),
 Playwright on the preinstalled Chromium, the composer/npm audits and the
-deploy-script test. When all of them pass it amends the unpushed head commit with
+deploy-script test. The audits run on every attested change, not only when a
+lockfile changes: an advisory published since the last dependency change would
+otherwise first fail at deploy time (deploy-remote.sh audits every release).
+When all of them pass it amends the unpushed head commit with
 
     CI-Verified: tree=<head tree sha> groups=<the groups that ran and passed>
 
@@ -138,6 +141,19 @@ MYSQL_TESTS = [
 # Order the groups run in under --attest; `build` is inserted before the first
 # group that needs the Vite manifest.
 ATTEST_ORDER = ('js', 'php', 'mysql', 'e2e', 'audit', 'deploy-script')
+
+
+def attest_groups(needed: dict[str, bool]) -> list[str]:
+    """The groups --attest runs: the planned ones, plus the dependency audit
+    whenever anything runs at all. The audit reads only the lockfiles and takes
+    seconds, and the deploy audits every release against the advisories known
+    on that day, so a new advisory against an unchanged lockfile is caught here,
+    before the push, rather than by a failed deploy. CI ignores an attested
+    group it did not plan, so the extra group never weakens the gate."""
+    if not any(needed.values()):
+        return []
+
+    return [group for group in ATTEST_ORDER if needed.get(group) or group == 'audit']
 
 ESLINT_SUFFIXES = ('.js', '.mjs', '.cjs', '.ts', '.tsx', '.vue')
 
@@ -610,8 +626,12 @@ def attest(base: str, *, serial: bool = False) -> int:
         return 2
 
     needed = ci_plan.plan(files)
-    wanted = [group for group in ATTEST_ORDER if needed.get(group)]
-    print(f'\n{len(files)} changed file(s) since {base}; CI groups needed: {", ".join(wanted) or "none"}.')
+    wanted = attest_groups(needed)
+    print(f'\n{len(files)} changed file(s) since {base}; CI groups needed: '
+          f'{", ".join(group for group in ATTEST_ORDER if needed.get(group)) or "none"}.')
+
+    if wanted and not needed.get('audit'):
+        print('The dependency audit runs too: the deploy audits every release against the current advisories.')
 
     if not wanted:
         print('Nothing to attest: no CI check reads the changed files.')

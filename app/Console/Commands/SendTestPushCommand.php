@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ReadsTextInput;
 use App\Services\FcmPushService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -11,6 +12,8 @@ use Illuminate\Console\Command;
 #[Description('Send one test push notification to a device token, through the same service the order pushes use')]
 class SendTestPushCommand extends Command
 {
+    use ReadsTextInput;
+
     public function handle(FcmPushService $push): int
     {
         if (! $push->isConfigured()) {
@@ -21,7 +24,7 @@ class SendTestPushCommand extends Command
 
         $this->components->info('Sending with Firebase project "'.$push->project().'".');
 
-        $result = $push->send((string) $this->argument('token'), (string) $this->option('title'), (string) $this->option('body'), ['item_type' => 'test', 'item_type_id' => 0]);
+        $result = $push->send($this->textArgument('token'), $this->textOption('title') ?? '', $this->textOption('body') ?? '', ['item_type' => 'test', 'item_type_id' => 0]);
 
         return match ($result) {
             FcmPushService::SENT => tap(self::SUCCESS, fn () => $this->components->info('Sent. The phone should show it.')),

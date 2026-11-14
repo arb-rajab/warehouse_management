@@ -54,7 +54,13 @@ attesting. The auto-selection is `attest_blocker` in the script.
 `pre_push_check.py --attest` runs every group the planner says the branch needs,
 in full, including Playwright (preinstalled Chromium), the migration tests on
 the local MySQL that `install_mysql.sh` provides, the composer and npm audits
-and the deploy-script test. When they pass it amends the *unpushed* head commit
+and the deploy-script test. The audit group runs on **every** attested change,
+not only when the planner asks for it (`attest_groups()`): `deploy-remote.sh`
+audits every release against the advisories known that day, so a new advisory
+against an unchanged lockfile used to surface only as a failed deploy. It reads
+the lockfiles and takes seconds; CI ignores an attested group it did not plan.
+An advisory published after the push can still fail the deploy: bump the
+package (`composer update <package>`) and attest again. When they pass it amends the *unpushed* head commit
 with `CI-Verified: tree=<head tree> groups=<passed groups>`. The `plan` job
 reads that trailer from the PR head commit and skips exactly those groups, but
 only when:
