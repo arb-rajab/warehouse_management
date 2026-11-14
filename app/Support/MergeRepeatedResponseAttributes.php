@@ -7,6 +7,8 @@ use Dedoc\Scramble\Attributes\WithRelations;
 use Dedoc\Scramble\Extensions\OperationExtension;
 use Dedoc\Scramble\Infer\Services\FileNameResolver;
 use Dedoc\Scramble\Support\Generator\Combined\AnyOf;
+use Dedoc\Scramble\Support\Generator\MediaType;
+use Dedoc\Scramble\Support\Generator\MissingValue;
 use Dedoc\Scramble\Support\Generator\Operation;
 use Dedoc\Scramble\Support\Generator\Reference;
 use Dedoc\Scramble\Support\Generator\Response;
@@ -86,9 +88,8 @@ class MergeRepeatedResponseAttributes extends OperationExtension
         foreach ($mediaTypes as $mediaType) {
             $types = [];
             foreach ($parts as $part) {
-                if (isset($part->content[$mediaType])) {
-                    $schema = $part->content[$mediaType];
-                    $types[] = $schema instanceof Reference ? $schema->resolve()->type : $schema->type;
+                if (isset($part->content[$mediaType]) && ($type = $this->contentType($part->content[$mediaType])) !== null) {
+                    $types[] = $type;
                 }
             }
 
@@ -96,6 +97,18 @@ class MergeRepeatedResponseAttributes extends OperationExtension
         }
 
         return $merged;
+    }
+
+    /**
+     * The type a response's content entry describes. In Scramble 0.13.53 an
+     * entry may be a MediaType wrapping the schema rather than the schema.
+     */
+    private function contentType(MediaType|Schema|Reference $content): ?Type
+    {
+        $schema = $content instanceof MediaType ? $content->schema : $content;
+        $schema = $schema instanceof Reference ? $schema->resolve() : $schema;
+
+        return $schema instanceof Schema ? $schema->type : null;
     }
 
     /**
@@ -152,10 +165,11 @@ class MergeRepeatedResponseAttributes extends OperationExtension
         $values = [];
         $shapes = [];
         foreach ($types as $type) {
-            $literals = $type->const !== null ? [$type->const] : $type->enum;
+            // Scramble marks "no const" with a MissingValue (null is a value it can hold).
+            $literals = $type->const instanceof MissingValue ? $type->enum : [$type->const];
             $values = $literals === [] || $values === null ? null : [...$values, ...$literals];
             $shape = $type->clone()->enum([]);
-            $shape->const = null;
+            $shape->const = new MissingValue;
             $shapes[json_encode($shape->toArray(), JSON_THROW_ON_ERROR)] = $shape;
         }
 

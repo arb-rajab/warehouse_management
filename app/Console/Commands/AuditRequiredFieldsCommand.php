@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ReadsTextInput;
 use App\Support\RequiredFields\RequiredFieldsAudit;
 use App\Support\RequiredFields\RequiredFieldsReport;
 use Illuminate\Console\Attributes\Description;
@@ -14,6 +15,8 @@ use Spatie\Permission\PermissionRegistrar;
 #[Description('Development only, read-only: cross-check which fields the server requires against what each Vue and storefront form requires and marks')]
 class AuditRequiredFieldsCommand extends Command
 {
+    use ReadsTextInput;
+
     /**
      * Execute the console command. It reads the code and calls each
      * FormRequest's rules() in a rolled-back transaction on a scratch
@@ -30,10 +33,10 @@ class AuditRequiredFieldsCommand extends Command
         $this->useScratchDatabase();
         $audit = RequiredFieldsAudit::make();
         $result = $audit->run($audit->vueForms(), $audit->bladeForms());
-        $date = (string) ($this->option('date') ?: now()->format('Ymd'));
+        $date = $this->textOption('date') ?: now()->format('Ymd');
         $report = new RequiredFieldsReport($result, $date);
 
-        $directory = base_path((string) $this->option('output'));
+        $directory = base_path($this->textOption('output') ?? '');
         $base = "{$directory}/required-fields-audit-{$date}";
         file_put_contents("{$base}.md", $report->toMarkdown());
         file_put_contents("{$base}.json", $report->toJson());

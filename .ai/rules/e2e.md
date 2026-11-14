@@ -24,6 +24,9 @@ Both layouts render through `BackofficeShell` (layouts.md). From 640 px the lang
 Use `switchLocale(page, label)` from that helper for locale buttons. It waits
 for LanguageSwitcher's full-page reload before another navigation starts;
 checking `dir` alone can race the reload and cancel the next visit.
+It also waits until exactly one switcher is visible: the sidebar copy is
+hidden by `sm:hidden`, which a loaded machine can apply after the page is
+already interactive (a strict-mode "resolved to 2 elements" failure).
 
 ## Select by role, name or test id, not by a palette class
 The back office has no raw palette classes any more (js.md "Back-office colours"), so a spec must not locate an element by one: `admin-pagination-dark-mode.spec.ts` finds the active page link by `nav .bg-brand` (the shared `selectedToggleClass`), the sign-in frame by `data-testid` `auth-logo`/`auth-brand`/`auth-area`. Computed colours (contrast, `toHaveCSS`) are fine and are how dark mode is asserted; a colour a spec compares to a literal RGB is a token value (`--surface` in dark is `rgb(30, 26, 23)`, see `store-search-select.spec.ts`), so update it with the token, not the other way round. Native controls follow dark mode (`html` `color-scheme: dark`, asserted in `backoffice-shell.spec.ts`).

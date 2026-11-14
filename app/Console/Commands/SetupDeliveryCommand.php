@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ReadsTextInput;
 use App\Models\BusinessSetting;
 use App\Models\Carrier;
 use App\Models\CarrierRange;
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\DB;
 #[Description('Give a development database one carrier for a country and, optionally, a minimum order amount (what GET delivery-info needs to be tested)')]
 class SetupDeliveryCommand extends Command
 {
+    use ReadsTextInput;
+
     public function handle(): int
     {
         if (app()->isProduction()) {
@@ -34,30 +37,33 @@ class SetupDeliveryCommand extends Command
             return self::FAILURE;
         }
 
-        $country = Country::query()->where('name', $this->option('country'))->first();
+        $countryName = $this->textOption('country');
+        $country = Country::query()->where('name', $countryName)->first();
 
         if ($country === null) {
-            $this->components->error('There is no country named "'.$this->option('country').'".');
+            $this->components->error('There is no country named "'.$countryName.'".');
 
             return self::FAILURE;
         }
 
-        $fee = $this->option('fee-mat-id');
+        $fee = $this->textOption('fee-mat-id');
 
-        if (filled($fee) && (! ctype_digit((string) $fee) || ! Product::query()->whereKey((int) $fee)->exists())) {
+        if (filled($fee) && (! ctype_digit($fee) || ! Product::query()->whereKey((int) $fee)->exists())) {
             $this->components->error('There is no product with id "'.$fee.'" for the delivery fee.');
 
             return self::FAILURE;
         }
 
-        if (filled($this->option('minimum')) && (! is_numeric($this->option('minimum')) || (float) $this->option('minimum') < 0)) {
+        $minimum = $this->textOption('minimum');
+
+        if (filled($minimum) && (! is_numeric($minimum) || (float) $minimum < 0)) {
             $this->components->error('--minimum must be a number of at least 0.');
 
             return self::FAILURE;
         }
 
         // The store's delivery models were never given $fillable lists, so they are written unguarded here.
-        DB::transaction(fn () => Model::unguarded(function () use ($country, $fee): void {
+        DB::transaction(fn () => Model::unguarded(function () use ($country, $fee, $minimum): void {
             // A country with zone 0 is in no zone, so no carrier price can match it.
             $zoneId = $country->zone_id ?: Zone::query()->firstOrCreate(['name' => $country->name], ['status' => 1])->id;
             Country::query()->whereKey($country->id)->update(['zone_id' => $zoneId]);
@@ -68,9 +74,9 @@ class SetupDeliveryCommand extends Command
             $range = CarrierRange::query()->firstOrCreate(['carrier_id' => $carrier->id, 'billing_type' => 'weight_based'], ['delimiter1' => 0, 'delimiter2' => 1000000]);
             CarrierRangePrice::query()->updateOrCreate(['carrier_id' => $carrier->id, 'carrier_range_id' => $range->id, 'zone_id' => $zoneId], ['price' => (float) $this->option('price')]);
 
-            if (filled($this->option('minimum'))) {
+            if (filled($minimum)) {
                 $this->setting('minimum_order_amount_check', 1);
-                $this->setting('minimum_order_amount', (float) $this->option('minimum'));
+                $this->setting('minimum_order_amount', (float) $minimum);
             }
 
             if (filled($fee)) {
@@ -82,8 +88,8 @@ class SetupDeliveryCommand extends Command
 
         Cache::forget('business_settings');
 
-        if (filled($this->option('minimum'))) {
-            $this->components->info('Minimum order amount '.(float) $this->option('minimum').($fee ? ', delivery fee product '.$fee.'.' : '. No --fee-mat-id given: an order below it is not charged a fee.'));
+        if (filled($minimum)) {
+            $this->components->info('Minimum order amount '.(float) $minimum.($fee ? ', delivery fee product '.$fee.'.' : '. No --fee-mat-id given: an order below it is not charged a fee.'));
         }
 
         if (get_setting('shipping_type') !== 'carrier_wise_shipping') {
