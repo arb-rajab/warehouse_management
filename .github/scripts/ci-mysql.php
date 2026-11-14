@@ -234,6 +234,6 @@ match ($argv[1] ?? '') {
     'check' => check(),
     'create' => create(),
     'drop' => drop(),
-    'name' => print(databaseName()."\n"),
+    'name' => print (databaseName()."\n"),
     default => fail('usage: php .github/scripts/ci-mysql.php check|create|drop|name'),
 };
