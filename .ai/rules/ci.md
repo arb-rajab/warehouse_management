@@ -1,6 +1,6 @@
 ---
 paths:
-  - '.github/**,.claude/scripts/pre_push_check.py,.claude/scripts/install_playwright.py,.claude/hooks/session-start.sh'
+  - '.github/**,.github/runner-setup/**,docs/self-hosted-runner.md,.claude/scripts/pre_push_check.py,.claude/scripts/install_playwright.py,.claude/hooks/session-start.sh'
 ---
 
 # CI check selection and attested pre-push verification
@@ -186,6 +186,13 @@ symlinks, one of them dangling, and Git for Windows' `ln -s` copies by default.
 MSYS system-file symlinks need no Windows privilege and may dangle, but only
 MSYS tools follow them; `nativestrict` refuses a missing target (msys2-runtime
 `symlink_native`). The test stops first if `ln -s` does not make real links.
+
+## The VPS and its provisioning scripts
+
+The runbook is [docs/self-hosted-runner.md](../../docs/self-hosted-runner.md) and the scripts are in
+[.github/runner-setup/](../../.github/runner-setup/README.md); neither has run on Windows yet. When a
+workflow starts needing something new from a runner (a tool, a host, an environment variable, a changed
+error message, the `require-php.sh` extension list), update the scripts and the runbook's table too.
 
 ## `deploy-remote.sh` and the host's privileges
 
