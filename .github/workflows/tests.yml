@@ -341,34 +341,54 @@ jobs:
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
     runs-on: ${{ fromJSON(vars.CI_RUNNER_LABELS || '["self-hosted","windows","warehouse-vps"]') }}
     timeout-minutes: 20
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: warehouse_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-    env:
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: warehouse_test
-      DB_USERNAME: root
-      DB_PASSWORD: password
+    # No `services:` container: those run only on Linux runners. The VPS runs
+    # one native MySQL 8.4 service that all its runner instances share
+    # (docs/self-hosted-runner.md); each job creates, migrates and drops a
+    # database of its own (.github/scripts/ci-mysql.php), named after the
+    # runner, run and attempt, so concurrent jobs never meet. The server and
+    # account come from the runner's environment (CI_MYSQL_HOST, CI_MYSQL_PORT,
+    # CI_MYSQL_USER, CI_MYSQL_PASSWORD), not from the repository. No DB_* is set
+    # here: setup-backend migrates its usual SQLite, and the create step below
+    # points every later step at the job's MySQL database.
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      # A GitHub-hosted runner (CI_RUNNER_LABELS="ubuntu-latest") has no MySQL
+      # 8.4 of its own, so it starts the image the job used to run as a
+      # service. It starts while the backend installs; the check below waits.
+      - name: Start MySQL 8.4 (GitHub-hosted runners)
+        if: runner.environment == 'github-hosted'
+        run: |
+          docker run --detach --name ci-mysql --publish 127.0.0.1:3306:3306 \
+            --env MYSQL_ROOT_PASSWORD=password mysql:8.4
+          {
+            echo 'CI_MYSQL_HOST=127.0.0.1'
+            echo 'CI_MYSQL_PORT=3306'
+            echo 'CI_MYSQL_USER=root'
+            echo 'CI_MYSQL_PASSWORD=password'
+            echo 'CI_MYSQL_WAIT_SECONDS=120'
+          } >> "$GITHUB_ENV"
+
       - name: Setup backend
         uses: ./.github/actions/setup-backend
+
+      # Fails naming the missing CI_MYSQL_* setting, or the address it could
+      # not reach, instead of letting migrations fail on a connection error.
+      - name: Check the runner's MySQL
+        run: php .github/scripts/ci-mysql.php check
+
+      - name: Create this job's MySQL database
+        id: database
+        run: php .github/scripts/ci-mysql.php create
+
+      # What setup-backend's migrate did when this job set DB_* job-wide: a
+      # full migration on MySQL, which the build below also needs, since
+      # Wayfinder boots controllers that read settings from the database.
+      - name: Migrate this job's MySQL database
+        run: php artisan migrate --force
 
       - name: Setup frontend
         uses: ./.github/actions/setup-frontend
@@ -407,6 +427,12 @@ jobs:
           tests/Feature/SellerDigitalProductPersistenceTest.php
           tests/Feature/SellerCatalogueRowRulesTest.php
           tests/Feature/Store/Admin/ProductMySqlEditTest.php
+
+      # Runs whatever happened above, and never fails the job: a database a
+      # killed job leaves behind is dropped by the next create on this runner.
+      - name: Drop this job's MySQL database
+        if: always()
+        run: php .github/scripts/ci-mysql.php drop
 
   # `composer audit` reads composer.lock and `npm audit` reads
   # package-lock.json, so neither needs the dependencies installed. Abandoned

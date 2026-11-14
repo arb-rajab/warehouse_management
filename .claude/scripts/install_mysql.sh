@@ -17,8 +17,9 @@
 # Measured in the web sandbox: the proxy answers HTTPS to the Ubuntu archive but
 # not the plain-HTTP mirrors apt is configured with ("Could not resolve"), so the
 # sources are switched to https:// first. The server is Ubuntu's MySQL 8.0, CI
-# uses mysql:8.4; the migration tests it runs behave the same on both. Credentials
-# match .github/workflows/tests.yml (root / password, database warehouse_test).
+# uses MySQL 8.4; the migration tests it runs behave the same on both. Credentials
+# match pre_push_check.py's MYSQL_ENV (root / password, database warehouse_test);
+# CI instead creates a database per job (.github/scripts/ci-mysql.php).
 # The container resets the process list between sessions, so the server must be
 # started again each time, which is why this runs on every SessionStart.
 

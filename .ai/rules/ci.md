@@ -96,7 +96,7 @@ Constraints that keep it honest:
   trailer; ordinary code PRs reject that partial coverage. A failing check
   records nothing.
 - It is self-attested: CI cannot prove the local run happened, and the sandbox
-  differs from CI (local MySQL 8.0 against `mysql:8.4`). Do not amend a trailer
+  differs from CI (local MySQL 8.0 against MySQL 8.4). Do not amend a trailer
   in by hand.
 - Jobs that `needs` Pint or Prettier must accept a skipped result, or an
   attested php/js group would silently skip Pest, MySQL and E2E too.
@@ -145,6 +145,20 @@ before planning). Its docstring is the rule list. The constraints behind it:
   instead of falling back to paid CI. The three jobs using `!cancelled()` also
   require a successful plan. Skipping uses job-level `if:`, never narrower `on:`
   filters. Do not rename jobs: branch protection may require their check names.
+
+## No containers: the runners are native Windows
+
+Service and job containers run only on Linux runners, so no workflow uses
+`services:` or `container:`. `Pest (MySQL migrations)` uses the VPS's one native
+MySQL 8.4, shared by every runner instance: `.github/scripts/ci-mysql.php`
+checks it (failing with the missing `CI_MYSQL_*` setting or the address it
+could not reach), creates a `whci_<runner>_<run>_<attempt>` database, exports
+`DB_*` to later steps, and drops it in an `if: always()` step. Credentials come
+from the runner's environment, never the repository. A runner runs one job at
+a time, so `create` drops whatever its own runner left behind; runner names
+must therefore be unique. On a GitHub-hosted runner the job starts `mysql:8.4`
+with `docker run` and points `CI_MYSQL_*` at it. Semgrep runs from the official
+wheel in a per-job venv, and `semgrep_report.py` fails a scan of zero files.
 
 ## `deploy-remote.sh` and the host's privileges
 
