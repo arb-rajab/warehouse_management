@@ -62,7 +62,8 @@ test('carrier edit round trips every range and zone price with narrow options', 
 
 test('paid carrier creation preserves both billing modes and zone prices', function (string $mode) {
     actingAsStoreUser(createStoreStaff('manage_carriers'));
-    $this->post('/temp/admin/carriers', [...$this->payload, 'carrier_name' => 'Express', 'billing_type' => $mode])->assertRedirect(route('carriers.index'));
+    $this->post('/temp/admin/carriers', [...$this->payload, 'carrier_name' => 'Express', 'billing_type' => $mode])->assertRedirect(route('carriers.index'))
+        ->assertInertiaFlash('success', 'Carrier has been created successfully');
     $id = DB::table('carriers')->where('name', 'Express')->value('id');
     $this->assertDatabaseHas('carrier_ranges', ['carrier_id' => $id, 'billing_type' => $mode, 'delimiter1' => 10, 'delimiter2' => 20]);
     $this->assertDatabaseHas('carrier_range_prices', ['carrier_id' => $id, 'zone_id' => $this->fixture['otherZone'], 'price' => 9]);
@@ -129,7 +130,8 @@ test('every carrier action isolates the WMS guard and preserves tariff data', fu
 
 test('carrier status and deletion preserve filters and deletion removes only its tariff', function () {
     actingAsStoreUser(createStoreStaff('manage_carriers'));
-    $this->post('/temp/admin/carriers/update_status?page=2&search=Parcel', ['id' => $this->carrier->id, 'status' => false])->assertRedirect(route('carriers.index', ['page' => 2, 'search' => 'Parcel']));
+    $this->post('/temp/admin/carriers/update_status?page=2&search=Parcel', ['id' => $this->carrier->id, 'status' => false])->assertRedirect(route('carriers.index', ['page' => 2, 'search' => 'Parcel']))
+        ->assertInertiaFlash('success', 'Carrier status has been updated successfully');
     $this->assertDatabaseHas('carriers', ['id' => $this->carrier->id, 'status' => 0]);
     $noise = DB::table('carriers')->insertGetId(['name' => 'Noise', 'transit_time' => '1']);
     $this->delete('/temp/admin/carriers/'.$this->carrier->id.'?page=2&per_page=10')->assertRedirect(route('carriers.index', ['page' => 2, 'per_page' => 10]));

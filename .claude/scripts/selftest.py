@@ -90,10 +90,12 @@ def main() -> int:
         import build_without_fonts
 
         source = build_without_fonts.CONFIG.read_text()
-        check('bundled local fonts are preserved', build_without_fonts.fontless_config(source) == source)
-        for weight in (400, 500, 600):
-            font = SCRIPTS.parents[1] / f'resources/fonts/instrument-sans/instrument-sans-{weight}-normal.woff2'
-            check(f'Instrument Sans {weight} is bundled as WOFF2', font.read_bytes()[:4] == b'wOF2')
+        check('the current config (no remote font) is built unchanged', build_without_fonts.fontless_config(source) == source)
+        check('vite.config.ts fetches no remote font', 'bunny' not in source and 'fonts.bunny.net' not in source)
+        local_only = """import { local } from 'laravel-vite-plugin/fonts';
+export default laravel({ fonts: [local('Plex', { variants: [] })] });
+"""
+        check('bundled local fonts are preserved', build_without_fonts.fontless_config(local_only) == local_only)
 
         legacy = """import { bunny } from 'laravel-vite-plugin/fonts';
 export default laravel({
@@ -111,10 +113,10 @@ export default laravel({
         )
 
         try:
-            build_without_fonts.fontless_config('export default {};\n')
-            check('a config without the font plugin is rejected, not built', False)
+            build_without_fonts.fontless_config("import { bunny } from 'laravel-vite-plugin/fonts';\nexport default {};\n")
+            check('a Bunny import without its fonts option is rejected, not built', False)
         except ValueError:
-            check('a config without the font plugin is rejected, not built', True)
+            check('a Bunny import without its fonts option is rejected, not built', True)
 
         print('pre_push_check.py')
         sys.path.insert(0, str(SCRIPTS))
@@ -207,6 +209,17 @@ export default laravel({
             return {label: command for label, command, _ in pre_push_check.scoped_steps(list(files))}
 
         check(
+            'Pint is not handed a file pint.json excludes',
+            scoped('routes/shop-web.php', 'app/Models/Pallet.php').get('Pint') == ['vendor/bin/pint', '--test', 'app/Models/Pallet.php'],
+            str(scoped('routes/shop-web.php', 'app/Models/Pallet.php').get('Pint')),
+        )
+        check(
+            'a change touching only excluded files skips Pint but still runs the PHP suite',
+            'Pint' not in scoped('routes/shop-web.php') and 'Pest' in scoped('routes/shop-web.php'),
+            str(list(scoped('routes/shop-web.php'))),
+        )
+
+        check(
             'a docs-only change runs nothing',
             scoped('.ai/rules/index.md', 'AGENTS.md', '.claude/scripts/selftest.py') == {},
         )
@@ -279,6 +292,17 @@ export default laravel({
         check(
             'the MySQL files attest runs are the ones the CI job runs',
             all(path in workflow for path in pre_push_check.MYSQL_TESTS),
+        )
+        no_groups = dict.fromkeys(pre_push_check.ci_plan.GROUPS, False)
+        check(
+            'attest always adds the dependency audit when anything runs',
+            pre_push_check.attest_groups({**no_groups, 'php': True}) == ['php', 'audit']
+            and pre_push_check.attest_groups({**no_groups, 'js': True, 'php': True, 'audit': True}) == ['js', 'php', 'audit'],
+            str(pre_push_check.attest_groups({**no_groups, 'php': True})),
+        )
+        check(
+            'attest adds nothing when no group is needed',
+            pre_push_check.attest_groups(no_groups) == [],
         )
         check(
             'attest runs groups in dependency order',

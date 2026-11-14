@@ -18,7 +18,8 @@ test('bulk import writes pricing stocks uploads and sanitized content with the e
     $owner = createStoreAdmin();
     actingAsStoreUser(createStoreStaff('product_bulk_import'));
     $row = catalogueImportRow();
-    $this->post('/temp/admin/bulk-product-upload', ['bulk_file' => catalogueImportFile([$row])])->assertSessionHasNoErrors()->assertRedirect(route('product_bulk_upload.index'));
+    $this->post('/temp/admin/bulk-product-upload', ['bulk_file' => catalogueImportFile([$row])])->assertSessionHasNoErrors()->assertRedirect(route('product_bulk_upload.index'))
+        ->assertInertiaFlash('success', 'Products have been imported successfully');
     expect(session()->has('flash_notification'))->toBeFalse();
     $product = Product::query()->where('name', 'Imported dates')->firstOrFail();
     expect($product->user_id)->toBe($owner->id)

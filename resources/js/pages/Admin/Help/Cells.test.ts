@@ -7,6 +7,7 @@ import {
     index as helpIndex,
 } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
+import PalletTransferFields from '@/components/PalletTransferFields.vue';
 import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
@@ -179,6 +180,40 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(
             t('cells.palletActions.transfer.flatNumberLabel'),
         );
+    });
+
+    it('previews the real transfer fields with the destination warehouse select', () => {
+        const wrapper = mountPage();
+        const fields = wrapper.getComponent(PalletTransferFields);
+
+        expect(fields.props('warehouses')).toHaveLength(2);
+        expect(wrapper.text()).toContain(
+            t('cells.palletActions.transfer.warehouseLabel'),
+        );
+        expect(wrapper.find('#help-pallet-transfer-warehouse').exists()).toBe(
+            true,
+        );
+        expect(
+            wrapper
+                .get('#help-pallet-transfer-warehouse')
+                .element.closest('[inert]'),
+        ).not.toBeNull();
+    });
+
+    it("explains a transfer to another warehouse and previews the map's transfer button", () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('help.cells.managingPallets.transferBody'),
+        );
+        expect(
+            wrapper.get('[data-testid="help-map-transfer-button"]').text(),
+        ).toBe(t('warehouseMap.transferPallet'));
+        expect(
+            wrapper
+                .get('[data-testid="help-map-transfer-button"]')
+                .attributes('tabindex'),
+        ).toBe('-1');
     });
 
     it('links to the rows page, where cells and pallets are managed', () => {

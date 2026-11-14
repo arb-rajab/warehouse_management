@@ -7,6 +7,7 @@ use App\Events\SetTruckAvailability;
 use App\Http\Controllers\Concerns\ReservesTripTrucks;
 use App\Http\Controllers\Concerns\WritesTripCheckpoints;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\StoreMapTripRequest;
 use App\Http\Resources\Store\TripCheckpointResource;
 use App\Http\Resources\Store\TripMapTruckResource;
@@ -40,6 +41,7 @@ use Inertia\Response;
  */
 class TripMapController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ReservesTripTrucks;
     use WritesTripCheckpoints;
 
@@ -155,6 +157,7 @@ class TripMapController extends Controller implements HasMiddleware
         });
         $this->sortBasedOnShortestPath($trip);
         $this->driverService->notifyDriver($trip);
+        $this->flashSuccess('trip_has_been_created_successfully');
 
         return redirect()->route('trips.create-from-map');
     }

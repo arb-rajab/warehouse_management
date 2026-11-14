@@ -9,6 +9,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -63,11 +64,13 @@ test('an authenticated worker can list cell logs with every property the app rea
             'row_letter' => 'A',
             'cell_number' => 1,
             'flat_number' => 2,
+            'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         ],
         'related_cell' => [
             'row_letter' => 'B',
             'cell_number' => 2,
             'flat_number' => 1,
+            'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         ],
         'product' => [
             'id' => $product->id,
@@ -88,6 +91,12 @@ test('an authenticated worker can list cell logs with every property the app rea
         'created_at' => $log->created_at->toIso8601String(),
         'next_log_at' => null,
         'duration_seconds' => 0,
+        'batch_id' => null,
+        'reason' => null,
+        'old_note' => null,
+        'new_note' => null,
+        'old_product' => null,
+        'new_product' => null,
     ]);
 
     Carbon::setTestNow();
@@ -576,4 +585,57 @@ test('the cell log listing can be sorted by pallet expiration date', function ()
 
     $response->assertOk();
     expect(collect($response->json('data'))->pluck('id')->all())->toEqual([$soon->id, $late->id]);
+});
+
+test('the mobile cell logs can be filtered by warehouse', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    $noise = CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    expect(collect($this->getJson("/api/v1/cell-logs?warehouse_ids[]={$north->id}")->assertOk()->json('data'))->pluck('id')->all())
+        ->toBe([$inNorth->id])
+        ->and(collect($this->getJson('/api/v1/cell-logs')->json('data'))->pluck('id'))->toContain($noise->id);
+});
+
+test('a cell log names the warehouse of its cell and of its related cell, even when a transfer crosses warehouses', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $south = Warehouse::factory()->create(['name' => 'South']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $southRow = Row::factory()->for($south)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $log = CellStatusLog::factory()->create([
+        'cell_id' => $northRow->cells()->value('id'),
+        'related_cell_id' => $southRow->cells()->value('id'),
+        'action' => CellLogAction::TransferredOut,
+    ]);
+
+    $payload = $this->getJson('/api/v1/cell-logs')->assertOk()->json('data.0');
+
+    expect($payload['id'])->toBe($log->id)
+        ->and($payload['cell'])->toBe(['row_letter' => 'A', 'cell_number' => 1, 'flat_number' => 1, 'warehouse' => ['id' => $north->id, 'name' => 'North']])
+        ->and($payload['related_cell'])->toBe(['row_letter' => 'A', 'cell_number' => 1, 'flat_number' => 1, 'warehouse' => ['id' => $south->id, 'name' => 'South']]);
+});
+
+test('a cell log without a related cell has a null related_cell, and several logs name their own warehouses without lazy loading', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $south = Warehouse::factory()->create(['name' => 'South']);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1])->cells()->value('id'), 'related_cell_id' => null]);
+    $inSouth = CellStatusLog::factory()->create(['cell_id' => Row::factory()->for($south)->create(['cells_count' => 1, 'flats_count' => 1])->cells()->value('id'), 'related_cell_id' => null]);
+
+    $rows = collect($this->getJson('/api/v1/cell-logs')->assertOk()->json('data'))->keyBy('id');
+
+    expect($rows[$inNorth->id]['cell']['warehouse']['name'])->toBe('North')
+        ->and($rows[$inSouth->id]['cell']['warehouse']['name'])->toBe('South')
+        ->and($rows[$inNorth->id]['related_cell'])->toBeNull();
+});
+
+test('the cell log listing never contains an entry for an unplaced pallet, which has no cell to log against', function () {
+    actingAsMobileUser();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    $this->getJson('/api/v1/cell-logs')->assertOk()->assertJsonCount(0, 'data');
 });

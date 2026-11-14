@@ -6,6 +6,7 @@ import { SearchBox } from './SearchBox';
 import { StateChips } from './StateChips';
 import { Toolbar } from './Toolbar';
 import type { ToolbarState } from './Toolbar';
+import { WarehouseSwitcher } from './WarehouseSwitcher';
 
 afterEach(() => {
     document.body.innerHTML = '';
@@ -128,7 +129,11 @@ describe('StateChips', () => {
     });
 });
 
-function toolbar(partial: Partial<ToolbarState> = {}, helpUrl?: string) {
+function toolbar(
+    partial: Partial<ToolbarState> = {},
+    helpUrl?: string,
+    warehouses?: WarehouseSwitcher,
+) {
     const root = host();
     const slice = fakeSlice<ToolbarState>({
         view: '2d',
@@ -170,6 +175,7 @@ function toolbar(partial: Partial<ToolbarState> = {}, helpUrl?: string) {
         chips,
         products,
         helpUrl,
+        warehouses,
     );
 
     bar.mount();
@@ -178,6 +184,53 @@ function toolbar(partial: Partial<ToolbarState> = {}, helpUrl?: string) {
 }
 
 describe('Toolbar', () => {
+    it('puts the warehouse switcher in the brand, after the title, when the map has one', () => {
+        const apply = vi.fn();
+        const switcher = new WarehouseSwitcher(
+            fakeSlice({
+                options: [
+                    { id: 1, name: 'Main' },
+                    { id: 2, name: 'Annex' },
+                ],
+                selected: [2],
+            }),
+            keyI18n(),
+            { apply },
+        );
+        const { bar, root } = toolbar({}, undefined, switcher);
+        const brand = root.querySelector('.wms-brand')!;
+
+        expect(brand.classList.contains('has-warehouses')).toBe(true);
+        expect(
+            [...brand.children].map((child) =>
+                child.getAttribute('class')?.split(' ').pop(),
+            ),
+        ).toEqual([
+            'wms-brand__logo',
+            'wms-brand__text',
+            'wms-brand__sep',
+            'wms-warehouses',
+        ]);
+        expect(
+            brand.querySelector('.wms-warehouses__trigger')?.textContent,
+        ).toBe('Annex');
+
+        bar.dispose();
+        // disposed with the bar: its listeners are gone
+        click(switcher.element.querySelector('.wms-warehouses__trigger'));
+        expect(switcher.isOpen).toBe(false);
+    });
+
+    it('shows only the brand without a switcher', () => {
+        const { bar, root } = toolbar();
+        const brand = root.querySelector('.wms-brand')!;
+
+        expect(brand.classList.contains('has-warehouses')).toBe(false);
+        expect(brand.querySelector('.wms-warehouses')).toBeNull();
+        expect(brand.querySelector('.wms-brand__sep')).toBeNull();
+        bar.dispose();
+    });
+
     it('shows the brand and the 2D | 3D toggle with the active view lit', () => {
         const { bar, root, slice } = toolbar();
 

@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
 <template>
     <div ref="outerRef" class="relative">
         <div
-            class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
+            class="relative overflow-hidden rounded-lg border border-line bg-surface shadow-card"
         >
             <!--
                 Layout contract (store-table-layout.md): the table is as wide
@@ -215,20 +215,18 @@ onBeforeUnmount(() => {
                 <table
                     class="w-max min-w-full text-start text-sm whitespace-nowrap [&_td]:py-1.5"
                 >
-                    <thead
-                        class="bg-gray-50 text-gray-500 dark:bg-neutral-900 dark:text-neutral-400"
-                    >
+                    <thead class="bg-table-head text-muted">
                         <tr>
                             <th
                                 v-for="(column, index) in columns"
                                 :key="index"
-                                class="sticky top-0 z-10 bg-gray-50 px-4 py-2 font-medium shadow-[inset_0_-1px_0_#e5e7eb] dark:bg-neutral-900 dark:shadow-[inset_0_-1px_0_#262626]"
+                                class="sticky top-0 z-10 bg-table-head px-4 py-2 text-xs font-semibold tracking-wide uppercase shadow-[inset_0_-1px_0_var(--line)] rtl:text-sm rtl:tracking-normal"
                             >
                                 <div class="flex items-center gap-1">
                                     <button
                                         v-if="sortKey(column)"
                                         type="button"
-                                        class="inline-flex cursor-pointer items-center gap-1 hover:text-gray-900 dark:hover:text-white"
+                                        class="inline-flex cursor-pointer items-center gap-1 uppercase hover:text-ink"
                                         @click="emit('sort', sortKey(column)!)"
                                     >
                                         {{ columnLabel(column) }}
@@ -247,7 +245,7 @@ onBeforeUnmount(() => {
                                         />
                                         <ArrowUpDown
                                             v-else
-                                            class="h-3 w-3 shrink-0 text-gray-300 dark:text-neutral-600"
+                                            class="h-3 w-3 shrink-0 text-line-strong"
                                         />
                                     </button>
                                     <span v-else>{{
@@ -260,8 +258,8 @@ onBeforeUnmount(() => {
                                         class="cursor-pointer rounded p-0.5"
                                         :class="
                                             isFiltered(column)
-                                                ? 'text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-300 hover:text-gray-500 dark:text-neutral-600 dark:hover:text-neutral-400'
+                                                ? 'text-link'
+                                                : 'text-line-strong hover:text-muted'
                                         "
                                         :title="t('common.filteredColumn')"
                                         :aria-expanded="
@@ -289,7 +287,7 @@ onBeforeUnmount(() => {
                         </tr>
                     </thead>
                     <tbody
-                        class="divide-y divide-gray-100 dark:divide-neutral-800"
+                        class="divide-y divide-line [&>tr:hover]:bg-row-hover"
                     >
                         <tr v-for="row in rows" :key="row.id">
                             <slot name="row" :row="row" />
@@ -297,11 +295,11 @@ onBeforeUnmount(() => {
                         <tr v-if="rows.length === 0">
                             <td
                                 :colspan="columns.length"
-                                class="px-4 py-6! text-center whitespace-normal text-gray-500 dark:text-neutral-400"
+                                class="px-4 py-6! text-center whitespace-normal text-muted"
                             >
                                 <div class="flex flex-col items-center gap-2">
                                     <PackageSearch
-                                        class="h-6 w-6 text-gray-300 dark:text-neutral-700"
+                                        class="h-6 w-6 text-line-strong"
                                     />
                                     <span>{{ emptyMessage }}</span>
                                 </div>
@@ -315,7 +313,7 @@ onBeforeUnmount(() => {
         <div
             v-if="openFilterKey !== null"
             ref="popoverRef"
-            class="absolute z-20 w-64 rounded-md border border-gray-300 bg-white p-3 font-normal text-gray-700 shadow-lg dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+            class="absolute z-20 w-64 rounded-lg border border-line bg-surface p-3 font-normal text-ink shadow-pop"
             :style="popoverStyle"
         >
             <slot name="column-filter" :filter-key="openFilterKey" />

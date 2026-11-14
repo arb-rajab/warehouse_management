@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
+use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\FilterCurrenciesRequest;
 use App\Http\Requests\Store\Admin\StoreCurrencyRequest;
 use App\Http\Requests\Store\Admin\UpdateCurrencyRequest;
@@ -22,6 +24,8 @@ use Inertia\Response;
 
 class CurrencyController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+    use ReadsHighlight;
     use UpdatesStoreSettings;
 
     /** @return array<int, Middleware> */
@@ -55,6 +59,7 @@ class CurrencyController extends Controller implements HasMiddleware
             'activeCurrencies' => Currency::query()->select(['id', 'name'])->where('status', 1)->orderBy('name')->get(),
             'settings' => ['system_default_currency' => (int) get_setting('system_default_currency', 0), ...collect(BusinessSetting::CURRENCY_DEFAULTS)->map(fn (int $default, string $key): int => (int) (filled($value = get_setting($key)) ? $value : $default))->all()],
             'dialog' => $dialog, 'selectedCurrency' => $currency === null ? null : new CurrencyResource($currency),
+            'highlight' => $dialog === null ? $this->highlight($request, ['system_default_currency']) : null,
         ]);
     }
 
@@ -62,6 +67,7 @@ class CurrencyController extends Controller implements HasMiddleware
     {
         $currency = new Currency;
         $currency->forceFill([...$request->validated(), 'status' => 0])->save();
+        $this->flashSuccess('currency_has_been_created_successfully');
 
         return redirect()->route('currency.index');
     }
@@ -70,6 +76,7 @@ class CurrencyController extends Controller implements HasMiddleware
     {
         $currency->forceFill($request->validated())->save();
         Cache::forget('system_default_currency');
+        $this->flashSuccess('currency_has_been_updated_successfully');
 
         return redirect()->route('currency.index');
     }
@@ -79,6 +86,7 @@ class CurrencyController extends Controller implements HasMiddleware
         abort_if(! $request->boolean('status') && (int) get_setting('system_default_currency') === $currency->id, 403);
         $currency->status = $request->boolean('status') ? 1 : 0;
         $currency->save();
+        $this->flashSuccess('currency_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('currency.index', $request);
     }
@@ -87,6 +95,7 @@ class CurrencyController extends Controller implements HasMiddleware
     {
         $this->updateSettings($request->validated());
         Cache::forget('system_default_currency');
+        $this->flashSuccess('currency_settings_have_been_updated_successfully');
 
         return redirect()->route('currency.index');
     }

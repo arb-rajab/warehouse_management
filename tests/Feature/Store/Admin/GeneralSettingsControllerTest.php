@@ -81,7 +81,8 @@ test('the configured timezone stays selectable and savable even when PHP lists i
         ->where('settings.timezone', 'Etc/UTC')
         ->where('timezones', fn ($timezones) => collect($timezones)->contains('Etc/UTC')));
     $this->post(route('general_setting.update'), ['settings' => generalSettingsPayload(['timezone' => 'Etc/UTC'])])
-        ->assertRedirect(route('general_setting.index'));
+        ->assertRedirect(route('general_setting.index'))
+        ->assertInertiaFlash('success', 'General settings have been updated successfully');
     $this->assertDatabaseMissing('business_settings', ['type' => 'timezone']);
 });
 

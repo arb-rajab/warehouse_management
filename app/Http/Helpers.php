@@ -71,7 +71,7 @@ if (!function_exists('clean_html')) {
 if (!function_exists('default_language')) {
     function default_language()
     {
-        return config("app.default_language");
+        return app(\App\Support\StoreDefaultLanguage::class)->get();
     }
 }
 
@@ -1361,7 +1361,11 @@ if (!function_exists('seller_purchase_payment_done')) {
         $seller->seller_package_id = $seller_package_id;
         $seller_package = SellerPackage::findOrFail($seller_package_id);
         $seller->product_upload_limit = $seller_package->product_upload_limit;
-        $seller->package_invalid_at = date('Y-m-d', strtotime($seller->package_invalid_at . ' +' . $seller_package->duration . 'days'));
+        // An active package is extended from its end date; one that expired, or was never bought, starts today
+        // (counting from an old end date left a renewed package expired).
+        $validUntil = $seller->package_invalid_at === null ? null : Carbon::parse($seller->package_invalid_at)->startOfDay();
+        $start = $validUntil !== null && $validUntil->greaterThanOrEqualTo(Carbon::today()) ? $validUntil : Carbon::today();
+        $seller->package_invalid_at = $start->copy()->addDays((int) $seller_package->duration)->toDateString();
         $seller->save();
 
         $seller_package = new SellerPackagePayment();

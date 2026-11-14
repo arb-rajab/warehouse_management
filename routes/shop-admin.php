@@ -129,6 +129,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/products/seller/{product}/edit', [StoreProductController::class, 'sellerEdit'])->name('products.seller.edit');
     Route::post('/products/update/{product}', [StoreProductController::class, 'update'])->name('products.update');
     Route::post('/products/{product}/variant-combinations', [StoreProductController::class, 'editVariantCombinations'])->name('products.edit_variant_combinations');
+    // The edit form's barcode image: scoped through Product::barcodes(), so only this product's barcodes resolve.
+    Route::get('/products/{product}/store-barcodes/{barcode}/image', [StoreProductController::class, 'storeBarcodeImage'])->scopeBindings()->name('products.store_barcodes.image');
     Route::get('/products/seller', [StoreProductController::class, 'seller'])->name('products.seller');
     Route::get('/products/seller/options', [StoreProductController::class, 'sellerOptions'])->name('products.seller.options');
     Route::post('/products/seller/{product}/todays-deal', [StoreProductController::class, 'updateTodaysDeal'])->defaults('productList', 'seller')->name('products.todays_deal');
@@ -377,6 +379,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/activation', [SettingsController::class, 'activation'])->name('activation.index');
     Route::post('/activation', [SettingsController::class, 'updateActivation'])->name('business_settings.update.activation');
     Route::get('/smtp-settings', [SettingsController::class, 'smtp'])->name('smtp_settings.index');
+    Route::post('/smtp-settings', [SettingsController::class, 'updateSmtp'])->name('smtp_settings.update');
     Route::get('/social-login', [SettingsController::class, 'socialLogin'])->name('social_login.index');
     Route::get('/facebook-chat', [SettingsController::class, 'facebookChat'])->name('facebook_chat.index');
     Route::post('/facebook-chat', [SettingsController::class, 'updateFacebookChat'])->name('facebook_chat.update');
@@ -399,6 +402,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/shipping_configuration/update', [ShippingConfigurationController::class, 'update'])->name('shipping_configuration.update');
     Route::get('/order-configuration', [OrderConfigurationController::class, 'index'])->name('order_configuration.index');
     Route::post('/order-configuration', [OrderConfigurationController::class, 'update'])->name('order_configuration.update');
+    Route::post('/order-configuration/delivery', [OrderConfigurationController::class, 'updateDelivery'])->name('order_configuration.delivery.update');
     Route::post('/order-configuration/representative', [OrderConfigurationController::class, 'updateRepresentative'])->name('order_configuration.representative.update');
     Route::get('/order-configuration/representatives', [OrderConfigurationController::class, 'representatives'])->name('order_configuration.representatives');
     Route::get('/product/search', [ProductSearchController::class, 'search'])->name('order_configuration.product-search');
@@ -425,6 +429,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/languages/create', [LanguageController::class, 'create'])->name('languages.create');
     Route::post('/languages', [LanguageController::class, 'store'])->name('languages.store');
     Route::post('/languages/update_rtl_status', [LanguageController::class, 'updateRtlStatus'])->name('languages.update_rtl_status');
+    Route::post('/languages/default', [LanguageController::class, 'updateDefault'])->name('languages.default.update');
     Route::post('/languages/update-status', [LanguageController::class, 'updateStatus'])->name('languages.update-status');
     Route::post('/languages/key_value_store', [LanguageController::class, 'storeTranslations'])->name('languages.key_value_store');
     Route::post('/languages/app-translations/import', [LanguageController::class, 'importAppTranslations'])->name('app-translations.import');

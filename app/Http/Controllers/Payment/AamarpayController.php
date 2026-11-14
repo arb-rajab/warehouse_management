@@ -3,68 +3,60 @@
 namespace App\Http\Controllers\Payment;
 
 use App\Http\Controllers\Controller;
-use App\Models\CombinedOrder;
-use App\Models\CustomerPackage;
-use App\Models\SellerPackage;
-use App\Services\GatewayPaymentService;
+use App\Services\GatewayCurrency;
+use App\Services\GatewayReturn;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use Auth;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
-use Session;
+use Illuminate\Support\Facades\Log;
 
 class AamarpayController extends Controller
 {
-    public function pay(){
+    private function baseUrl(): string
+    {
+        return get_setting('aamarpay_sandbox') == 1 ? 'https://sandbox.aamarpay.com/' : 'https://secure.aamarpay.com/';
+    }
+
+    /**
+     * Start the payment this session is making. The amount due comes from the database (an
+     * order of the signed-in customer, a package's price, the top-up asked for), is converted to
+     * aamarpay's currency and kept to the cent. A currency the store has no active rate for, or
+     * an aamarpay that does not answer with a payment page, is refused with a message and nothing
+     * is kept. Otherwise the payment is recorded as pending under the transaction id sent to
+     * aamarpay (GatewayReturn), which is all success() reads from the return.
+     */
+    public function pay()
+    {
         if (Auth::user()->phone == null) {
             flash(__('storefront.auth.please_add_phone_number_to_your_profile'))->warning();
+
             return redirect()->route('profile');
         }
 
-        if (Auth::user()->email == null) {
-            $email = 'customer@exmaple.com';
-        }
-        else{
-            $email = Auth::user()->email;
+        $email = Auth::user()->email ?: config('mail.from.address');
+
+        $payment = app(SessionGatewayPayment::class)->pending();
+        $currency = GatewayCurrency::forGateway('aamarpay');
+        $converted = $payment === null ? null : $currency->fromStore($payment['amount']);
+
+        if ($payment === null || $converted === null) {
+            Log::error('aamarpay refused: nothing due, or the store has no active rate for the gateway currency.', ['currency' => $currency->chargeCode()]);
+
+            return $this->failed();
         }
 
-        if (get_setting('aamarpay_sandbox') == 1) {
-            $url = 'https://sandbox.aamarpay.com/request.php'; // live url https://secure.aamarpay.com/request.php
-        }
-        else {
-            $url = 'https://secure.aamarpay.com/request.php';
-        }
-
-        $amount = 0;
-        if(Session::has('payment_type')){
-            if(Session::get('payment_type') == 'cart_payment'){
-                $combined_order = CombinedOrder::findOrFail(Session::get('combined_order_id'));
-                $amount = round($combined_order->grand_total);
-            }
-            elseif (Session::get('payment_type') == 'wallet_payment') {
-                $amount = round(Session::get('payment_data')['amount']);
-            }
-            elseif (Session::get('payment_type') == 'customer_package_payment') {
-                $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
-                $amount = round($customer_package->amount);
-            }
-            elseif (Session::get('payment_type') == 'seller_package_payment') {
-                $seller_package = SellerPackage::findOrFail(Session::get('payment_data')['seller_package_id']);
-                $amount = round($seller_package->amount);
-            }
-        }
-
-        // The transaction id success() checks against aamarpay's search API.
-        $tran_id = Str::random(20);
-        Session::put('aamarpay_tran_id', $tran_id);
+        // The transaction id success() looks the payment up by, and checks against aamarpay's search API.
+        $tran_id = GatewayReturn::newReference();
 
         $fields = [
-            'store_id' => env('AAMARPAY_STORE_ID'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
-            'amount' => $amount, //transaction amount
+            'store_id' => StorePaymentGateways::get('aamarpay', 'store_id'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
+            'amount' => GatewayCurrency::format($converted), //transaction amount
             'payment_type' => 'VISA', //no need to change
-            'currency' => 'BDT',  //currenct will be USD/BDT
+            'currency' => $currency->chargeCode(),
             'tran_id' => $tran_id, //transaction id must be unique from your end
             'cus_name' => Auth::user()->name,  //customer name
             'cus_email' => $email, //customer email address
@@ -87,79 +79,80 @@ class AamarpayController extends Controller
             'success_url' => route('aamarpay.success'), //your success route
             'fail_url' => route('aamarpay.fail'), //your fail route
             'cancel_url' => route('cart'), //your cancel url
-            'opt_a' => Session::get('payment_type'),  //optional paramter
-            'opt_b' => Session::get('combined_order_id'),
-            'opt_c' => json_encode(Session::get('payment_data')),
+            'opt_a' => $payment['payment_type'],  //optional paramter (not read back)
+            'opt_b' => '',
+            'opt_c' => '',
             'opt_d' => '',
-            'signature_key' => env('AAMARPAY_SIGNATURE_KEY'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature key
+            'signature_key' => StorePaymentGateways::get('aamarpay', 'signature_key'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature
         ];
 
-        $fields_string = http_build_query($fields);
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_VERBOSE, true);
-        curl_setopt($ch, CURLOPT_URL, $url);
-
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        $url_forward = str_replace('"', '', stripslashes(curl_exec($ch)));
-
-        $this->redirect_to_merchant($url_forward);
-    }
-
-    function redirect_to_merchant($url) {
-        if (get_setting('aamarpay_sandbox') == 1) {
-            $base_url = 'https://sandbox.aamarpay.com/';
-        }
-        else {
-            $base_url = 'https://secure.aamarpay.com/';
+        try {
+            $response = Http::asForm()->timeout(30)->post($this->baseUrl().'request.php', $fields);
+        } catch (ConnectionException) {
+            $response = null;
         }
 
-        ?>
-        <html xmlns="http://www.w3.org/1999/xhtml">
-          <head><script type="text/javascript">
-            function closethisasap() { document.forms["redirectpost"].submit(); }
-          </script></head>
-          <body onLoad="closethisasap();">
+        // aamarpay answers with the payment page's path (quoted, with slashes escaped); anything else is an error.
+        $path = $response === null ? '' : str_replace('"', '', stripslashes((string) $response->body()));
 
-            <form name="redirectpost" method="post" action="<?php echo $base_url.$url; ?>"></form>
+        if ($response === null || ! $response->successful() || ! preg_match('#^[A-Za-z0-9_./?=&%-]+$#', $path) || str_contains($path, '..')) {
+            Log::error('aamarpay gave no payment page.', ['status' => $response?->status()]);
 
-          </body>
-        </html>
-        <?php
-        exit;
+            return $this->failed();
+        }
+
+        app(GatewayReturn::class)->begin('aamarpay', $tran_id, $payment, $converted, $currency->chargeCode());
+
+        return redirect()->away($this->baseUrl().ltrim($path, '/'));
     }
 
+    private function failed()
+    {
+        flash(__('storefront.checkout.payment_failed'))->error();
+
+        return redirect()->route('cart');
+    }
 
     /**
-     * aamarpay posts the customer back here, and the post used to be trusted for
-     * everything: the payment type, the order (`opt_b`) and the top-up amount
-     * (`opt_c`). The transaction must be the one this session started, and
-     * aamarpay's search API (by `mer_txnid`) must report it paid for at least the
-     * amount due; what it reports is credited to the signed-in customer, once.
+     * aamarpay posts the customer back here, cross-site, so the post carries no session (this
+     * route runs without one: routes/shop-gateway-returns.php), and the post used to be trusted
+     * for everything: the payment type, the order (`opt_b`) and the top-up amount (`opt_c`).
+     * Only `mer_txnid` is read now: it must name a pending aamarpay payment pay() recorded,
+     * aamarpay's search API must report it paid, and the reported amount must be the recorded
+     * converted amount to the cent, in the recorded currency (the reported one, when it reports one). The recorded payer is
+     * credited, once.
      */
     public function success(Request $request){
-        $tran_id = (string) Session::get('aamarpay_tran_id');
-        $amountDue = app(SessionGatewayPayment::class)->amountDue();
+        $returns = app(GatewayReturn::class);
+        $tran_id = (string) $request->input('mer_txnid');
+        $pending = $returns->find('aamarpay', $tran_id);
 
-        if ($tran_id === '' || $amountDue === null || ! hash_equals($tran_id, (string) $request->input('mer_txnid'))) {
-            return app(SessionGatewayPayment::class)->notVerified();
+        if (is_string($pending)) {
+            return $returns->refuse($pending, 'aamarpay', $tran_id);
+        }
+
+        if ($pending->completed_at !== null) {
+            return $returns->finished($pending);
         }
 
         $transaction = $this->searchTransaction($tran_id);
+
         $isPaid = is_array($transaction)
             && ($transaction['pay_status'] ?? null) === 'Successful'
-            && hash_equals($tran_id, (string) ($transaction['mer_txnid'] ?? ''))
-            && GatewayPaymentService::covers((float) ($transaction['amount'] ?? 0), $amountDue);
+            && hash_equals($tran_id, (string) ($transaction['mer_txnid'] ?? ''));
 
         if (! $isPaid) {
-            return app(SessionGatewayPayment::class)->notVerified();
+            return $returns->refuse('not_verified', 'aamarpay', $tran_id, $pending);
         }
 
-        Session::forget('aamarpay_tran_id');
+        // The search API may name the charge currency `currency` (`currency_merchant` on some
+        // accounts); it is unconfirmed that it does. A reported currency must be the recorded one;
+        // none at all is compared in the recorded currency (aamarpay settles in BDT only), and
+        // the amount must still be the recorded one to the cent.
+        $reportedCurrency = $transaction['currency'] ?? $transaction['currency_merchant'] ?? null;
+        $reportedCurrency = is_scalar($reportedCurrency) ? (string) $reportedCurrency : null;
 
-        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('aamarpay', $tran_id, (float) $transaction['amount'], json_encode($transaction)));
+        return $returns->complete($pending, (float) ($transaction['amount'] ?? 0), $reportedCurrency, json_encode($transaction));
     }
 
     /**
@@ -169,12 +162,10 @@ class AamarpayController extends Controller
      */
     private function searchTransaction(string $tran_id): ?array
     {
-        $base_url = get_setting('aamarpay_sandbox') == 1 ? 'https://sandbox.aamarpay.com/' : 'https://secure.aamarpay.com/';
-
-        $response = Http::timeout(30)->get($base_url.'api/v1/trxcheck/request.php', [
+        $response = Http::timeout(30)->get($this->baseUrl().'api/v1/trxcheck/request.php', [
             'request_id' => $tran_id,
-            'store_id' => env('AAMARPAY_STORE_ID'),
-            'signature_key' => env('AAMARPAY_SIGNATURE_KEY'),
+            'store_id' => StorePaymentGateways::get('aamarpay', 'store_id'),
+            'signature_key' => StorePaymentGateways::get('aamarpay', 'signature_key'),
             'type' => 'json',
         ]);
 
@@ -182,7 +173,6 @@ class AamarpayController extends Controller
     }
 
     public function fail(Request $request){
-        flash(__('storefront.checkout.payment_failed'))->error();
-    	return redirect()->route('cart');
+        return app(GatewayReturn::class)->outcome('failed');
     }
 }

@@ -1,6 +1,11 @@
 <?php
 
+use App\Models\Permission;
+use App\Models\Product;
+use App\Models\Role;
 use App\Models\StoreUser;
+use App\Services\Store\ProductVariantCombinations;
+use App\Support\StorePermissions;
 use Database\Seeders\StoreAccountFilterSeeder;
 use Database\Seeders\StoreFilterCoverageSeeder;
 use Database\Seeders\Support\StoreFilterSeedData;
@@ -190,4 +195,45 @@ test('account fixtures give every customer a usable address, fill only blanks, a
     $before = DB::table('addresses')->orderBy('id')->get()->toJson();
     (new StoreAccountFilterSeeder)->run();
     expect(DB::table('addresses')->orderBy('id')->get()->toJson())->toBe($before);
+});
+
+test('every seeded product has a stock row for each variant its colours and choices generate, so a buyer can pick any of them', function () {
+    (new StoreFilterCoverageSeeder)->run();
+
+    $combinations = new ProductVariantCombinations;
+    $seeded = Product::query()->where('slug', 'like', 'pantry-%')->get();
+
+    expect($seeded)->not->toBeEmpty();
+
+    foreach ($seeded as $product) {
+        $colors = json_decode((string) $product->colors, true) ?: [];
+        $values = collect(json_decode((string) $product->choice_options, true) ?: [])->pluck('values')->filter()->values()->all();
+        $expected = $combinations->names($colors, $values) ?: [''];
+        $stored = $product->stocks()->pluck('variant')->map(fn ($variant) => (string) $variant)->all();
+
+        // Nothing the buyer can pick is missing, and no stock row names a variant the product cannot generate.
+        expect(array_diff($expected, $stored))->toBe([], "product {$product->id} lacks a stock row")
+            ->and($combinations->unmatchedStocks($product))->toBe([], "product {$product->id} has an unmatched stock row");
+    }
+});
+
+test('re-seeding keeps one stock row per variant rather than adding a second set', function () {
+    (new StoreFilterCoverageSeeder)->run();
+    $stocks = DB::table('product_stocks')->count();
+
+    (new StoreFilterCoverageSeeder)->run();
+
+    expect(DB::table('product_stocks')->count())->toBe($stocks);
+});
+
+test('the demonstration administrator role gets every store permission but the sensitive ones', function () {
+    (new StoreAccountFilterSeeder)->run();
+
+    $role = Role::findByName('Demonstration Store Administrator', 'store');
+    $granted = $role->permissions->pluck('name');
+
+    expect($granted)->not->toContain('smtp_settings')
+        ->and($granted->sort()->values()->all())->toBe(
+            Permission::query()->whereNotIn('name', StorePermissions::SENSITIVE)->pluck('name')->sort()->values()->all()
+        );
 });

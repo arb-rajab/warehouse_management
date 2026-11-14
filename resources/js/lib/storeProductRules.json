@@ -201,7 +201,9 @@
         "edit": {
             "lang": ["required", "string", "max:10"],
             "slug": ["nullable", "string"],
-            "old_photo": ["nullable", "string", "max:2000"]
+            "old_photo": ["nullable", "string", "max:2000"],
+            "product_barcodes_seen": ["nullable", "array", "max:50"],
+            "product_barcodes_seen.*": ["nullable", "string", "max:255"]
         },
         "named": {
             "discount": ["discountLimit"],

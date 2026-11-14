@@ -1,0 +1,35 @@
+{
+    "rules": {
+        "mailer": ["nullable", "string", "in:smtp,log"],
+        "host": [
+            "required_with:port,username,password",
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^[A-Za-z0-9.-]+$/D"
+        ],
+        "port": [
+            "required_with:host",
+            "nullable",
+            "integer",
+            "min:1",
+            "max:65535"
+        ],
+        "scheme": ["nullable", "string", "in:smtp,smtps"],
+        "username": ["nullable", "string", "max:255", "regex:/^[^\\r\\n]*$/D"],
+        "password": ["nullable", "string", "max:255", "regex:/^[^\\r\\n]*$/D"],
+        "password_clear": ["nullable", "boolean"],
+        "from_address": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^[^\\r\\n]*$/D"
+        ],
+        "from_name": ["nullable", "string", "max:255", "regex:/^[^\\r\\n]*$/D"],
+        "current_password": ["required", "string"]
+    },
+    "serverOnly": {
+        "from_address": ["email:rfc"],
+        "current_password": ["current_password:store"]
+    }
+}

@@ -15,6 +15,7 @@ import { physicalProductValidation } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductTax,
     StoreLanguage,
+    StoreProductBarcodeImage,
     StoreProductColor,
     StoreProductEditListType,
     StoreProductForm,
@@ -31,7 +32,10 @@ import type {
  * (`products.seller.edit`); its language tabs stay on the route it was
  * opened from. Only the in-house list is an Inertia page to cancel back to.
  * `readOnlyFields` are the Otajer-owned synced fields of a feed-origin
- * product (Setup > Product data sources), shown read-only.
+ * product (Setup > Product data sources), shown read-only. `barcodeImages`
+ * are the saved barcodes (the shared `product_barcodes` table), shown as
+ * barcode images under their inputs; the form also posts the values it loaded
+ * as `product_barcodes_seen`.
  */
 const props = defineProps<{
     product: StoreProductForm;
@@ -52,6 +56,7 @@ const props = defineProps<{
     sections: StoreProductFormSections;
     variants: StoreProductVariantState;
     initialFiles: Record<string, StoreUpload[]>;
+    barcodeImages: StoreProductBarcodeImage[];
 }>();
 const editRoute = props.listType === 'seller' ? sellerEdit : edit;
 // Checked in the browser before anything is sent; a read-only field is not
@@ -97,6 +102,7 @@ const validation = physicalProductValidation({
             :variants="variants"
             :variants-url="editVariantCombinations.url(product)"
             :initial-files="initialFiles"
+            :barcode-images="barcodeImages"
             :errors="errors"
         />
     </ResourceFormPage>

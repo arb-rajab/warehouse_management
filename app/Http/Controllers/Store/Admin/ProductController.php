@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\BulkDeleteProductsRequest;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
@@ -31,8 +32,11 @@ use App\Models\Category;
 use App\Models\Color;
 use App\Models\FlashDeal;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductStock;
 use App\Models\StoreUser;
+use App\Rules\NewProductBarcode;
+use App\Services\ProductBarcodeLabels;
 use App\Services\ProductFieldSourceService;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
@@ -46,6 +50,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
@@ -63,6 +68,7 @@ use Inertia\Response;
  */
 class ProductController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreProductTaxes;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
@@ -75,7 +81,7 @@ class ProductController extends Controller implements HasMiddleware
         return [
             new Middleware('permission:add_new_product', only: ['create', 'store', 'variantCombinations']),
             // The root ProductController's gate for the edit form it rendered.
-            new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations']),
+            new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations', 'storeBarcodeImage']),
             new Middleware('permission:show_in_house_products', only: ['inHouse']),
             new Middleware('permission:show_all_products', only: ['all']),
             new Middleware('permission:show_seller_products', only: ['seller', 'sellerOptions']),
@@ -189,15 +195,19 @@ class ProductController extends Controller implements HasMiddleware
      * Creates the product, its stock rows, taxes, flash deal entry,
      * default-language translation, types and store barcodes in one
      * transaction, then clears the compiled views and the cache as the
-     * legacy form did, once the write has committed.
+     * legacy form did, once the write has committed. It then opens the main
+     * Products list (products.all), which shows the flashed success message
+     * in the layout's SuccessBanner; staff who may not open that list return
+     * to the in-house list instead of landing on a refusal.
      */
     public function store(StoreProductRequest $request, InHouseProductWriter $writer): RedirectResponse
     {
         $data = $request->validated();
-        DB::transaction(fn () => $writer->create($data, $request->variantNames(), $request->variantColorCodes(), StoreProductRequest::cashPaymentEnabled()));
+        NewProductBarcode::locked(fn () => DB::transaction(fn () => $writer->create($data, $request->variantNames(), $request->variantColorCodes(), StoreProductRequest::cashPaymentEnabled())));
         $this->clearStorefrontCaches();
+        $this->flashSuccess('product_has_been_created_successfully');
 
-        return redirect()->route('products.admin');
+        return redirect()->route($request->user('store')->can('show_all_products') ? 'products.all' : 'products.admin');
     }
 
     /**
@@ -240,20 +250,23 @@ class ProductController extends Controller implements HasMiddleware
      * edited language's translation, types and store barcodes in one
      * transaction (InHouseProductWriter::update()), then clears the compiled
      * views and the cache as the legacy form did, once the write has
-     * committed, and returns to the edit form in the same language.
+     * committed, and returns to the edit form in the same language with a
+     * flashed success message (the layout's SuccessBanner).
      */
     public function update(UpdateProductRequest $request, Product $product, InHouseProductWriter $writer): RedirectResponse
     {
         $data = $request->validated();
-        $product = DB::transaction(fn (): Product => $writer->update(
+        // Under the shared barcode lock, which the writer's final barcode check needs.
+        $product = NewProductBarcode::locked(fn (): Product => DB::transaction(fn (): Product => $writer->update(
             $this->lockedProduct(Product::query()->physical(), $product),
             $data,
             $request->variantNames(),
             $request->variantColorCodes(),
             UpdateProductRequest::cashPaymentEnabled(),
             UpdateProductRequest::productWiseShippingEnabled(),
-        ));
+        )));
         $this->clearStorefrontCaches();
+        $this->flashSuccess('product_has_been_updated_successfully');
 
         return redirect()->route($product->getAttribute('added_by') === 'seller' ? 'products.seller.edit' : 'products.admin.edit', ['product' => $product->id, 'lang' => $data['lang']]);
     }
@@ -272,6 +285,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updatePublished(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductPublished($this->listQuery($request->productList()), $product, $request->boolean('status'));
+        $this->flashSuccess('product_published_status_has_been_updated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -279,6 +293,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updateFeatured(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductFeatured($this->listQuery($request->productList()), $product, $request->boolean('status'));
+        $this->flashSuccess('product_featured_status_has_been_updated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -297,6 +312,7 @@ class ProductController extends Controller implements HasMiddleware
             $this->saveAvailability($product, $forSale);
         });
         $this->clearStorefrontCaches();
+        $this->flashSuccess('product_for_sale_status_has_been_updated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -321,6 +337,7 @@ class ProductController extends Controller implements HasMiddleware
             $stocks->product_duplicate_store($source->stocks()->orderBy('id')->get(), $copy);
             $taxes->product_duplicate_store($source->taxes()->orderBy('id')->get(), $copy);
         });
+        $this->flashSuccess('product_has_been_duplicated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -338,6 +355,7 @@ class ProductController extends Controller implements HasMiddleware
             $this->deleteProduct($this->lockedProduct($this->listQuery($request->productList()), $product));
         });
         $this->clearStorefrontCaches();
+        $this->flashSuccess('product_has_been_deleted_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -358,6 +376,7 @@ class ProductController extends Controller implements HasMiddleware
             $products->each(fn (Product $product) => $this->deleteProduct($product));
         });
         $this->clearStorefrontCaches();
+        $this->flashSuccess('products_have_been_deleted_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -385,6 +404,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updateTodaysDeal(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductTodaysDeal($this->listQuery(StoreProductList::Seller), $product, $request->boolean('status'));
+        $this->flashSuccess('product_todays_deal_status_has_been_updated_successfully');
 
         return $this->redirectToList(StoreProductList::Seller, $request);
     }
@@ -392,6 +412,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updateProductApproval(UpdateProductApprovalRequest $request, Product $product): RedirectResponse
     {
         $this->writeProductApproval($this->listQuery(StoreProductList::Seller), $product, $request->boolean('approved'));
+        $this->flashSuccess('product_approval_status_has_been_updated_successfully');
 
         return $this->redirectToList(StoreProductList::Seller, $request);
     }
@@ -430,10 +451,10 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /**
-     * One search word or phrase against the name, the Arabic name and both
-     * barcode tables: the WMS barcodes the merged `barcodes()` relation now
-     * reads, and the store barcodes the legacy Otajer import fills with each
-     * product's material id, which the legacy search meant to cover.
+     * One search word or phrase against the name, the Arabic name and the
+     * product's barcodes (the one `product_barcodes` table, which also holds
+     * the material id the Otajer import stores for each product, as the
+     * legacy search meant to cover).
      *
      * @param  Builder<Product>  $query
      */
@@ -442,8 +463,7 @@ class ProductController extends Controller implements HasMiddleware
         $like = '%'.$term.'%';
         $query->orWhere('name', 'like', $like)
             ->orWhere('ar_name', 'like', $like)
-            ->orWhereHas('barcodes', fn (Builder $barcodes) => $barcodes->where('barcode', 'like', $like))
-            ->orWhereHas('storeBarcodes', fn (Builder $barcodes) => $barcodes->where('barcode', 'like', $like));
+            ->orWhereHas('barcodes', fn (Builder $barcodes) => $barcodes->where('barcode', 'like', $like));
     }
 
     /**
@@ -586,7 +606,7 @@ class ProductController extends Controller implements HasMiddleware
                 'product_translations:id,product_id,lang,name,unit,description',
                 'stocks' => fn ($stocks) => $stocks->select(['id', 'product_id', 'variant', 'sku', 'qty'])->orderBy('id'),
                 'variations' => fn ($variations) => $variations->select(['id', 'product_id', 'name'])->orderBy('id'),
-                'storeBarcodes' => fn ($barcodes) => $barcodes->select(['id', 'product_id', 'barcode'])->orderBy('id'),
+                'barcodes' => fn ($barcodes) => $barcodes->select(['id', 'product_id', 'barcode']),
                 'flash_deal_product:id,product_id,flash_deal_id',
             ])
             ->findOrFail($product->id);
@@ -625,7 +645,61 @@ class ProductController extends Controller implements HasMiddleware
                 'pdf' => $product->getAttribute('pdf'),
                 'meta_img' => $product->getAttribute('meta_img'),
             ]),
+            'barcodeImages' => $this->barcodeImages($product),
         ]);
+    }
+
+    /**
+     * The saved barcodes the form's inputs edit, one per distinct trimmed
+     * value as ProductFormResource lists them (the oldest row of a value the
+     * product holds twice), each with its id for its image route and whether
+     * Code 128 can encode it once its Arabic digits are converted
+     * (ProductBarcodeLabels). An input shows the image only while it still
+     * holds a saved value.
+     *
+     * @return list<array{id: int, barcode: string, printable: bool}>
+     */
+    private function barcodeImages(Product $product): array
+    {
+        $labels = app(ProductBarcodeLabels::class);
+
+        $images = [];
+
+        foreach (ProductBarcode::distinctValues($product->barcodes) as $barcode) {
+            $images[] = [
+                'id' => $barcode->id,
+                'barcode' => trim($barcode->barcode),
+                'printable' => $labels->isPrintable($labels->normalize($barcode->barcode)),
+            ];
+        }
+
+        return $images;
+    }
+
+    /**
+     * One of the product's barcodes (`product_barcodes`) as the WMS barcode
+     * label, for the edit form's image. Scoped binding: a barcode of
+     * another product is a 404. The stored value is converted as the
+     * storefront shows it; a blank one is a 404 and one Code 128 cannot
+     * encode a 422, as in the WMS. Served like the WMS previews: inline SVG,
+     * `private, no-cache`, an ETag answered by a 304 before rendering.
+     */
+    public function storeBarcodeImage(Request $request, Product $product, ProductBarcode $barcode, ProductBarcodeLabels $labels): HttpResponse
+    {
+        $value = $labels->normalize($barcode->barcode);
+        abort_if($value === '', HttpResponse::HTTP_NOT_FOUND);
+        abort_unless($labels->isPrintable($value), HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $value]));
+        $etag = $labels->etag($product, $value);
+        $notModified = response('')->setEtag($etag)->header('Cache-Control', 'private, no-cache');
+        if ($notModified->isNotModified($request)) {
+            return $notModified;
+        }
+
+        return response($labels->barcodeSvg($product, $value))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'inline')
+            ->header('Cache-Control', 'private, no-cache')
+            ->setEtag($etag);
     }
 
     /**
@@ -740,7 +814,7 @@ class ProductController extends Controller implements HasMiddleware
         $product->stocks()->delete();
         $product->taxes()->delete();
         $product->variations()->delete();
-        $product->storeBarcodes()->delete();
+        $product->barcodes()->delete();
         $product->delete();
         Cart::query()->where('product_id', $product->id)->delete();
     }

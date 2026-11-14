@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateSellerVerificationFormRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -13,6 +14,7 @@ use Inertia\Response;
 
 class SellerVerificationFormController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use UpdatesStoreSettings;
 
     /** @return array<int, Middleware> */
@@ -40,6 +42,7 @@ class SellerVerificationFormController extends Controller implements HasMiddlewa
     public function update(UpdateSellerVerificationFormRequest $request): RedirectResponse
     {
         $this->updateSettings(['verification_form' => $request->storedForm()]);
+        $this->flashSuccess('seller_verification_form_has_been_updated_successfully');
 
         return redirect()->route('seller_verification_form.index');
     }

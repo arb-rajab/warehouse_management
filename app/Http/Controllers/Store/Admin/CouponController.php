@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\FilterCouponRequest;
 use App\Http\Requests\Store\Admin\SearchOptionsRequest;
@@ -25,6 +26,7 @@ use Inertia\Response;
 
 class CouponController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use SearchesOptions;
 
     /** @return array<int, Middleware> */
@@ -63,6 +65,7 @@ class CouponController extends Controller implements HasMiddleware
         $ownerId = $this->ownerId();
         abort_if($ownerId === null, 409);
         Coupon::create($this->attributes($request->validated()) + ['user_id' => $ownerId]);
+        $this->flashSuccess('coupon_has_been_created_successfully');
 
         return redirect()->route('coupon.index');
     }
@@ -83,6 +86,7 @@ class CouponController extends Controller implements HasMiddleware
     {
         $this->authorizeOwner($coupon);
         $coupon->update($this->attributes($request->validated()));
+        $this->flashSuccess('coupon_has_been_updated_successfully');
 
         return redirect()->route('coupon.index');
     }
@@ -91,6 +95,7 @@ class CouponController extends Controller implements HasMiddleware
     {
         $this->authorizeOwner($coupon);
         $coupon->delete();
+        $this->flashSuccess('coupon_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('coupon.index', $request);
     }

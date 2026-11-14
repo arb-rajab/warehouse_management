@@ -180,10 +180,7 @@ describe('Store trip detail', () => {
                     t('store.trips.index.startedAt'),
                     formatDateTime('2026-10-14T08:30:00+00:00'),
                 ],
-                [
-                    t('store.trips.index.closedAt'),
-                    t('store.trips.index.notAvailable'),
-                ],
+                [t('store.trips.index.closedAt'), '-'],
                 [
                     t('store.trips.index.distance'),
                     t('store.trips.index.km', {

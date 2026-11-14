@@ -15,6 +15,8 @@ import { store as storeFromMap } from '@/actions/App/Http/Controllers/Store/Admi
 import { markDelivered } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreTripMap from '@/components/StoreTripMap.vue';
 import type { StoreTripMapPoint } from '@/components/StoreTripMap.vue';
@@ -127,7 +129,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
     <Head :title="t('store.trips.map.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.trips.map.title')" />
-        <p class="mb-4 text-sm text-gray-600 dark:text-neutral-400">
+        <p class="mb-4 text-sm text-muted">
             {{ t('store.trips.map.help') }}
         </p>
         <ActionErrorBanner
@@ -142,10 +144,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                     :selected="selected"
                     @toggle="toggle"
                 />
-                <p
-                    v-if="orders.length === 0"
-                    class="mt-2 text-sm text-gray-600 dark:text-neutral-400"
-                >
+                <p v-if="orders.length === 0" class="mt-2 text-sm text-muted">
                     {{ t('store.trips.map.noOrders') }}
                 </p>
             </div>
@@ -153,17 +152,14 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                 <h2 id="trip-map-stops" class="mb-3 text-lg font-semibold">
                     {{ t('store.trips.map.stops', { count: stops.length }) }}
                 </h2>
-                <p
-                    v-if="stops.length === 0"
-                    class="text-sm text-gray-600 dark:text-neutral-400"
-                >
+                <p v-if="stops.length === 0" class="text-sm text-muted">
                     {{ t('store.trips.map.noStops') }}
                 </p>
                 <ol v-else class="space-y-3">
                     <li
                         v-for="(order, index) in stops"
                         :key="order.id"
-                        class="rounded-md border border-gray-200 p-3 text-sm dark:border-neutral-700"
+                        class="rounded-md border border-line p-3 text-sm"
                     >
                         <div class="flex items-start justify-between gap-2">
                             <p class="font-medium">
@@ -177,7 +173,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                             <div class="flex shrink-0 gap-1">
                                 <button
                                     type="button"
-                                    class="cursor-pointer rounded p-1.5 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-neutral-800"
+                                    class="cursor-pointer rounded p-1.5 hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40"
                                     :disabled="index === 0"
                                     :aria-label="
                                         t('store.trips.form.moveUp', {
@@ -195,7 +191,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                                 </button>
                                 <button
                                     type="button"
-                                    class="cursor-pointer rounded p-1.5 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-neutral-800"
+                                    class="cursor-pointer rounded p-1.5 hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40"
                                     :disabled="index === stops.length - 1"
                                     :aria-label="
                                         t('store.trips.form.moveDown', {
@@ -213,7 +209,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                                 </button>
                                 <button
                                     type="button"
-                                    class="cursor-pointer rounded p-1.5 text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-neutral-800"
+                                    class="cursor-pointer rounded p-1.5 text-danger-strong hover:bg-danger-soft"
                                     :aria-label="
                                         t('store.trips.form.remove', {
                                             position: index + 1,
@@ -230,35 +226,29 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                                 </button>
                             </div>
                         </div>
-                        <dl
-                            class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1"
-                        >
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.customerId') }}
-                            </dt>
-                            <dd>{{ order.customer.id }}</dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.postalCode') }}
-                            </dt>
-                            <dd>{{ order.postal_code || '-' }}</dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.phone') }}
-                            </dt>
-                            <dd>{{ order.customer.phone || '-' }}</dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.address') }}
-                            </dt>
-                            <dd>
-                                <AddressMapLink
+                        <DetailList plain :columns="2" class="mt-2">
+                            <DetailItem
+                                :label="t('store.trips.map.customerId')"
+                                :value="order.customer.id"
+                            />
+                            <DetailItem
+                                :label="t('store.trips.map.postalCode')"
+                                :value="order.postal_code"
+                            />
+                            <DetailItem
+                                :label="t('store.trips.map.phone')"
+                                :value="order.customer.phone"
+                            />
+                            <DetailItem :label="t('store.trips.map.address')"
+                                ><AddressMapLink
                                     :address="order.address"
                                     placeholder="-"
-                                />
-                            </dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.accountingId') }}
-                            </dt>
-                            <dd>{{ order.customer.accounting_id || '-' }}</dd>
-                        </dl>
+                            /></DetailItem>
+                            <DetailItem
+                                :label="t('store.trips.map.accountingId')"
+                                :value="order.customer.accounting_id"
+                            />
+                        </DetailList>
                         <div
                             v-if="
                                 access.can('edit_trip') && orderTrips[order.id]
@@ -300,15 +290,12 @@ function hasStops(truck: StoreTripMapTruck): boolean {
             <h2 id="trip-map-free-trucks" class="mb-1 text-lg font-semibold">
                 {{ t('store.trips.map.freeTrucks') }}
             </h2>
-            <p
-                v-if="stops.length === 0"
-                class="mb-3 text-sm text-gray-600 dark:text-neutral-400"
-            >
+            <p v-if="stops.length === 0" class="mb-3 text-sm text-muted">
                 {{ t('store.trips.map.selectFirst') }}
             </p>
             <p
                 v-if="availableTrucks.length === 0"
-                class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                class="rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning-strong"
             >
                 {{ t('store.trips.map.noFreeTrucks') }}
             </p>
@@ -319,7 +306,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                 <li
                     v-for="truck in availableTrucks"
                     :key="truck.id"
-                    class="flex flex-col rounded-md border border-gray-200 p-3 text-sm dark:border-neutral-700"
+                    class="flex flex-col rounded-md border border-line p-3 text-sm"
                 >
                     <img
                         v-if="photoUrl(truck)"
@@ -333,11 +320,11 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                     />
                     <TruckIcon
                         v-else
-                        class="mb-2 h-12 w-12 text-gray-400 dark:text-neutral-500"
+                        class="mb-2 h-12 w-12 text-muted"
                         aria-hidden="true"
                     />
                     <h3 class="font-semibold">{{ truck.name }}</h3>
-                    <p class="text-gray-600 dark:text-neutral-400">
+                    <p class="text-muted">
                         {{
                             t('store.trips.map.maxPallets', {
                                 count: truck.max_pallets_number ?? '-',
@@ -370,7 +357,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
             </h2>
             <p
                 v-if="busyTrucks.length === 0"
-                class="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
+                class="rounded-md border border-success/30 bg-success-soft px-3 py-2 text-sm text-success-strong"
             >
                 {{ t('store.trips.map.allFree') }}
             </p>
@@ -381,7 +368,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                 <li
                     v-for="truck in busyTrucks"
                     :key="truck.id"
-                    class="flex flex-col rounded-md border border-gray-200 p-3 text-sm dark:border-neutral-700"
+                    class="flex flex-col rounded-md border border-line p-3 text-sm"
                 >
                     <img
                         v-if="photoUrl(truck)"
@@ -395,7 +382,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                     />
                     <TruckIcon
                         v-else
-                        class="mb-2 h-12 w-12 text-gray-400 dark:text-neutral-500"
+                        class="mb-2 h-12 w-12 text-muted"
                         aria-hidden="true"
                     />
                     <h3 class="font-semibold">
@@ -407,7 +394,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                         <template v-else>{{ truck.name }}</template>
                     </h3>
                     <template v-if="truck.trip && hasStops(truck)">
-                        <p class="mb-2 text-gray-600 dark:text-neutral-400">
+                        <p class="mb-2 text-muted">
                             {{
                                 truck.trip.driver?.name ??
                                 t('store.trips.index.notAvailable')
@@ -420,12 +407,9 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                         >
                             <ul class="space-y-1">
                                 <li v-for="stop in trip.stops" :key="stop.id">
-                                    <span
-                                        class="block text-xs text-gray-500 dark:text-neutral-400"
-                                        >{{
-                                            t('store.trips.map.nextStop')
-                                        }}</span
-                                    >
+                                    <span class="block text-xs text-muted">{{
+                                        t('store.trips.map.nextStop')
+                                    }}</span>
                                     <TableLink
                                         v-if="
                                             stop.customer &&
@@ -445,9 +429,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                                     }}</span>
                                 </li>
                             </ul>
-                            <p
-                                class="mt-1 text-xs text-gray-500 dark:text-neutral-400"
-                            >
+                            <p class="mt-1 text-xs text-muted">
                                 {{
                                     t('store.trips.map.checkpointsCount', {
                                         code: trip.code,
@@ -457,7 +439,7 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                             </p>
                         </div>
                     </template>
-                    <p v-else class="text-gray-600 dark:text-neutral-400">
+                    <p v-else class="text-muted">
                         {{ t('store.trips.map.noTripInformation') }}
                     </p>
                     <div class="mt-3 flex flex-wrap gap-2">

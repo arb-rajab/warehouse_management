@@ -26,14 +26,11 @@ const icons = {
     mail: Mail,
 } as const;
 const tones: Record<SearchOptionTone, string> = {
-    neutral:
-        'bg-gray-100 text-gray-700 dark:bg-neutral-700 dark:text-neutral-200',
-    success:
-        'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-    warning:
-        'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200',
-    danger: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+    neutral: 'bg-subtle text-ink',
+    success: 'bg-success-soft text-success-strong',
+    warning: 'bg-warning-soft text-warning-strong',
+    danger: 'bg-danger-soft text-danger-strong',
+    info: 'bg-info-soft text-info-strong',
 };
 
 const imageFailed = ref(false);
@@ -74,14 +71,14 @@ const descriptionParts = computed(() =>
                 :src="option.image"
                 alt=""
                 loading="lazy"
-                class="shrink-0 rounded-md border border-gray-200 object-cover dark:border-neutral-600"
+                class="shrink-0 rounded-md border border-line object-cover"
                 :class="size"
                 data-testid="search-option-image"
                 @error="imageFailed = true"
             />
             <span
                 v-else-if="icon"
-                class="grid shrink-0 place-items-center rounded-md bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-neutral-300"
+                class="grid shrink-0 place-items-center rounded-md bg-subtle text-muted"
                 :class="size"
                 data-testid="search-option-icon"
             >
@@ -93,7 +90,7 @@ const descriptionParts = computed(() =>
             </span>
             <span
                 v-else
-                class="grid shrink-0 place-items-center rounded-full bg-blue-100 font-semibold text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
+                class="grid shrink-0 place-items-center rounded-full bg-info-soft font-semibold text-info-strong"
                 :class="[size, variant === 'row' ? 'text-xs' : 'text-[10px]']"
                 aria-hidden="true"
                 data-testid="search-option-initials"
@@ -103,13 +100,13 @@ const descriptionParts = computed(() =>
         <span class="min-w-0 flex-1">
             <span
                 dir="auto"
-                class="block truncate text-sm text-gray-900 dark:text-neutral-100"
+                class="block truncate text-sm text-ink"
                 :class="variant === 'chip' ? '' : 'font-medium'"
                 data-testid="search-option-label"
                 ><template v-for="(part, index) in labelParts" :key="index"
                     ><mark
                         v-if="part.match"
-                        class="rounded bg-yellow-200 px-0.5 text-inherit dark:bg-yellow-500/40 dark:text-white"
+                        class="rounded bg-warning-soft px-0.5 text-inherit ring-1 ring-warning/40"
                         >{{ part.text }}</mark
                     ><template v-else>{{ part.text }}</template></template
                 ></span
@@ -117,14 +114,14 @@ const descriptionParts = computed(() =>
             <span
                 v-if="option.description && variant !== 'chip'"
                 dir="auto"
-                class="block truncate text-xs text-gray-500 dark:text-neutral-400"
+                class="block truncate text-xs text-muted"
                 data-testid="search-option-description"
                 ><template
                     v-for="(part, index) in descriptionParts"
                     :key="index"
                     ><mark
                         v-if="part.match"
-                        class="rounded bg-yellow-200 px-0.5 text-inherit dark:bg-yellow-500/40 dark:text-white"
+                        class="rounded bg-warning-soft px-0.5 text-inherit ring-1 ring-warning/40"
                         >{{ part.text }}</mark
                     ><template v-else>{{ part.text }}</template></template
                 ></span

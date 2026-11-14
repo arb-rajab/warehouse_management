@@ -35,7 +35,7 @@ The header must stay visible, and `position: sticky` sticks to the nearest scrol
 - The column-filter popover is a sibling outside the scroller (js-components.md); keep it there so it is not clipped.
 
 ## Page width
-`StoreAdminLayout.vue` lets content grow to `max-w-screen-2xl` so more columns fit before scrolling. Keep it; do not cap the content narrower again for the sake of a list. The warehouse `AdminLayout` keeps its own `max-w-6xl`.
+The shared `BackofficeShell` (layouts.md) lets content grow to `max-w-screen-2xl` beside the sidebar in both layouts (store and warehouse alike), so more columns fit before scrolling. Keep it; do not cap the content narrower again for the sake of a list.
 
 ## Tests
-`DataTable.test.ts` asserts `w-max`/`whitespace-nowrap`, the sticky `th` classes and the viewport-based `max-h`; `StoreAdminLayout.test.ts` asserts `max-w-screen-2xl`. Update them with any change here.
+`DataTable.test.ts` asserts `w-max`/`whitespace-nowrap`, the sticky `th` classes and the viewport-based `max-h`; `StoreAdminLayout.test.ts`, `AdminLayout.test.ts` and `BackofficeShell.test.ts` assert `max-w-screen-2xl`. The header cells are the Direction A style (`bg-table-head`, small uppercase semibold, `shadow-[inset_0_-1px_0_var(--line)]`; no hex colour) and the wrapper is a `bg-surface shadow-card` card. Update them with any change here.

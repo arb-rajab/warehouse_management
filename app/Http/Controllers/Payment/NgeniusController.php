@@ -2,44 +2,58 @@
 namespace App\Http\Controllers\Payment;
 
 use App\Http\Controllers\Controller;
-use App\Models\CombinedOrder;
-use App\Models\CustomerPackage;
-use App\Models\SellerPackage;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
 use App\Utility\NgeniusUtility;
+use Illuminate\Support\Facades\Log;
 use Session;
 
 class NgeniusController extends Controller
 {
+    /**
+     * Start the payment this session is making. The amount due comes from the database (an
+     * order of the signed-in customer, a package's price, the top-up asked for), is converted
+     * to the gateway currency and sent in minor units. A currency the store has no active rate
+     * for, or an N-Genius that gives no payment page, is refused with a message and nothing is
+     * recorded.
+     */
     public function pay()
     {
-        if (Session::get('payment_type') == 'cart_payment') {
-            $combined_order = CombinedOrder::findOrFail(Session::get('combined_order_id'));
-            $amount = round($combined_order->grand_total * 100);
-            //will be redirected
-            NgeniusUtility::make_payment(route('ngenius.cart_payment_callback'),"cart_payment",$amount);
-        } elseif (Session::get('payment_type') == 'wallet_payment') {
-            $amount = round(Session::get('payment_data')['amount'] * 100);
-            //will be redirected
-            NgeniusUtility::make_payment(route('ngenius.wallet_payment_callback'),"wallet_payment",$amount);
-        } elseif (Session::get('payment_type') == 'customer_package_payment') {
-            $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
-            $amount = round($customer_package->amount * 100);
-            //will be redirected
-            NgeniusUtility::make_payment(route('ngenius.customer_package_payment_callback'),"customer_package_payment",$amount);
-        } elseif (Session::get('payment_type') == 'seller_package_payment') {
-            $seller_package = SellerPackage::findOrFail(Session::get('payment_data')['seller_package_id']);
-            $amount = round($seller_package->amount * 100);
-            //will be redirected
-            NgeniusUtility::make_payment(route('ngenius.seller_package_payment_callback'),"seller_package_payment",$amount);
+        $callbacks = [
+            'cart_payment' => 'ngenius.cart_payment_callback',
+            'wallet_payment' => 'ngenius.wallet_payment_callback',
+            'customer_package_payment' => 'ngenius.customer_package_payment_callback',
+            'seller_package_payment' => 'ngenius.seller_package_payment_callback',
+        ];
+        $paymentType = (string) Session::get('payment_type');
+        $due = app(SessionGatewayPayment::class)->amountDue();
+        $currency = GatewayCurrency::forGateway('ngenius');
+        $converted = $due === null ? null : $currency->fromStore($due);
+
+        if (! isset($callbacks[$paymentType]) || $converted === null) {
+            Log::error('N-Genius refused: nothing due, or the store has no active rate for the gateway currency.', ['type' => $paymentType, 'currency' => $currency->chargeCode()]);
+
+            return $this->failed();
         }
 
+        $redirect = NgeniusUtility::make_payment(route($callbacks[$paymentType]), $paymentType, (int) round($converted * 100), $currency->chargeCode());
 
-        $seller_package_id = Session::get('payment_data')['seller_package_id'];
-        $seller_package  = SellerPackage::findOrFail($seller_package_id);
+        if ($redirect === null) {
+            Log::error('N-Genius gave no payment page.', ['type' => $paymentType, 'mode' => NgeniusUtility::getMode()]);
 
+            return $this->failed();
+        }
+
+        return $redirect;
+    }
+
+    private function failed()
+    {
+        flash(__('storefront.checkout.payment_failed'))->error();
+
+        return redirect()->route('cart');
     }
 
     public function cart_payment_callback()
@@ -80,11 +94,13 @@ class NgeniusController extends Controller
         }
 
         $order = NgeniusUtility::retrieve_order($ref);
+        $currency = GatewayCurrency::forGateway('ngenius');
         $paid = (float) ($order['amount']['value'] ?? 0) / 100;
         $isCaptured = is_array($order)
             && hash_equals($ref, (string) ($order['reference'] ?? ''))
             && ($order['_embedded']['payment'][0]['state'] ?? null) === 'CAPTURED'
-            && GatewayPaymentService::covers($paid, $amountDue);
+            && strtoupper((string) ($order['amount']['currencyCode'] ?? '')) === $currency->chargeCode()
+            && ($currency->isStoreCurrency() ? GatewayPaymentService::covers($paid, $amountDue) : $currency->matchesDue($paid, $amountDue));
 
         if (! $isCaptured) {
             Session::forget('payment_data');
@@ -94,6 +110,6 @@ class NgeniusController extends Controller
 
         Session::forget('ngenius_order_ref');
 
-        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('ngenius', $ref, $paid, json_encode($order)));
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('ngenius', $ref, $currency->paidInStoreCurrency($paid, $amountDue), json_encode($order)));
     }
 }

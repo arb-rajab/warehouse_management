@@ -173,15 +173,16 @@ test('the edit form sends the full product, the language texts, the product taxe
     $this->get(route('digitalproducts.edit', ['product' => $this->product, 'lang' => 'xx']))->assertSessionHasErrors('lang');
 });
 
-test('creating a digital product writes the product, its stock, translation and taxes together and returns to the list', function () {
-    $staff = createStoreStaff('add_digital_product');
+test('creating a digital product writes the product, its stock, translation and taxes together and opens the main products list', function () {
+    $staff = createStoreStaff('add_digital_product', 'show_all_products');
     actingAsStoreUser($staff);
     $photo = digitalImage($staff->id);
     $file = digitalImage($staff->id, 'document');
     $before = Product::query()->max('id');
 
     $this->post(route('digitalproducts.store'), digitalProductForm(['photos' => (string) $photo->id, 'thumbnail_img' => $photo->id, 'meta_img' => $photo->id, 'file' => $file->id]))
-        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'));
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.all'))
+        ->assertInertiaFlash('success', 'Digital product has been created successfully');
 
     $product = Product::query()->where('id', '>', $before)->sole();
     expect($product->only(['name', 'added_by', 'user_id', 'category_id', 'digital', 'photos', 'thumbnail_img', 'tags', 'description', 'discount_type', 'meta_title', 'meta_description', 'meta_img', 'file_name']))->toEqual([
@@ -203,13 +204,22 @@ test('creating a digital product writes the product, its stock, translation and 
         ->toEqual([['tax_id' => $this->vat, 'tax' => 21, 'tax_type' => 'percent'], ['tax_id' => $this->service, 'tax' => 1.5, 'tax_type' => 'amount']]);
 
     $this->post(route('digitalproducts.store'), digitalProductForm(['name' => 'Spiced tea notes!', 'date_range' => null, 'tags' => null, 'tax_id' => null, 'tax' => null, 'tax_type' => null]))
-        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'));
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.all'));
     $plain = Product::query()->where('name', 'Spiced tea notes!')->sole();
     expect($plain->slug)->toMatch('/^Spiced-tea-notes-\d{5}$/')
         ->and($plain->getAttribute('discount_start_date'))->toBeNull()
         ->and($plain->getAttribute('discount_end_date'))->toBeNull()
         ->and($plain->getAttribute('tags'))->toBe('')
         ->and(ProductTax::query()->where('product_id', $plain->id)->exists())->toBeFalse();
+});
+
+test('the created digital product opens the main products list showing the success message', function () {
+    actingAsStoreUser(createStoreStaff('add_digital_product', 'show_all_products'));
+
+    $this->followingRedirects()->post(route('digitalproducts.store'), digitalProductForm())
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Store/Admin/Product/Products/Index')->where('listType', 'all')
+        ->hasFlash('success', 'Digital product has been created successfully'));
 });
 
 test('updating in the default language rewrites the base texts, replaces stock and taxes and returns to the edit form', function () {

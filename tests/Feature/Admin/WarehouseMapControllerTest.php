@@ -3,6 +3,7 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -161,4 +162,72 @@ test('a mobile app user cannot read the warehouse map rows', function () {
     Row::factory()->create();
 
     $this->getJson('/admin/warehouse-map/rows')->assertForbidden();
+});
+
+test('the warehouse map screen carries the warehouse filter and every warehouse for its switcher', function () {
+    actingAsAdmin();
+    $default = Warehouse::firstOrCreateDefault();
+    $north = Warehouse::factory()->create(['name' => 'North', 'code' => 'NTH', 'address' => 'Dock 4']);
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $everyWarehouse = [
+        ['id' => $annex->id, 'name' => 'Annex'],
+        ['id' => $default->id, 'name' => Warehouse::DEFAULT_NAME],
+        ['id' => $north->id, 'name' => 'North'],
+    ];
+
+    $this->get("/admin/warehouse-map?warehouse_ids[]={$north->id}&warehouse_ids[]={$annex->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/WarehouseMap/Index')
+            ->where('filters', ['warehouse_ids' => [$north->id, $annex->id]])
+            ->where('warehouses', $everyWarehouse)
+            ->missing('filterOptions')
+    );
+    $this->get('/admin/warehouse-map')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('filters', ['warehouse_ids' => null])->where('warehouses', $everyWarehouse)
+    );
+});
+
+test('the warehouse map screen refuses a warehouse filter that names no warehouse', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/warehouse-map?warehouse_ids[]=999999')->assertSessionHasErrors('warehouse_ids.0');
+    $this->get('/admin/warehouse-map?warehouse_ids=north')->assertSessionHasErrors('warehouse_ids');
+});
+
+test('the warehouse map rows can be narrowed to the selected warehouses, each row naming its warehouse', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $filtered = $this->getJson("/admin/warehouse-map/rows?warehouse_ids[]={$north->id}");
+    $all = $this->getJson('/admin/warehouse-map/rows');
+
+    expect(collect($filtered->assertOk()->json())->pluck('id')->all())->toBe([$northRow->id])
+        ->and($filtered->json('0.warehouse'))->toEqual(['id' => $north->id, 'name' => 'North'])
+        ->and(collect($all->json())->pluck('id')->sort()->values()->all())->toBe([$northRow->id, $defaultRow->id]);
+});
+
+test('the warehouse map screen sends the pallet transfer destinations only when the transfer dialog asks for them', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 3, 'flats_count' => 2]);
+
+    $this->get('/admin/warehouse-map')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/WarehouseMap/Index')
+            ->missing('transferTargets')
+            ->reloadOnly('transferTargets', fn (Assert $reload) => $reload
+                ->where('transferTargets.warehouses', [
+                    ['id' => $annex->id, 'name' => 'Annex'],
+                    ['id' => $defaultRow->warehouse_id, 'name' => Warehouse::DEFAULT_NAME],
+                ])
+                ->has('transferTargets.rows', 2)
+                ->where('transferTargets.rows.0.id', $defaultRow->id)
+                ->where('transferTargets.rows.0.warehouse_id', $defaultRow->warehouse_id)
+                ->where('transferTargets.rows.1.id', $annexRow->id)
+                ->where('transferTargets.rows.1.warehouse_id', $annex->id)
+                ->where('transferTargets.rows.1.cells_count', 3)
+                ->where('transferTargets.rows.1.flats_count', 2)
+            )
+    );
 });

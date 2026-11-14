@@ -1,13 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './support/auth';
-import { openAccountMenu, switchLocale } from './support/nav';
+import { switchLocale } from './support/nav';
 
 test('the cell log state-change arrow flips direction in RTL layouts', async ({
     page,
 }) => {
     await loginAsAdmin(page);
 
-    await openAccountMenu(page);
     await switchLocale(page, 'Arabic');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
 

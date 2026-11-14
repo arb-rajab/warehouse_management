@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterSellerPayoutRequest;
 use App\Http\Requests\Store\Admin\SellerReferenceRequest;
 use App\Http\Requests\Store\Admin\StoreSellerPaymentRequest;
@@ -26,6 +27,8 @@ use Inertia\Response;
 
 class SellerPaymentController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -129,6 +132,7 @@ class SellerPaymentController extends Controller implements HasMiddleware
         } finally {
             $request->session()->forget(['payment_data', 'payment_type']);
         }
+        $this->flashSuccess('seller_payment_has_been_recorded_successfully');
 
         return redirect()->route($withdrawal ? 'withdraw_requests_all' : 'sellers.index', $request->query());
     }

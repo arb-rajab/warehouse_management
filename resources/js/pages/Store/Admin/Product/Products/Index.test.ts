@@ -367,7 +367,7 @@ describe('Store product lists Index', () => {
         );
         expect(cells[1].text()).toContain('Olive oil 1L');
         expect(cells[1].get('[dir="auto"]').text()).toBe('زيت زيتون');
-        expect(cells[1].find('.text-red-700').exists()).toBe(false);
+        expect(cells[1].find('.text-danger-strong').exists()).toBe(false);
         expect(cells[2].text()).toBe('41');
         expect(cells[3].text()).toBe('Box(12)');
         expect(cells[5].text()).toBe('40');
@@ -377,7 +377,7 @@ describe('Store product lists Index', () => {
         expect(secondCells[1].text()).toContain('<img src=x onerror=alert(1)>');
         expect(second.findAll('img')).toHaveLength(1);
         expect(secondCells[1].find('[dir="auto"]').exists()).toBe(false);
-        expect(secondCells[1].find('.text-red-700').exists()).toBe(true);
+        expect(secondCells[1].find('.text-danger-strong').exists()).toBe(true);
         expect(secondCells[2].text()).toBe('42');
         expect(
             secondCells[5].findAll('span').map((span) => span.text()),
@@ -734,8 +734,8 @@ describe('Store product lists Index', () => {
             },
         ]);
         const presetLinks = wrapper.findAll('#product-presets a');
-        expect(presetLinks[3].classes()).toContain('bg-gray-900');
-        expect(presetLinks[0].classes()).not.toContain('bg-gray-900');
+        expect(presetLinks[3].classes()).toContain('bg-brand');
+        expect(presetLinks[0].classes()).not.toContain('bg-brand');
         const pagination = wrapper.getComponent(Pagination);
         expect(pagination.props()).toMatchObject({ perPage: 50 });
         pagination.vm.$emit('update:perPage', 25);

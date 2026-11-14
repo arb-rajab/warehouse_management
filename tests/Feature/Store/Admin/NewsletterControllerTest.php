@@ -84,7 +84,8 @@ test('newsletters queue only selected persisted recipients once and sanitize HTM
     $this->post(route('newsletters.send'), [
         'user_emails' => [$user->email], 'subscriber_emails' => [$user->email, 'selected@example.test'],
         'subject' => 'عروض', 'content' => '<p><strong>Safe</strong><script>alert(1)</script><a href="javascript:alert(1)">link</a></p>',
-    ])->assertRedirect(route('shop.admin.dashboard'));
+    ])->assertRedirect(route('shop.admin.dashboard'))
+        ->assertInertiaFlash('success', 'Newsletter has been sent successfully');
     Mail::assertQueuedCount(2);
     Mail::assertQueued(EmailManager::class, function (EmailManager $mail) use ($user): bool {
         expect($mail->array['subject'])->toBe('عروض')->and($mail->array['view'])->toBe('shop.emails.newsletter');
@@ -120,12 +121,14 @@ test('newsletter writes validate recipients subject and safe content before queu
     'unsafe only content' => [['content' => '<script>alert(1)</script>'], 'content'],
 ]);
 
-test('the SMTP test validates its address and queues the existing test message', function () {
+test('the SMTP test validates its address and sends the existing test message at once', function () {
     actingAsStoreUser(createStoreStaff('send_newsletter', 'smtp_settings'));
     $this->postJson(route('test.smtp'), ['email' => 'bad'])->assertUnprocessable()->assertJsonValidationErrors('email');
+    Mail::assertNothingOutgoing();
+    $this->post(route('test.smtp'), ['email' => 'test@example.test'])->assertRedirect(route('smtp_settings.index'))
+        ->assertInertiaFlash('success', 'Test email has been sent successfully');
     Mail::assertNothingQueued();
-    $this->post(route('test.smtp'), ['email' => 'test@example.test'])->assertRedirect(route('smtp_settings.index'));
-    Mail::assertQueued(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('test@example.test') && $mail->array['subject_key'] === 'delivery.mail.smtp_subject' && $mail->array['content_key'] === 'delivery.mail.smtp_body');
+    Mail::assertSent(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('test@example.test') && $mail->array['subject_key'] === 'delivery.mail.smtp_subject' && $mail->array['content_key'] === 'delivery.mail.smtp_body');
 });
 
 foreach (['index', 'recipients', 'send', 'testEmail'] as $action) {
@@ -139,6 +142,6 @@ foreach (['index', 'recipients', 'send', 'testEmail'] as $action) {
             'testEmail' => $this->post(route('test.smtp'), ['email' => 'test@example.test']),
         };
         assertStoreCallerRefused($response, $caller);
-        Mail::assertNothingQueued();
+        Mail::assertNothingOutgoing();
     })->with('refused store admin callers');
 }

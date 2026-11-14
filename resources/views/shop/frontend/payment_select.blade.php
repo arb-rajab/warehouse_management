@@ -1,6 +1,9 @@
 @extends('shop.frontend.layouts.app')
 
 @section('content')
+    @php
+        $onlineGateways = app(\App\Services\PaymentOptions::class)->available();
+    @endphp
 
     <!-- Steps -->
     <section class="pt-5 mb-4">
@@ -85,152 +88,30 @@
                                 <textarea name="additional_info" rows="5" class="form-control rounded-0" placeholder="{{ __('storefront.common.type_your_text') }}"></textarea>
                             </div>
 
-                            <div class="card-header p-4 border-bottom-0 d-none">
+                            <div class="card-header p-4 border-bottom-0 @if ($onlineGateways === []) d-none @endif">
                                 <h3 class="fs-16 fw-700 text-dark mb-0">
                                     {{ __('storefront.checkout.select_a_payment_option') }}
                                 </h3>
                             </div>
                             <!-- Payment Options -->
-                            <div class="card-body text-center px-4 pt-0 d-none">
+                            <div class="card-body text-center px-4 pt-0 @if ($onlineGateways === []) d-none @endif">
                                 <div class="row gutters-10">
-                                    {{--
-                                    <!-- sslcommerz -->
-                                    @if (get_setting('sslcommerz_payment') == 1)
+                                    @foreach ($onlineGateways as $gatewayKey => $gateway)
+                                        <!-- {{ $gatewayKey }} -->
                                         <div class="col-6 col-xl-3 col-md-4">
                                             <label class="aiz-megabox d-block mb-3">
-                                                <input value="sslcommerz" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
+                                                <input value="{{ $gatewayKey }}" class="online_payment" type="radio"
+                                                    name="payment_option" @checked($loop->first)>
                                                 <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/sslcommerz.png') }}"
-                                                        class="img-fit mb-2">
+                                                    <img src="{{ static_asset('assets/img/cards/'.$gateway['image']) }}"
+                                                        class="img-fit mb-2" alt="{{ $gateway['name'] }}">
                                                     <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.sslcommerz') }}</span>
+                                                        <span class="d-block fw-600 fs-15">{{ $gateway['name'] }}</span>
                                                     </span>
                                                 </span>
                                             </label>
                                         </div>
-                                    @endif
-                                    <!-- voguepay -->
-                                    @if (get_setting('voguepay') == 1)
-                                        <div class="col-6 col-xl-3 col-md-4">
-                                            <label class="aiz-megabox d-block mb-3">
-                                                <input value="voguepay" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
-                                                <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/vogue.png') }}"
-                                                        class="img-fit mb-2">
-                                                    <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.voguepay') }}</span>
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    @endif
-                                    <!-- payhere -->
-                                    @if (get_setting('payhere') == 1)
-                                        <div class="col-6 col-xl-3 col-md-4">
-                                            <label class="aiz-megabox d-block mb-3">
-                                                <input value="payhere" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
-                                                <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/payhere.png') }}"
-                                                        class="img-fit mb-2">
-                                                    <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.payhere') }}</span>
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    @endif
-                                    <!-- ngenius -->
-                                    @if (get_setting('ngenius') == 1)
-                                        <div class="col-6 col-xl-3 col-md-4">
-                                            <label class="aiz-megabox d-block mb-3">
-                                                <input value="ngenius" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
-                                                <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/ngenius.png') }}"
-                                                        class="img-fit mb-2">
-                                                    <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.ngenius') }}</span>
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    @endif
-                                    <!-- iyzico -->
-                                    @if (get_setting('iyzico') == 1)
-                                        <div class="col-6 col-xl-3 col-md-4">
-                                            <label class="aiz-megabox d-block mb-3">
-                                                <input value="iyzico" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
-                                                <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/iyzico.png') }}"
-                                                        class="img-fit mb-2">
-                                                    <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.iyzico') }}</span>
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    @endif
-                                    <!-- nagad -->
-                                    @if (get_setting('nagad') == 1)
-                                        <div class="col-6 col-xl-3 col-md-4">
-                                            <label class="aiz-megabox d-block mb-3">
-                                                <input value="nagad" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
-                                                <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/nagad.png') }}"
-                                                        class="img-fit mb-2">
-                                                    <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.nagad') }}</span>
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    @endif
-                                    <!-- bkash -->
-                                    @if (get_setting('bkash') == 1)
-                                        <div class="col-6 col-xl-3 col-md-4">
-                                            <label class="aiz-megabox d-block mb-3">
-                                                <input value="bkash" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
-                                                <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/bkash.png') }}"
-                                                        class="img-fit mb-2">
-                                                    <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.bkash') }}</span>
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    @endif
-                                    <!-- aamarpay -->
-                                    @if (get_setting('aamarpay') == 1)
-                                        <div class="col-6 col-xl-3 col-md-4">
-                                            <label class="aiz-megabox d-block mb-3">
-                                                <input value="aamarpay" class="online_payment" type="radio"
-                                                    name="payment_option" checked>
-                                                <span class="d-block aiz-megabox-elem rounded-0 p-3">
-                                                    <img src="{{ static_asset('assets/img/cards/aamarpay.png') }}"
-                                                        class="img-fit mb-2">
-                                                    <span class="d-block text-center">
-                                                        <span
-                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.aamarpay') }}</span>
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    @endif
-                                    --}}
+                                    @endforeach
                                     <!-- Cash Payment -->
                                     @if (get_setting('cash_payment') == 1)
                                         @php
@@ -250,7 +131,7 @@
                                             <div class="col-6 col-xl-3 col-md-4">
                                                 <label class="aiz-megabox d-block mb-3">
                                                     <input value="cash_on_delivery" class="online_payment"
-                                                        type="radio" name="payment_option" checked>
+                                                        type="radio" name="payment_option" @checked($onlineGateways === [])>
                                                     <span class="d-block aiz-megabox-elem rounded-0 p-3">
                                                         <img src="{{ static_asset('assets/img/cards/cod.png') }}"
                                                             class="img-fit mb-2">

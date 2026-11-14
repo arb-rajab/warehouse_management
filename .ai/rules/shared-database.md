@@ -329,12 +329,14 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 
 - `pallets.product_id`
 - `cell_status_logs.product_id`
+- `cell_status_logs.old_product_id` (the product a pallet held before a `product_changed` entry)
 - `cell_verification_reports.expected_product_id`
 - `cell_verification_reports.reported_product_id`
 - `wms_product_settings.product_id`
-- `wms_product_barcodes.product_id`
+- `wms_product_barcodes.product_id` (retired 2026-11-08, see "Barcodes: one table"; dropped by a follow-up migration after one release)
 - `wms_product_image_reviews.product_id`
-- `product_barcodes.product_id`
+- `receipt_pallets.product_id`
+- `product_barcodes.product_id` (the one barcode table)
 - `product_variations.product_id`
 - `carts_offered.product_id` (no constraint, as in the store's schema)
 - `offer_products.product_id` (no constraint, as in the store's schema)
@@ -532,6 +534,36 @@ row's `updated_at` is store-owned and is no longer automatically changed by the 
 categories, brands, unit translations, stock quantities, owner and approval
 values are not imported by this command.
 
+## Barcodes: one table
+
+Added 2026-11-08. A product's barcodes live in **one** table, `product_barcodes`
+(`App\Models\ProductBarcode`, reached through `Product::barcodes()`). It is
+owned by both apps' code: the WMS products page (Barcodes dialog), the store
+back office's product form, the Otajer import, the storefront label, the store
+app's search and `GET /api/v1/products/{code}` all read and write it. There is
+no `StoreProductBarcode` model and no `Product::storeBarcodes()`; do not add a
+second model or relation over the same table.
+
+- **No unique index.** The inherited table already held the same value on
+  several products, and existing data is never changed to make room for a
+  constraint. The table has only a plain index on `barcode`
+  (`2026_11_08_100000`). **Uniqueness is application-level**:
+  `App\Rules\NewProductBarcode` checks a new value across every product, and
+  its writers repeat the check and insert under `NewProductBarcode::locked()`.
+  Existing duplicates are listed by `php artisan products:barcode-conflicts`,
+  never deleted automatically. On MySQL "equal" follows the column's collation.
+- **`wms_product_barcodes` is retired.** The WMS used to keep its own table with
+  its own unique index. `2026_11_08_100001` copied its rows into
+  `product_barcodes` (skipping a value another row already holds, and rows whose
+  product is gone) and no code reads the old table any more. It stays, unused,
+  for one release, because the copy migration's `down()` is a no-op and the old
+  rows are the rollback. A follow-up migration drops it, removes the report's
+  (b) and (c) categories, replaces `CreateWmsProductBarcodesTableTest` and
+  removes the table from the e2e cleanup lists.
+  Runbook: [barcode-single-source-runbook-20261108.md](../barcode-single-source-runbook-20261108.md).
+- The behaviours that follow (own-id rows, deletion, labels, the Store form's
+  seen list) are in [product-barcodes.md](product-barcodes.md).
+
 ## Every other table is WMS-owned, under a `wms_` prefix
 
 The table below is history now that the databases are separate — no name here
@@ -552,11 +584,20 @@ existing database, and changing one is a production data migration.
 | `wms_cache`, `wms_cache_locks` | no | this app runs `CACHE_STORE=database`; if the store ever does too, either app could read, overwrite or flush the other's entries |
 | `wms_jobs`, `wms_job_batches`, `wms_failed_jobs` | no | this app runs `QUEUE_CONNECTION=database`; if the store ever does too, each app's workers would reserve payloads whose job classes don't exist on their side |
 
-The remaining tables (`rows`, `cells`, `pallets`, `cell_status_logs`,
+The remaining tables (`rows`, `cells`, `pallets`, `warehouses`, `receipts`,
+`receipt_files`, `receipt_pallets`, `cell_status_logs`,
 `cell_status_log_flags`, `cell_verification_rounds`,
 `cell_verification_reports`, `mobile_app_version_requirements`) keep bare names:
 they were specific enough to this domain that the store app had nothing like
 them — verified name-by-name against the store's 107 tables at the time.
+`admin_audit_logs` (2026-11-11, `AdminAuditLog`) is a store back-office table
+created by this app with a bare name like the store's own tables; its `user_id`
+is a store `users.id` with no foreign key on purpose (a row outlives the account).
+`payment_gateway_settings` (2026-11-12, `PaymentGatewaySetting`, written only by
+`App\Support\StorePaymentGateways`) is the same kind of table: one row per payment
+gateway and field, secrets as `Crypt` ciphertext, `updated_by` a store `users.id`
+without a foreign key. It exists so the inherited `business_settings` (`type` is a
+`string(30)`, readable by the public business-settings endpoint) is not widened.
 `tests/Feature/SharedDatabaseTableNamesTest.php` pins that inventory, and still
 should: it is what keeps the prefixed and bare sets from drifting by accident.
 A new bare-named table fails the suite until it is added there. Telescope,

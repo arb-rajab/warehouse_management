@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { PackageSearch, TriangleAlert } from '@lucide/vue';
+import { Head } from '@inertiajs/vue3';
+import { PackageSearch } from '@lucide/vue';
 import { computed } from 'vue';
-import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
-import {
-    activation,
-    payments,
-    smtp,
-} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreDashboardChart from '@/components/StoreDashboardChart.vue';
+import StoreSetupChecklist from '@/components/StoreSetupChecklist.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -17,31 +12,6 @@ import type { StoreDashboardProps } from '@/types/store';
 
 const props = defineProps<StoreDashboardProps>();
 const access = useStoreAccess();
-// Settings the store cannot take orders without, each with the page that sets it.
-// Cash payment is switched on in Features activation, and the link lands on that option.
-const setupLinks = {
-    noPaymentMethod: () =>
-        access.value.can('features_activation')
-            ? activation({ query: { highlight: 'cash_payment' } })
-            : payments(),
-    cashOnDeliveryProducts: allProducts,
-};
-const alerts = computed(() => [
-    ...(props.showSmtpAlert && access.value.can('smtp_settings')
-        ? [
-              {
-                  key: 'smtp',
-                  message: t('store.dashboard.smtpWarning'),
-                  href: smtp(),
-              },
-          ]
-        : []),
-    ...props.setupAlerts.map((key) => ({
-        key,
-        message: t(`store.dashboard.setup.${key}`),
-        href: setupLinks[key](),
-    })),
-]);
 const charts = computed(() => [
     {
         key: 'products',
@@ -89,27 +59,14 @@ const charts = computed(() => [
     <StoreAdminLayout>
         <PageHeader :title="t('store.dashboard.title')" />
         <div v-if="access.can('admin_dashboard')" class="space-y-6">
-            <div
-                v-for="alert in alerts"
-                :key="alert.key"
-                role="alert"
-                class="flex items-center gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-100"
-            >
-                <TriangleAlert class="size-5 shrink-0" />
-                <span
-                    >{{ alert.message }}
-                    <Link :href="alert.href" class="font-semibold underline">{{
-                        t('store.dashboard.configureNow')
-                    }}</Link></span
-                >
-            </div>
+            <StoreSetupChecklist :checklist="setupChecklist" />
             <dl class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div
                     v-for="(value, key) in stats"
                     :key="key"
-                    class="rounded-lg border border-gray-200 p-4 dark:border-neutral-700"
+                    class="rounded-lg border border-line p-4"
                 >
-                    <dt class="text-sm text-gray-600 dark:text-neutral-300">
+                    <dt class="text-sm text-muted">
                         {{ t(`store.dashboard.${key}`) }}
                     </dt>
                     <dd class="mt-2 text-3xl font-semibold">{{ value }}</dd>
@@ -138,7 +95,7 @@ const charts = computed(() => [
                     <article
                         v-for="product in topProducts"
                         :key="product.id"
-                        class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700"
+                        class="overflow-hidden rounded-lg border border-line"
                     >
                         <component
                             :is="product.public_url ? 'a' : 'div'"
@@ -161,13 +118,11 @@ const charts = computed(() => [
                                             product.base_price !==
                                             product.discounted_price
                                         "
-                                        class="me-2 text-gray-600 dark:text-neutral-300"
+                                        class="me-2 text-muted"
                                         >{{ product.base_price }}</del
                                     ><span>{{ product.discounted_price }}</span>
                                 </p>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-neutral-300"
-                                >
+                                <p class="text-sm text-muted">
                                     {{
                                         t('store.dashboard.rating', {
                                             rating: product.rating,
@@ -178,10 +133,7 @@ const charts = computed(() => [
                         </component>
                     </article>
                 </div>
-                <p
-                    v-else
-                    class="flex items-center gap-2 text-gray-600 dark:text-neutral-300"
-                >
+                <p v-else class="flex items-center gap-2 text-muted">
                     <PackageSearch class="size-5" />{{
                         t('store.dashboard.emptyProducts')
                     }}

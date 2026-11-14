@@ -2,35 +2,26 @@
 
 namespace App\Utility;
 
+use App\Support\StorePaymentGateways;
 use Illuminate\Support\Facades\Http;
 
 class NgeniusUtility
 {
+    /** The identity or gateway URL of the configured environment (`NGENIUS_MODE`: uat, the default, or live). */
     public static function getUrl($key)
     {
-        $mode = self::getMode();
-        $url['sandbox']['identity'] = "https://api-gateway.sandbox.ngenius-payments.com/identity/auth/access-token";
-        $url['sandbox']['gateway'] = "https://api-gateway.sandbox.ngenius-payments.com";
-        // sandbox urls do not work as the identity is not retrived by sandbox identity
-
-        $url['real']['identity'] = "https://identity-uat.ngenius-payments.com/auth/realms/ni/protocol/openid-connect/token";
-        $url['real']['gateway'] = "https://api-gateway-uat.ngenius-payments.com";
-
-        return $url[$mode][$key];
+        return (string) config('services.ngenius.urls.'.self::getMode().'.'.$key);
     }
 
-    //sandbox or real
+    /** 'live' only when NGENIUS_MODE says so; everything else is N-Genius's UAT test environment. */
     public static function getMode()
     {
-        $sandbox = false; //check from db or env
-        // sandbox urls do not work as the identity is not retrived by sandbox identity
-
-        return $sandbox ? "sandbox" : "real";
+        return strtolower((string) StorePaymentGateways::get('ngenius', 'mode')) === 'live' ? 'live' : 'uat';
     }
 
     public static function getAccessToken()
     {
-        $apikey = env("NGENIUS_API_KEY"); // set your service account API key (example only)
+        $apikey = StorePaymentGateways::get('ngenius', 'api_key'); // set your service account API key (example only)
         $idServiceURL = self::getUrl('identity');                   // set the identity service URL (example only)
 
         $tokenHeaders = ["Authorization: Basic $apikey", "Content-Type: application/x-www-form-urlencoded"];
@@ -49,55 +40,45 @@ class NgeniusUtility
     }
 
 
-    public static function make_payment($callback_url, $payment_type, $amount)
+    /**
+     * Create the order at N-Genius and send the customer to its payment page.
+     *
+     * `$amount` is in minor units (1000 = 10.00) of `$currencyCode`. Returns the redirect to
+     * N-Genius's payment page, or null when N-Genius gave no payment link (it was unreachable,
+     * refused the credentials or the order): the caller tells the customer, nothing is recorded.
+     */
+    public static function make_payment($callback_url, $payment_type, $amount, string $currencyCode = '')
     {
-        $order = new \StdClass();
-
-        $order->action = "SALE";                                        // Transaction mode ("AUTH" = authorize only, no automatic settle/capture, "SALE" = authorize + automatic settle/capture)
+        $order = new \stdClass();
+        $order->action = 'SALE'; // authorize and capture in one step
         $order->amount = new \stdClass();
-        $order->amount->currencyCode = env('NGENIUS_CURRENCY', "AED");                           // Payment currency ('AED' only for now)
-        $order->amount->value = $amount;                                   // Minor units (1000 = 10.00 AED)
-        $order->language = "en";                                        // Payment page language ('en' or 'ar' only)
-        $order->merchantOrderReference = time();                                        // Payment page language ('en' or 'ar' only)
-        //$order->merchantAttributes->redirectUrl = "http://premizer.com/test/pp.php";     // A redirect URL to a page on your site to return the customer to
-        //$order->merchantAttributes->redirectUrl = "http://192.168.0.111:8080/n-genius/pp.php";     // A redirect URL to a page on your site to return the customer to
+        $order->amount->currencyCode = $currencyCode !== '' ? $currencyCode : strtoupper((string) StorePaymentGateways::currency('ngenius'));
+        $order->amount->value = $amount; // minor units (1000 = 10.00)
+        $order->language = 'en'; // payment page language ('en' or 'ar' only)
+        $order->merchantOrderReference = time();
         $order->merchantAttributes = new \stdClass();
-        $order->merchantAttributes->redirectUrl = $callback_url;
-        // A redirect URL to a page on your site to return the customer to
-        //$order->merchantAttributes->redirectUrl = "http:// 192.168.0.111:8080/n-genius/pp.php";     // A redirect URL to a page on your site to return the customer to
+        $order->merchantAttributes->redirectUrl = $callback_url; // where N-Genius returns the customer to
         $order = json_encode($order);
 
-
-        $outletRef = env("NGENIUS_OUTLET_ID"); // set your outlet reference/ID value here (example only)
-        $txnServiceURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders";             // set the transaction service URL (example only)
+        $outletRef = StorePaymentGateways::get('ngenius', 'outlet_id');
+        $txnServiceURL = self::getUrl('gateway')."/transactions/outlets/$outletRef/orders";
         $access_token = self::getAccessToken();
 
-        $orderCreateHeaders = ["Authorization: Bearer " . $access_token, "Content-Type: application/vnd.ni-payment.v2+json", "Accept: application/vnd.ni-payment.v2+json"];
-        $orderCreateResponse = self::invokeCurlRequest("POST", $txnServiceURL, $orderCreateHeaders, $order);
+        $orderCreateHeaders = ['Authorization: Bearer '.$access_token, 'Content-Type: application/vnd.ni-payment.v2+json', 'Accept: application/vnd.ni-payment.v2+json'];
+        $orderCreateResponse = json_decode((string) self::invokeCurlRequest('POST', $txnServiceURL, $orderCreateHeaders, $order));
 
-        $orderCreateResponse = json_decode($orderCreateResponse);
+        $paymentLink = $orderCreateResponse->_links->payment->href ?? null; // the payment page to send the customer to
+        $orderReference = $orderCreateResponse->reference ?? null; // the order, kept so the callback accepts only it
 
-        //dd($callback_url,$orderCreateResponse);
-
-        $paymentLink = $orderCreateResponse->_links->payment->href;     // the link to the payment page for redirection (either full-page redirect or iframe)
-        $orderReference = $orderCreateResponse->reference;              // the reference to the order, which you should store in your records for future interaction with this order
+        if (! is_string($paymentLink) || $paymentLink === '' || ! is_string($orderReference) || $orderReference === '') {
+            return null;
+        }
 
         // The only order the callback accepts for this session.
         session()->put('ngenius_order_ref', $orderReference);
         session()->save();
 
-        /*echo "<!DOCTYPE html>
-        <html>
-        <script type=\"text/javascript\">
-        window.location = \"$paymentLink\";
-
-        </script>
-        </html>";*/
-
-        header("Location: " . $paymentLink);                     // execute redirect
-        exit;
-
-
+        return redirect()->away($paymentLink);
     }
 
     /**
@@ -108,7 +89,7 @@ class NgeniusUtility
      */
     public static function retrieve_order($orderRef)
     {
-        $outletRef = env("NGENIUS_OUTLET_ID"); // set your outlet reference/ID value here (example only)
+        $outletRef = StorePaymentGateways::get('ngenius', 'outlet_id'); // set your outlet reference/ID value here (example only)
         $orderCheckURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders/" . rawurlencode($orderRef);
         $access_token = self::getAccessToken();
 

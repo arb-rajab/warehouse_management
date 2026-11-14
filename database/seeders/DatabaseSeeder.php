@@ -31,8 +31,10 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             ProductSeeder::class,
+            WarehouseSeeder::class,
             RowSeeder::class,
             PalletSeeder::class,
+            ReceiptSeeder::class,
             CellStatusLogSeeder::class,
             CellVerificationRoundSeeder::class,
             CellVerificationReportSeeder::class,

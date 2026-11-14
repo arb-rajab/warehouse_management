@@ -56,6 +56,7 @@ Token-based, under `/api/v1`, authenticated with Sanctum bearer tokens (all rout
 - `POST /api/v1/logout` — revoke the current token.
 - `GET /api/v1/rows`, `GET /api/v1/rows/{row}/cells`, `GET /api/v1/rows/{row}/cells/{cellNumber}/flats/{flatNumber}` — browse rows and cells.
 - `GET /api/v1/products` — browse the product catalog.
+- `POST /api/v1/products/{product}/barcodes` — add a barcode to a product (201 with its barcode list; 409 `barcode_taken` when another product holds it; 422 when this product already does).
 - `POST /api/v1/pallets` — store a new pallet on a cell.
 - `GET /api/v1/pallets/{pallet}` — read a pallet and its current contents.
 - `POST /api/v1/pallets/{pallet}/open`, `.../remove-boxes`, `.../empty`, `.../transfer` — pallet actions delegated to `PalletActionService`, which locks and updates the affected records and writes audit logs in a transaction. Removing boxes preserves the cell's state; a transfer writes paired source/destination logs.
@@ -159,6 +160,45 @@ A product with no `wms_product_settings` row falls back to `Product::DEFAULT_BOX
 Box counts are set per product from the products screen at `/admin/products` — clicking the count in the **Boxes / pallet** column opens a dialog with an explicit save through `Admin\ProductController::updateBoxCount()`. Creating a minimum-pallet setting also stores the default box count when no settings row exists. The integrated store's product CRUD and the sync follow Option A above.
 
 A freshly deployed catalog therefore needs someone to walk the list and set the real counts; there is nothing to import them from.
+
+### Settings managed in the admin (they supersede `.env`)
+
+Some settings that used to live only in the server's `.env` can be saved in the store admin. A value saved there **wins**; with nothing saved, the `.env` value is used, so a fresh deploy behaves exactly as its `.env` says. Nothing in the admin ever writes `.env`. Each page shows every effective value with "saved in admin" or "from .env" (secrets only as set / not set). Details: [.ai/rules/admin-env-overrides.md](.ai/rules/admin-env-overrides.md).
+
+| Admin page | Superseded `.env` keys | Notes |
+| --- | --- | --- |
+| SMTP settings (`/temp/admin/smtp-settings`, permission `smtp_settings`) | `MAIL_MAILER` | The admin offers `smtp`, `log` or "use the server setting". |
+| | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | One group: with a host saved in the admin, all five come from the admin (the `.env` username and password are not used, and `MAIL_URL` is ignored); without one, all five come from `.env`. The password is stored encrypted with `APP_KEY`; after changing `APP_KEY` without `APP_PREVIOUS_KEYS`, enter it again. |
+| | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Each on its own. The health and backup notifications still read these from `.env`. |
+| Google map (`/temp/admin/google-map`) | `MAP_API_KEY` | |
+| Analytics (`/temp/admin/google-analytics`, permission `analytics_tools_configuration`) | `TRACKING_ID` | Google Analytics tracking ID (for example `G-XXXXXXXXXX`). Public, shown back in full; letters, digits and hyphens only. Empty uses `.env`. |
+| | `FACEBOOK_PIXEL_ID` | Facebook pixel ID (digits only). Empty uses `.env`. |
+| Facebook chat (`/temp/admin/facebook-chat`, permission `facebook_chat`) | `FACEBOOK_PAGE_ID` | Facebook page ID (digits only). Empty uses `.env`. |
+| Facebook comments (`/temp/admin/facebook-comment`, permission `facebook_comment`) | `FACEBOOK_APP_ID` | Facebook app ID (digits only). Empty uses `.env`. |
+| Order configuration (`/temp/admin/order-configuration`, permission `order_configuration`) | `STORE_DELIVERY_LEAD_DAYS` | Delivery lead days for orders placed through the app: whole days, 0 to 30. Empty uses `.env`. |
+| | `STORE_DELIVERY_TIMEZONE` | The timezone "today" is read in for the delivery date check: one of PHP's timezone identifiers (for example `Europe/Amsterdam`), chosen from a list. Empty uses `.env`. The delivery weekdays stay in `config/store.php`. |
+| Languages (`/temp/admin/languages`, permission `language_setup`) | `DEFAULT_LANGUAGE` | The default content language: choose an existing, active language. "Use the server setting" uses `.env`. Applied to web requests and queued jobs, not to other console commands. Changing it re-labels text already saved under the old default (product, category and brand text), so the page asks to confirm. |
+| Payment methods (`/temp/admin/payment-method`, permission `payment_methods_configurations`) | `STORE_PAYMENT_GATEWAYS` | "Which gateways answer": follow `.env`, or choose with each gateway's switch (then all switches off means none). Stripe, Paytm and ToyyibPay have no payment flow and cannot be enabled. A gateway is offered at checkout only while it is also switched on in Features activation. |
+| | `BKASH_CHECKOUT_APP_KEY`, `BKASH_CHECKOUT_APP_SECRET`, `BKASH_CHECKOUT_USER_NAME`, `BKASH_CHECKOUT_PASSWORD`, `BKASH_CURRENCY` | One group per gateway, here and below: once the gateway's first field (here the app key) is saved in the admin, every field of that gateway comes from the admin and none from `.env`; with all its fields empty, all come from `.env`. Secrets are stored encrypted with `APP_KEY`, never shown or returned; a changed account asks for them again. |
+| | `NAGAD_MERCHANT_ID`, `NAGAD_MERCHANT_NUMBER`, `NAGAD_PG_PUBLIC_KEY`, `NAGAD_MERCHANT_PRIVATE_KEY`, `NAGAD_MODE` | Keys can be pasted with or without their BEGIN/END lines. `config/nagad.php` no longer has a default merchant id or number. `NAGAD_CALLBACK_URL` stays `.env` only. |
+| | `SSLCZ_STORE_ID`, `SSLCZ_STORE_PASSWD`, `SSLCZ_CURRENCY` | |
+| | `IYZICO_API_KEY`, `IYZICO_SECRET_KEY`, `IYZICO_CURRENCY_CODE` | `IYZICO_IDENTITY_NUMBER` stays `.env` only. |
+| | `PAYHERE_MERCHANT_ID`, `PAYHERE_SECRET`, `PAYHERE_CURRENCY` | |
+| | `AAMARPAY_STORE_ID`, `AAMARPAY_SIGNATURE_KEY`, `AAMARPAY_CURRENCY` | |
+| | `NGENIUS_OUTLET_ID`, `NGENIUS_API_KEY`, `NGENIUS_CURRENCY`, `NGENIUS_MODE` | The `NGENIUS_*_URL` overrides stay `.env` only. |
+| | `VOGUE_MERCHANT_ID`, `VOGUE_CURRENCY` | |
+| | `TOYYIBPAY_CATEGORY`, `TOYYIBPAY_KEY`, `TOYYIBPAY_MODE` | No payment flow: stored ready for an integration. |
+| | `STRIPE_KEY`, `STRIPE_SECRET`, `STRIPE_CURRENCY` | No payment flow. The mode is read from the keys (`pk_test_`/`pk_live_`); both keys must agree. |
+| | `PAYTM_MERCHANT_ID`, `PAYTM_MERCHANT_KEY`, `PAYTM_MERCHANT_WEBSITE`, `PAYTM_CHANNEL`, `PAYTM_INDUSTRY_TYPE`, `PAYTM_ENVIRONMENT` | No payment flow. |
+| reCAPTCHA (`/temp/admin/google-recaptcha`, permission `google_recaptcha_configuration`) | `CAPTCHA_KEY`, `CAPTCHA_SECRET` | One pair: with a site key saved in the admin, the site key and the secret both come from the admin (`CAPTCHA_SECRET` is not used with it); without one, both come from `.env`. The secret is stored encrypted with `APP_KEY`, never shown or returned, and changing the site key asks for the secret again. |
+
+Each page warns, naming the field, when its switch is on but no ID or key is in effect; the storefront prints nothing for such a switch. The analytics, pixel, chat and comments IDs and the reCAPTCHA site key are public (every visitor's browser receives them), so the admin shows them in full; the reCAPTCHA secret, the SMTP settings, the Google Maps key and every other credential-like `business_settings` row are never returned by the public business-settings API (`App\Support\PublicSettingsGuard`, a block-list: a key whose name ends in `_secret`, `_key`, `_password`, `_token`, `_credentials` or `_encrypted`, or starts with `mail_` or `payment_gateway_`, is blocked unless it is a listed public exception such as `recaptcha_site_key`; a new key must be classified there, see `.ai/rules/admin-env-overrides.md`). Social login keys (`FACEBOOK_CLIENT_ID` and the others) stay `.env` only.
+
+Still `.env` only: `MAIL_EHLO_DOMAIN`, `MAIL_LOG_CHANNEL`, `MAIL_SENDMAIL_PATH` and the other mailers' keys. Saved SMTP settings apply to web requests and queued jobs (a running worker picks up a save before its next job); they are never applied to other console commands, so `config:cache` never writes them into the cached config. The "Send test email" button sends at once and shows the mail server's refusal as an error.
+
+**Who can change SMTP.** Whoever controls the SMTP settings can read every email the shop sends, password-reset emails included, so `smtp_settings` is a sensitive permission: only a Super Admin can give it to a role (or take it off one), or give a role that carries it; the role form warns on it and the Roles list badges such roles. Existing grants are not revoked; to see who holds it, run the query in [.ai/rules/admin-env-overrides.md](.ai/rules/admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail). Saving the SMTP page asks for the staff member's own current password (5 wrong ones per 15 minutes lock the field). Every change is written to `admin_audit_logs` (who, when, IP, field names only, never values) and listed on the page, and every active Super Admin, plus the previous from-address when the from address changed, is mailed at once through the settings as they were before the change.
+
+**Who can change the payment gateways.** Whoever controls them can redirect customer payments, so `payment_methods_configurations` is a sensitive permission too (only a Super Admin grants it; existing grants are kept). Saving the Payment methods page asks for the staff member's current password (wrong ones count together with the SMTP page's: 5 per 15 minutes), records every change in `admin_audit_logs` (field names, never values) and mails every active Super Admin. The sandbox switches of bKash, SSLCommerz, iyzico, PayHere, AamarPay and VoguePay were never `.env` and are edited in their gateway's tab. Gateway settings live in their own `payment_gateway_settings` table, which no public endpoint reads.
 
 ## Contributing / conventions
 

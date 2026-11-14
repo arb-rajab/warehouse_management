@@ -1,7 +1,7 @@
 @php
     $best_selling_products = remember_models(\App\Models\Product::class, 'best_selling_products', 20, function () {
         return filter_products(\App\Models\Product::where('isOfferProduct', true))->where('published', 1)->orderBy('name')->get();
-    });
+    }, \App\Models\Product::WITH_STORE_CARD);
 @endphp
 
 @if (get_setting('best_selling') == 1 && count($best_selling_products) > 0)

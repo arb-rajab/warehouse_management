@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateWebsiteHomeRequest;
 use App\Models\Page;
 use App\Services\Store\WebsiteSettings;
@@ -17,6 +18,8 @@ use stdClass;
 
 class WebsiteHomeController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     private const ARRAYS = ['home_slider_images', 'home_slider_links', 'home_categories'];
 
     /** @return array<int, Middleware> */
@@ -42,6 +45,7 @@ class WebsiteHomeController extends Controller implements HasMiddleware
     {
         Page::query()->select(['id'])->where('slug', 'home')->where('type', 'home_page')->firstOrFail();
         $settings->write($request->validated('settings'));
+        $this->flashSuccess('website_home_page_has_been_updated_successfully');
 
         return redirect()->route('website.home.edit');
     }

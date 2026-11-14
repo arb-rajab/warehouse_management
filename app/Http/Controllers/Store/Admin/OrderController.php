@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\BulkDeleteOrdersRequest;
 use App\Http\Requests\Store\Admin\FilterOrdersRequest;
 use App\Http\Requests\Store\Admin\UpdateOrderActionRequest;
@@ -29,6 +30,8 @@ use Inertia\Response;
 
 class OrderController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     public function __construct(private StoreAdminOrderService $orders) {}
 
     /** @return array<int, Middleware> */
@@ -128,6 +131,7 @@ class OrderController extends Controller implements HasMiddleware
     public function destroy(Request $request, Order $order): RedirectResponse
     {
         DB::transaction(fn () => $this->deleteOrder($order));
+        $this->flashSuccess('order_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('all_orders.index', $request);
     }
@@ -139,6 +143,7 @@ class OrderController extends Controller implements HasMiddleware
                 $this->deleteOrder($order);
             }
         });
+        $this->flashSuccess('orders_have_been_deleted_successfully');
         if ($request->validated('return_to') === 'trip_orders') {
             return redirect()->route('trips.orders', Arr::except($request->query(), ['return_to']));
         }
@@ -196,6 +201,7 @@ class OrderController extends Controller implements HasMiddleware
             $locked->orderDetails()->update(['delivery_status' => $status]);
             DB::afterCommit(fn () => $this->notifyTransition($locked, $status));
         });
+        $this->flashSuccess('order_delivery_status_has_been_updated_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }
@@ -220,6 +226,7 @@ class OrderController extends Controller implements HasMiddleware
             }
             DB::afterCommit(fn () => $this->notifyTransition($locked, $status));
         });
+        $this->flashSuccess('order_payment_status_has_been_updated_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }
@@ -238,6 +245,7 @@ class OrderController extends Controller implements HasMiddleware
         $order = Order::query()->findOrFail($request->integer('order_id'));
         $order->tracking_code = $request->validated('tracking_code');
         $order->save();
+        $this->flashSuccess('order_tracking_code_has_been_updated_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }
@@ -246,6 +254,7 @@ class OrderController extends Controller implements HasMiddleware
     {
         $order = Order::query()->findOrFail($request->integer('order_id', $request->integer('id')));
         $order->setAttribute('manager_notes', $request->validated('notes'))->save();
+        $this->flashSuccess('order_manager_notes_have_been_updated_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }
@@ -271,6 +280,7 @@ class OrderController extends Controller implements HasMiddleware
                 StoreUser::query()->whereKey($id)->increment('profits', (float) $locked->getAttribute('profits') - $oldProfit);
             }
         });
+        $this->flashSuccess('order_item_price_has_been_updated_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }

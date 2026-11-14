@@ -54,6 +54,22 @@
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/archive/required-fields/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {
+            "fingerprint": "A|resources/js/pages/Store/Admin/Settings/Analytics.vue|SettingsController@updateAnalytics|settings",
+            "reason": "Scanner limitation, not a defect: the `settings` rule is the container of the page's switches, each posted as a required `settings[<switch>]` select (StoreBooleanField, a name built in a v-for the scanner cannot resolve). Same shape as Website/Appearance."
+        },
+        {
+            "fingerprint": "A|resources/js/pages/Store/Admin/Settings/FacebookChat.vue|SettingsController@updateFacebookChat|settings",
+            "reason": "Scanner limitation, not a defect: the `settings` rule is the container of the page's switches, each posted as a required `settings[<switch>]` select (StoreBooleanField, a name built in a v-for the scanner cannot resolve). Same shape as Website/Appearance."
+        },
+        {
+            "fingerprint": "A|resources/js/pages/Store/Admin/Settings/FacebookComments.vue|SettingsController@updateFacebookComments|settings",
+            "reason": "Scanner limitation, not a defect: the `settings` rule is the container of the page's switches, each posted as a required `settings[<switch>]` select (StoreBooleanField, a name built in a v-for the scanner cannot resolve). Same shape as Website/Appearance."
+        },
+        {
+            "fingerprint": "A|resources/js/pages/Store/Admin/Settings/Recaptcha.vue|SettingsController@updateRecaptcha|settings",
+            "reason": "Scanner limitation, not a defect: the `settings` rule is the container of the page's switches, each posted as a required `settings[<switch>]` select (StoreBooleanField, a name built in a v-for the scanner cannot resolve). Same shape as Website/Appearance."
+        },
+        {
             "fingerprint": "A|resources/js/pages/Store/Admin/Setup/Carriers/Create.vue|CarrierController@store|carrier_price",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/archive/required-fields/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },

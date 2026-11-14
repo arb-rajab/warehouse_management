@@ -13,8 +13,18 @@
         "confirmLogout": "Log out of your account?",
         "openMenu": "Open menu",
         "closeMenu": "Close menu",
-        "account": "Account",
-        "skipToContent": "Skip to main content"
+        "skipToContent": "Skip to main content",
+        "warehouses": "Warehouses",
+        "breadcrumb": "Breadcrumb",
+        "pallets": "Pallets",
+        "receipts": "Receipts",
+        "help": "Help",
+        "groupInventory": "Inventory",
+        "groupActivity": "Activity",
+        "groupAdmin": "Administration",
+        "menuLabel": "Warehouse menu",
+        "collapseSidebar": "Collapse sidebar",
+        "expandSidebar": "Expand sidebar"
     },
     "language": {
         "label": "Language",
@@ -112,7 +122,8 @@
             "delete": "Delete",
             "rowLabel": "row {letter}",
             "hasPallets": "Has pallets",
-            "hasPalletsTitle": "This row has pallets stored in it, so it can't be deleted."
+            "hasPalletsTitle": "This row has pallets stored in it, so it can't be deleted.",
+            "columnWarehouse": "Warehouse"
         },
         "create": {
             "title": "Add row",
@@ -133,12 +144,15 @@
             "empty": "Empty",
             "highlight": {
                 "button": "Highlight cells"
-            }
+            },
+            "details": "Details",
+            "warehouse": "Warehouse"
         },
         "fields": {
             "letter": "Letter",
             "cellsPerFlat": "Cells per level",
-            "flats": "Levels"
+            "flats": "Levels",
+            "warehouse": "Warehouse"
         }
     },
     "users": {
@@ -250,7 +264,8 @@
             "note": "Note",
             "doneBy": "Done by",
             "when": "When",
-            "ongoing": "Ongoing"
+            "ongoing": "Ongoing",
+            "noCell": "Not placed yet"
         },
         "actions": {
             "stored": "Stored",
@@ -262,14 +277,21 @@
             "transferred": "Transferred",
             "deactivated": "Deactivated",
             "reactivated": "Reactivated",
-            "product_changed": "Product changed"
+            "product_changed": "Product changed",
+            "note_changed": "Pallet note changed"
         },
         "states": {
             "empty": "Empty",
             "full": "Full",
             "opened": "Opened"
         },
-        "empty": "No activity yet."
+        "empty": "No activity yet.",
+        "correction": {
+            "reason": "Reason",
+            "palletNote": "Pallet note",
+            "noNote": "none",
+            "wasProduct": "Was"
+        }
     },
     "cellVerificationRound": {
         "title": "Cell Verification Rounds",
@@ -432,10 +454,13 @@
                 "submit": "Empty pallet"
             },
             "transfer": {
+                "warehouseLabel": "Destination warehouse",
                 "rowLabel": "Destination row",
                 "cellNumberLabel": "Destination cell number",
                 "flatNumberLabel": "Destination level",
-                "submit": "Transfer pallet"
+                "submit": "Transfer pallet",
+                "title": "Transfer pallet — {location}",
+                "loading": "Loading destinations…"
             },
             "noteLabel": "Note (optional)",
             "notePlaceholder": "Reason for this change…",
@@ -448,6 +473,12 @@
         "searchPh": "Search products…",
         "productsLabel": "Filter by product",
         "productsAll": "All products",
+        "warehouseLabel": "Warehouse",
+        "warehousesAll": "All warehouses",
+        "warehousesCount": "{count} warehouse | {count} warehouses",
+        "warehouseSwitch": "Choose warehouses",
+        "warehouseApply": "Apply",
+        "warehouseShowing": "Showing {name}",
         "productsSearchPh": "Find a product…",
         "productsSelected": "Selected",
         "productsDeselectAll": "Deselect all",
@@ -603,6 +634,7 @@
         "sBob": "Camera bob while walking",
         "sMagnet": "Snap back after peeking (guided)",
         "copyLink": "Copy link",
+        "transferPallet": "Transfer…",
         "copied": "Link copied",
         "toolbar": "Warehouse map toolbar",
         "viewToggle": "Map view",
@@ -633,6 +665,10 @@
             "empty": "Empty",
             "full": "Full",
             "opened": "Opened"
+        },
+        "unplaced": {
+            "title": "Unplaced pallets",
+            "count": "Received, not yet placed in a cell"
         },
         "expiring": {
             "title": "Expiring pallets",
@@ -696,6 +732,7 @@
         "newBarcodePlaceholder": "Scan or type a barcode…",
         "removeBarcode": "Remove barcode {barcode}",
         "noBarcodes": "No custom barcodes added yet.",
+        "barcodeNotPrintable": "This barcode cannot be shown as an image.",
         "viewBarcode": "View barcode {barcode}",
         "downloadBarcode": "Download barcode {barcode}",
         "downloadAllBarcodes": "Download all",
@@ -708,6 +745,8 @@
     "pallets": {
         "title": "Matching pallets",
         "viewOnMap": "View on map",
+        "unplacedBadge": "Unplaced",
+        "receiptLink": "Receipt #{id}",
         "filteredBy": "Filtered by:",
         "columns": {
             "product": "Product",
@@ -761,6 +800,14 @@
                 "settings": {
                     "title": "Settings",
                     "description": "How to change the size of every QR code label this app generates and which levels pallets may be opened on."
+                },
+                "warehouses": {
+                    "title": "Warehouses",
+                    "description": "What a warehouse is, how rows belong to one, and how to add, rename or remove a warehouse."
+                },
+                "receipts": {
+                    "title": "Receipts",
+                    "description": "How to read a truck receipt: its bill photos and the pallets as written on the bill."
                 }
             }
         },
@@ -768,11 +815,19 @@
             "title": "Help: Dashboard",
             "overview": {
                 "heading": "What the dashboard shows",
-                "body": "The dashboard is the first page you see after signing in. It gives a quick snapshot of the whole warehouse: how many cells are empty, full, or opened; how many pallets are expired or expiring soon; and how much activity (pallets stored, opened, emptied, or transferred) happened today and this week."
+                "body": "The dashboard is the first page you see after signing in. It gives a quick snapshot of the whole warehouse: how many cells are empty, full, or opened; how many pallets have been received but not yet placed in a cell; how many pallets are expired or expiring soon; and how much activity (pallets stored, opened, emptied, or transferred) happened today and this week."
+            },
+            "unplaced": {
+                "heading": "Unplaced pallets",
+                "body": "The Unplaced pallets tile counts pallets that arrived on a truck and have not been stored in a cell yet. They are still stock: they also count in the expired, expiring and stale tiles. Click the tile to see them. An unplaced pallet has no place on the map, so the list shows its warehouse and a link to the receipt it arrived on instead."
             },
             "productFilter": {
                 "heading": "Filtering by product",
                 "body": "Use the product selector at the top to narrow every tile on the dashboard down to one or more specific products — useful for checking how much stock of a particular item is on hand or about to expire."
+            },
+            "warehouseFilter": {
+                "heading": "Filtering by warehouse",
+                "body": "Use the warehouse selector beside the product selector to count only the cells, pallets and activity of one or more warehouses. Leave it on All to see every warehouse together."
             }
         },
         "rows": {
@@ -787,7 +842,7 @@
             },
             "creating": {
                 "heading": "Adding a new row",
-                "body": "From the Rows page, click \"Add row\" and enter a letter plus the number of cells and levels. The system creates every empty slot in the grid automatically — there's nothing else to set up before pallets can be stored in it."
+                "body": "From the Rows page, click \"Add row\", choose the warehouse the row belongs to and enter a letter plus the number of cells and levels. The system creates every empty slot in the grid automatically — there's nothing else to set up before pallets can be stored in it."
             },
             "editing": {
                 "heading": "Changing a row's size",
@@ -806,11 +861,16 @@
             },
             "managingPallets": {
                 "heading": "Storing, opening, and moving pallets",
-                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically."
+                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically.",
+                "transferBody": "To move a pallet to another warehouse, choose the destination warehouse first: the row list then shows that warehouse's rows. The warehouse map offers the same transfer: open a rack, then press Transfer… under an occupied shelf."
             },
             "deactivating": {
                 "heading": "Deactivating a cell",
                 "body": "If a cell becomes unusable — damaged shelving, for example — deactivate it so it can no longer be used to store, open, or move pallets, until you reactivate it again."
+            },
+            "preview": {
+                "mainWarehouse": "Main warehouse",
+                "otherWarehouse": "Annex"
             }
         },
         "users": {
@@ -844,7 +904,7 @@
             },
             "exportingQr": {
                 "heading": "Printing a product's barcode label",
-                "body": "Click the number in a product's Barcodes column to open its barcodes. The first one, marked Default, is the product's ID: it is always there and cannot be edited or removed. Use its eye and download buttons to preview or download a printable Code 128 barcode label for it. You can also add custom barcodes, but never one equal to a product ID. The label shows the product's id and its name in the language you are using, both in large type. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the barcode in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
+                "body": "Click the number in a product's Barcodes column to open its barcodes. The first one, marked Default, is the product's ID: it is always there and cannot be edited or removed. Use its eye and download buttons to preview or download a printable Code 128 barcode label for it. You can also add barcodes of your own. Barcodes are shared with the store and must be unique across all products, and never equal to a product ID. A barcode that came from the store can be text that cannot be drawn as a Code 128 label: it is listed with a note, has no preview or download button, and can still be removed. The label shows the product's id and its name in the language you are using, both in large type. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the barcode in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
             }
         },
         "cellLogs": {
@@ -924,6 +984,63 @@
             "sharing": {
                 "heading": "Sharing a location",
                 "body": "Open a rack and press “Copy link”: the link ends in #slot=B5-2 and opens the 3D view in front of that slot. The T key (or the small tab at the top edge) hides the toolbars."
+            },
+            "warehouses": {
+                "heading": "Switching warehouse",
+                "body": "When there is more than one warehouse, the map's top bar shows which warehouses are on the map next to its title (on a phone, the warehouse icon). Open it, tick \"All warehouses\" or one or more warehouses, then press Apply or simply close the menu. The map reloads only those rows and keeps your view, search, filters, floor and open rack where they still exist. The choice is part of the page address, so reloading, Back and a shared link keep it.",
+                "exampleMain": "Main warehouse",
+                "exampleAnnex": "Annex",
+                "exampleCold": "Cold store"
+            }
+        },
+        "warehouses": {
+            "title": "Help: Warehouses",
+            "grid": {
+                "heading": "What is a warehouse?",
+                "body": "A warehouse is a physical site that holds rows. Every row belongs to exactly one warehouse, and its cells and pallets belong to that warehouse through the row. Everyone who uses the panel sees every warehouse."
+            },
+            "letters": {
+                "heading": "Row letters",
+                "body": "A row letter only has to be unique inside its warehouse, so two warehouses can each have a row A. Where a letter is shared, the row lists show the warehouse next to it (\"A - Main\")."
+            },
+            "creating": {
+                "heading": "Adding or changing a warehouse",
+                "body": "From the Warehouses page, click \"Add warehouse\" and enter a name; the code and address are optional. Open Edit on a warehouse to change them. Names and codes must be unique."
+            },
+            "filtering": {
+                "heading": "Showing one warehouse",
+                "body": "The dashboard, the warehouse map and the lists of rows, pallets, the activity log and verification rounds have a Warehouse filter. Pick one or more warehouses to see only their rows, cells and pallets; leave it on All to see everything."
+            },
+            "deleting": {
+                "heading": "Deleting a warehouse",
+                "body": "A warehouse can be deleted only while it has no rows. If it still has rows, move or delete them first — the delete option is hidden and a \"Has rows\" notice appears instead."
+            }
+        },
+        "receipts": {
+            "title": "Help: Receipts",
+            "what": {
+                "heading": "What is a receipt?",
+                "body": "A receipt records a truck of pallets received into one warehouse. It keeps the photos or PDFs of the bill and the pallets exactly as the merchant wrote them. Receipts are created and finalized in the mobile app; this page is read-only."
+            },
+            "list": {
+                "heading": "The receipts list",
+                "body": "Each row is one receipt, newest first. It shows the warehouse, whether the receipt is a draft or finalized, how many pallets and bill files it holds, who created it and when. Click the column header to reverse the order, and use Columns to show or hide the optional columns."
+            },
+            "status": {
+                "heading": "Draft and finalized",
+                "body": "A draft is still being filled in and can change. Finalizing it creates one unplaced pallet for every pallet written down, and the receipt can no longer change. The pallets then wait to be stored in a cell from the mobile app."
+            },
+            "filtering": {
+                "heading": "Finding a receipt",
+                "body": "Open Filters to see only the receipts of one or more warehouses, or only drafts or only finalized receipts. Leave a filter on All to see everything."
+            },
+            "files": {
+                "heading": "Bill photos and PDFs",
+                "body": "Open a receipt to see its bill files. Photos show as thumbnails and open full size in a new tab; PDFs open in a new tab. Compare the bill with the pallets listed below it. If a photo cannot be loaded, a message appears and you can still open it."
+            },
+            "pallets": {
+                "heading": "Pallets as written",
+                "body": "The table lists the pallets in the order they were typed, with the product, the number of boxes and the expiration date when one was written. Past dates are shown as they are: the receipt records what arrived."
             }
         }
     },
@@ -1091,7 +1208,8 @@
                 "password": "Password",
                 "newPassword": "New password",
                 "confirmPassword": "Confirm password",
-                "passwordPlaceholder": "Leave blank to keep current password"
+                "passwordPlaceholder": "Leave blank to keep current password",
+                "roleSensitive": "{name} (sensitive: controls outgoing email or payments)"
             }
         },
         "roles": {
@@ -1102,7 +1220,9 @@
                 "columnActions": "Actions",
                 "empty": "No roles yet.",
                 "edit": "Edit",
-                "delete": "Delete"
+                "delete": "Delete",
+                "sensitiveBadge": "Sensitive",
+                "sensitiveBadgeHint": "Includes a permission only a Super Admin can grant: it can read all outgoing email or redirect payments."
             },
             "create": {
                 "title": "Add role",
@@ -1118,7 +1238,9 @@
             "fields": {
                 "name": "Name",
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
-                "permissions": "Permissions"
+                "permissions": "Permissions",
+                "sensitive": "Sensitive",
+                "sensitiveWarning": "Controls where the shop's email or payments go: whoever holds it can read all outgoing email (password-reset emails included) or redirect payments. Only a Super Admin can grant it."
             }
         },
         "reference": {
@@ -1207,7 +1329,8 @@
             "areaNote": "Uses the customer’s shipping area. Configure shipping cities to set area costs.",
             "carrierNote": "Uses the carrier’s free shipping, weight range, or price range. Configure shipping carriers to set these costs.",
             "cities": "Configure shipping cities",
-            "carriers": "Configure shipping carriers"
+            "carriers": "Configure shipping carriers",
+            "chooseMethod": "Choose a shipping type"
         },
         "orderConfiguration": {
             "title": "Order configuration",
@@ -1221,7 +1344,25 @@
             "chooseProduct": "Select the default product",
             "searchProducts": "Search by product ID…",
             "chooseRepresentative": "Select the default representative",
-            "searchRepresentatives": "Search representatives by name, phone or email…"
+            "searchRepresentatives": "Search representatives by name, phone or email…",
+            "delivery": {
+                "title": "Delivery dates",
+                "intro": "Orders placed in the app are refused when the delivery date is earlier than today plus the lead days. \"Today\" is read in the timezone below. A field left empty uses the server's setting (.env).",
+                "leadDays": "Lead days",
+                "leadDaysHelp": "Whole days to skip after today, from {min} to {max}. With 2, today and tomorrow cannot be picked.",
+                "timezone": "Timezone",
+                "timezoneServer": "Use the server setting ({timezone})",
+                "timezoneHelp": "The warehouse's timezone, used to decide what \"today\" is.",
+                "sources": {
+                    "admin": "saved in admin",
+                    "env": "from .env"
+                },
+                "inUse": {
+                    "title": "In use",
+                    "leadDays": "{value} days ({source})",
+                    "timezone": "{value} ({source})"
+                }
+            }
         },
         "generalSettings": {
             "title": "General settings",
@@ -1263,7 +1404,7 @@
             "enabled": "Enabled",
             "disabled": "Disabled",
             "environmentReadOnly": "Environment configuration is managed on the server. Credentials are not displayed or edited here.",
-            "gatewayNotice": "Payment gateway availability is managed on the server and requires verified credentials and callbacks.",
+            "gatewayNotice": "A payment gateway switched on here is offered at checkout only while it is also enabled on the Payment methods page, where its credentials are set.",
             "testEmail": "Test recipient email",
             "sendTest": "Send test email",
             "sendingTest": "Sending…",
@@ -1348,13 +1489,267 @@
                 "google_analytics": "Google Analytics",
                 "facebook_pixel": "Facebook Pixel",
                 "google_recaptcha": "reCAPTCHA",
-                "google_firebase": "Firebase",
-                "bkash_sandbox": "Bkash sandbox",
-                "sslcommerz_sandbox": "Sslcommerz sandbox",
-                "aamarpay_sandbox": "Aamarpay sandbox",
-                "iyzico_sandbox": "Iyzico sandbox",
-                "payhere_sandbox": "Payhere sandbox",
-                "voguepay_sandbox": "Voguepay sandbox"
+                "google_firebase": "Firebase"
+            },
+            "server": {
+                "set": "Set",
+                "notSet": "Not set",
+                "found": "Found",
+                "notFound": "Not found",
+                "firebase": {
+                    "title": "Push notifications (set on the server)",
+                    "project": "Firebase project (FIREBASE_PROJECT)",
+                    "credentials": "Credentials file (FIREBASE_CREDENTIALS)"
+                }
+            },
+            "integrations": {
+                "intro": {
+                    "analytics": "Values saved here replace the server's .env values (TRACKING_ID, FACEBOOK_PIXEL_ID). Leave a field empty to use the server value.",
+                    "facebookChat": "A value saved here replaces the server's .env value (FACEBOOK_PAGE_ID). Leave the field empty to use the server value.",
+                    "facebookComments": "A value saved here replaces the server's .env value (FACEBOOK_APP_ID). Leave the field empty to use the server value."
+                },
+                "fields": {
+                    "google_analytics_tracking_id": {
+                        "label": "Google Analytics tracking ID",
+                        "help": "For example G-XXXXXXXXXX. Letters, digits and hyphens only. Empty uses the server value."
+                    },
+                    "facebook_pixel_id": {
+                        "label": "Facebook pixel ID",
+                        "help": "Digits only, 5 to 20. Empty uses the server value."
+                    },
+                    "facebook_page_id": {
+                        "label": "Facebook page ID",
+                        "help": "The page the chat widget opens, digits only, 5 to 20. Empty uses the server value."
+                    },
+                    "facebook_app_id": {
+                        "label": "Facebook app ID",
+                        "help": "Digits only, 5 to 20. Empty uses the server value."
+                    }
+                },
+                "missing": "{switch} is on but no {field} is set, so nothing is added to the storefront. Enter it below.",
+                "effective": {
+                    "title": "In use",
+                    "withSource": "{value} ({source})",
+                    "notSet": "Not set",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    }
+                }
+            },
+            "recaptcha": {
+                "intro": "Values saved here replace the server's .env reCAPTCHA keys (CAPTCHA_KEY, CAPTCHA_SECRET). The site key and the secret are a pair: with a site key saved here, the secret also comes from here. Leave both empty to use the server pair.",
+                "siteKey": "Site key",
+                "siteKeyHelp": "The public key the forms show the widget with. Letters, digits, hyphens and underscores only.",
+                "secretKey": "Secret key",
+                "secretKeep": "Leave empty to keep the saved secret",
+                "secretSaved": "A secret is saved. It is never shown.",
+                "secretNotSaved": "No secret is saved here.",
+                "secretUnreadable": "The saved secret can no longer be read (the application key changed). Enter it again.",
+                "secretHelp": "Enter the secret again when you add or change the site key.",
+                "removeSecret": "Remove the saved secret",
+                "missingSiteKey": "reCAPTCHA is on but no site key is set: the forms cannot show the widget. Enter the site key below.",
+                "missingSecret": "reCAPTCHA is on but no secret key is set: every form that shows it is refused. Enter the secret key below.",
+                "effective": {
+                    "title": "In use",
+                    "withSource": "{value} ({source})",
+                    "siteKey": "Site key",
+                    "secretKey": "Secret key",
+                    "notSet": "Not set",
+                    "set": "Set",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    }
+                }
+            },
+            "smtp": {
+                "intro": "Values saved here replace the server's .env mail settings (MAIL_*). Leave a field empty to use the server value.",
+                "passwordUnreadable": "The saved password can no longer be read (the application key changed). Enter it again.",
+                "mailer": "Mailer",
+                "mailerServer": "Use the server setting (.env: {mailer})",
+                "mailerHelp": "Log only writes emails to the server log: customers receive nothing.",
+                "mailers": {
+                    "smtp": "SMTP: send through the mail server below",
+                    "log": "Log only: emails are not sent"
+                },
+                "host": "SMTP host",
+                "hostHelp": "The host, port, encryption, username and password belong together: with no host here, all five come from the server's .env. A port, username or password needs a host.",
+                "port": "Port",
+                "portHelp": "Usually 587 (STARTTLS) or 465 (SSL/TLS). Required with a host.",
+                "scheme": "Encryption",
+                "schemeAutomatic": "Automatic (SSL/TLS on port 465, otherwise STARTTLS when offered)",
+                "schemes": {
+                    "smtps": "SSL/TLS (smtps)",
+                    "smtp": "STARTTLS when offered (smtp)"
+                },
+                "username": "Username",
+                "password": "Password",
+                "passwordKeep": "Leave empty to keep the saved password",
+                "passwordSaved": "A password is saved. It is never shown.",
+                "passwordNotSaved": "No password is saved here.",
+                "passwordHelp": "Enter the password again when you change the host or username.",
+                "removePassword": "Remove the saved password",
+                "fromAddress": "From address",
+                "fromName": "From name",
+                "fromHelp": "An empty from address or name uses the server's MAIL_FROM_ADDRESS or MAIL_FROM_NAME.",
+                "currentPassword": "Your current password",
+                "currentPasswordHelp": "Enter the password you sign in with to save. Whoever controls these settings can read every email the shop sends, password-reset emails included.",
+                "testTitle": "Send a test email",
+                "testHelp": "Sent at once with the saved settings; if the mail server refuses it, the error shows here.",
+                "effective": {
+                    "title": "Mail is sent with",
+                    "withSource": "{value} ({source})",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    },
+                    "automatic": "Automatic",
+                    "mailer": "Mailer",
+                    "host": "SMTP host",
+                    "port": "Port",
+                    "scheme": "Encryption",
+                    "username": "Username",
+                    "password": "Password",
+                    "from_address": "From address",
+                    "from_name": "From name"
+                },
+                "audit": {
+                    "title": "Recent changes",
+                    "help": "The last 10 saves and refused passwords on this page. Values are never recorded.",
+                    "when": "When",
+                    "who": "Staff member",
+                    "ip": "IP address",
+                    "what": "What changed",
+                    "empty": "No SMTP changes have been recorded yet.",
+                    "passwordFailed": "Wrong current password, nothing saved",
+                    "deletedUser": "Account #{id} no longer exists",
+                    "fieldChange": "{field} ({change})",
+                    "separator": ", ",
+                    "kinds": {
+                        "set": "set",
+                        "changed": "changed",
+                        "removed": "removed"
+                    }
+                }
+            },
+            "payments": {
+                "intro": "Values saved here win over the server's .env, one gateway at a time: once any field of a gateway is saved here, all of its settings come from this page and none from .env. Leave all of a gateway's fields empty to use .env. Secrets are stored encrypted and never shown again.",
+                "enabledSource": "Which gateways answer",
+                "enabledSources": {
+                    "env": "Follow STORE_PAYMENT_GATEWAYS in .env ({list})",
+                    "admin": "Choose here with each gateway's switch"
+                },
+                "enabledSourceHelp": "While .env is followed, the switches show the .env list and cannot be changed. Chosen here with every switch off, no gateway answers.",
+                "none": "none",
+                "tabs": "Payment gateways",
+                "enabled": "Enabled: its checkout and callbacks answer",
+                "noFlow": "No payment flow yet: the keys are stored ready for a future integration. Customers are not offered this gateway and it cannot be enabled.",
+                "offered": "Offered at checkout (Features activation): {state}",
+                "offeredStates": {
+                    "on": "on",
+                    "off": "off"
+                },
+                "openActivation": "Change it in Features activation",
+                "notOffered": "{gateway} is enabled, but switched off in Features activation, so customers are not offered it.",
+                "mode": "Mode",
+                "modes": {
+                    "sandbox": "Sandbox (test payments)",
+                    "live": "Live"
+                },
+                "modeFromEnv": "Not saved here (.env: {mode})",
+                "modeDerived": "Mode (read from the keys): {mode}",
+                "modeUnknown": "no key yet",
+                "currencyFixed": "Currency: {code}, the only one this gateway accepts.",
+                "currencyStore": "Empty: the store's own currency.",
+                "currencyNoRate": "No active exchange rate for {code} in Currencies: payments are refused until there is one.",
+                "missing": "{gateway} is enabled but its {field} is not set here or in .env.",
+                "groupHelp": "Fields marked * are needed once any {gateway} field is entered here. Leave every field empty to use .env; emptying the {identifying} removes every saved {gateway} setting, secrets included.",
+                "envHint": ".env ({env}): {value}",
+                "envOnlyMissing": "{gateway} needs {env} in .env: without it {gateway} cannot start a payment.",
+                "envOnlyFields": {
+                    "identity_number": "Buyer identity number ({env}, .env only)"
+                },
+                "liveUnconfirmed": {
+                    "ngenius": "The live URLs are defaults that were not confirmed with the provider: confirm NGENIUS_LIVE_IDENTITY_URL and NGENIUS_LIVE_GATEWAY_URL in .env before going live.",
+                    "aamarpay": "The payment page is opened with a GET redirect that was not confirmed with the provider: check it in AamarPay's sandbox before going live (the old code POSTed a form)."
+                },
+                "secretSaved": "Saved here. Leave the field empty to keep it.",
+                "secretNotSaved": "Not saved here.",
+                "secretUnreadable": "The saved value can no longer be read (the application key changed). Enter it again.",
+                "secretKeep": "Leave empty to keep the saved value",
+                "secretAgain": "Asked for again when the {identifying} changes.",
+                "removeSecret": "Remove the saved {field}",
+                "keyHelp": "Paste the key with or without its BEGIN/END lines; spaces and line breaks are removed.",
+                "effective": {
+                    "title": "Effective configuration: {gateway}",
+                    "source": "Settings source",
+                    "sources": {
+                        "admin": "Saved in admin",
+                        "env": "From .env"
+                    },
+                    "enabled": "Enabled",
+                    "listSources": {
+                        "admin": "chosen here",
+                        "env": "from .env"
+                    },
+                    "enabledValue": "{state} ({source})",
+                    "yes": "Yes",
+                    "no": "No",
+                    "set": "Set",
+                    "notSet": "Not set"
+                },
+                "fields": {
+                    "app_key": "App key",
+                    "app_secret": "App secret",
+                    "username": "Username",
+                    "password": "Password",
+                    "currency": "Currency",
+                    "merchant_id": "Merchant ID",
+                    "merchant_number": "Merchant number",
+                    "pg_public_key": "Gateway public key",
+                    "merchant_private_key": "Merchant private key",
+                    "mode": "Mode",
+                    "store_id": "Store ID",
+                    "store_password": "Store password",
+                    "api_key": "API key",
+                    "secret_key": "Secret key",
+                    "secret": "Merchant secret",
+                    "signature_key": "Signature key",
+                    "outlet_id": "Outlet ID",
+                    "category_code": "Category code",
+                    "user_secret_key": "User secret key",
+                    "publishable_key": "Publishable key",
+                    "merchant_key": "Merchant key",
+                    "merchant_website": "Merchant website",
+                    "channel": "Channel",
+                    "industry_type": "Industry type",
+                    "enabled": "Enabled"
+                },
+                "currentPassword": "Your current password",
+                "currentPasswordHelp": "Needed to save: these settings decide where customer payments go. It is checked on every save.",
+                "audit": {
+                    "title": "Recent changes",
+                    "help": "The last 10 saves and refused passwords on this page. Values are never recorded.",
+                    "when": "When",
+                    "who": "Staff member",
+                    "ip": "IP address",
+                    "what": "What changed",
+                    "empty": "No payment gateway changes have been recorded yet.",
+                    "passwordFailed": "Wrong current password, nothing saved",
+                    "deletedUser": "Account #{id} no longer exists",
+                    "fieldChange": "{field} ({change})",
+                    "gatewayField": "{gateway} {field}",
+                    "enabledSource": "Where the enabled gateways come from",
+                    "separator": ", ",
+                    "kinds": {
+                        "set": "set",
+                        "changed": "changed",
+                        "removed": "removed",
+                        "enabled": "enabled",
+                        "disabled": "disabled"
+                    }
+                }
             }
         },
         "languages": {
@@ -1371,7 +1766,7 @@
             "defaultLocked": "Default language",
             "actions": "Actions",
             "empty": "No languages found.",
-            "defaultReadOnly": "Default content language ({code}) is managed on the server. The interface language is selected separately.",
+            "defaultReadOnly": "Default content language ({code}) is chosen in the default language section above. The interface language is selected separately.",
             "translations": "Content and custom labels",
             "appTranslations": "Mobile compatibility translations",
             "delete": "Delete",
@@ -1387,7 +1782,21 @@
             "key": "Key",
             "source": "English",
             "value": "Translation",
-            "noTranslations": "No translation keys found."
+            "noTranslations": "No translation keys found.",
+            "defaultTitle": "Default content language",
+            "defaultLabel": "Default language",
+            "defaultServer": "Use the server setting ({code})",
+            "defaultHelp": "Only active languages can be chosen. Existing product, category and brand text is not translated when you change the default: text saved under the old default is read as the new default's until you translate it.",
+            "defaultInUse": "In use: {code} ({source})",
+            "defaultSources": {
+                "admin": "saved in admin",
+                "env": "from .env"
+            },
+            "defaultSwitchedOff": "switched off",
+            "defaultNone": "No default language is set. Choose one.",
+            "default_missing": "The default language ({code}) is not in the language list. Choose another language or add it.",
+            "default_inactive": "The default language ({code}) is switched off. Switch it on in the list below or choose another language.",
+            "defaultConfirm": "Change the default content language to {name}? Existing text saved under the old default will be read as {name} until it is translated."
         },
         "reports": {
             "number": "#",
@@ -2580,6 +2989,12 @@
             "discount": "Discount",
             "indicator": "Profit margin",
             "invoice": "Download invoice",
+            "groups": {
+                "order": "Order",
+                "people": "People",
+                "money": "Money",
+                "notes": "Notes and address"
+            },
             "tracking": "Tracking code",
             "status": {
                 "pending": "Pending",
@@ -2603,8 +3018,6 @@
             "searchProducts": "Search products by name, SKU or id…"
         },
         "dashboard": {
-            "smtpMissing": "SMTP is not configured.",
-            "configure": "Configure SMTP",
             "customers": "Verified customers",
             "orders": "Total orders",
             "categories": "Product categories",
@@ -2630,12 +3043,130 @@
             "numberOfVisits": "Number of visits",
             "category": "Category / country",
             "emptyProducts": "No products yet.",
-            "smtpWarning": "Please configure SMTP settings for email sending to work.",
-            "setup": {
-                "noPaymentMethod": "Payments are not set up: no payment method is switched on, so customers cannot place an order in the app.",
-                "cashOnDeliveryProducts": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it. Tick \"Cash on delivery\" on the products that take cash."
+            "checklist": {
+                "title": "Setup checklist",
+                "progress": "{done} of {total} done",
+                "collapse": "Hide checklist",
+                "expand": "Show checklist",
+                "statusDone": "Done",
+                "statusTodo": "To do",
+                "items": {
+                    "smtp": {
+                        "label": "Email (SMTP)"
+                    },
+                    "paymentMethod": {
+                        "label": "Payment methods"
+                    },
+                    "paymentGateways": {
+                        "label": "Payment gateway settings"
+                    },
+                    "cashOnDeliveryProducts": {
+                        "label": "Cash on delivery products"
+                    },
+                    "shipping": {
+                        "label": "Shipping"
+                    },
+                    "firebasePush": {
+                        "label": "Push notifications (Firebase)"
+                    },
+                    "googleMaps": {
+                        "label": "Google Maps"
+                    },
+                    "currency": {
+                        "label": "Currency"
+                    },
+                    "vatTax": {
+                        "label": "VAT and tax"
+                    },
+                    "catalog": {
+                        "label": "Products and categories"
+                    },
+                    "siteBasics": {
+                        "label": "Site basics"
+                    },
+                    "language": {
+                        "label": "Default language"
+                    }
+                },
+                "fix": "Fix this setting",
+                "fixReason": "Fix: {reason}",
+                "reasons": {
+                    "smtp": {
+                        "mailer_log": "The mailer is \"Log only\", so emails are only written to the server log and never reach anyone.",
+                        "host": "No SMTP host is saved in the admin or set on the server (MAIL_HOST), so the store cannot send emails.",
+                        "username_and_password": "No SMTP username or password is saved in the admin or set on the server (MAIL_USERNAME, MAIL_PASSWORD), so the store cannot send emails."
+                    },
+                    "paymentMethod": {
+                        "none_enabled": "No payment method is switched on in Features activation (an online gateway counts only while it is also enabled on the Payment methods page), so customers cannot place an order in the app."
+                    },
+                    "paymentGateways": {
+                        "bkash_app_key": "bKash is enabled, but its app key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_app_secret": "bKash is enabled, but its app secret is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_username": "bKash is enabled, but its username is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_password": "bKash is enabled, but its password is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "bkash_currency": "bKash is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_merchant_id": "Nagad is enabled, but its merchant ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_pg_public_key": "Nagad is enabled, but its gateway public key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_merchant_private_key": "Nagad is enabled, but its merchant private key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "nagad_mode": "Nagad is enabled, but its mode is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "sslcommerz_store_id": "SSLCommerz is enabled, but its store ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "sslcommerz_store_password": "SSLCommerz is enabled, but its store password is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "sslcommerz_currency": "SSLCommerz is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_api_key": "iyzico is enabled, but its API key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_secret_key": "iyzico is enabled, but its secret key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_currency": "iyzico is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "iyzico_identity_number": "iyzico needs IYZICO_IDENTITY_NUMBER in .env: without it iyzico cannot start a payment.",
+                        "payhere_merchant_id": "PayHere is enabled, but its merchant ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "payhere_secret": "PayHere is enabled, but its merchant secret is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "aamarpay_store_id": "AamarPay is enabled, but its store ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "aamarpay_signature_key": "AamarPay is enabled, but its signature key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "aamarpay_currency": "AamarPay is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_outlet_id": "N-Genius is enabled, but its outlet ID is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_api_key": "N-Genius is enabled, but its API key is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_currency": "N-Genius is enabled, but its currency is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "ngenius_mode": "N-Genius is enabled, but its mode is not set on the Payment methods page or in .env, so it cannot take payments.",
+                        "voguepay_merchant_id": "VoguePay is enabled, but its merchant ID is not set on the Payment methods page or in .env, so it cannot take payments."
+                    },
+                    "cashOnDeliveryProducts": {
+                        "no_product_allows_cod": "Cash payment is on, but no product allows cash on delivery. Tick \"Cash on delivery\" on the products that take cash."
+                    },
+                    "shipping": {
+                        "type_unset": "No shipping type is chosen yet.",
+                        "flat_rate_cost": "The shipping type is \"Flat rate\", but the flat rate cost was never saved.",
+                        "seller_admin_cost": "The shipping type is \"Seller wise\", but the in-house seller shipping cost was never saved.",
+                        "area_no_active_city_with_cost": "The shipping type is \"Area wise\", but no active shipping city has a cost above zero.",
+                        "carrier_none_usable": "The shipping type is \"Carrier wise\", but no active carrier ships free or has a price for a weight or price range."
+                    },
+                    "firebasePush": {
+                        "project_unset": "FIREBASE_PROJECT is not set on the server.",
+                        "credentials_missing": "The FIREBASE_CREDENTIALS file is not found on the server."
+                    },
+                    "googleMaps": {
+                        "api_key_unset": "No Google Maps key is saved on the Google map settings page, and MAP_API_KEY is not set on the server."
+                    },
+                    "currency": {
+                        "default_unset": "No default currency is chosen.",
+                        "default_missing": "The default currency no longer exists. Choose another one."
+                    },
+                    "vatTax": {
+                        "no_active_tax": "No VAT or tax rate is active. Switch one on or add one."
+                    },
+                    "catalog": {
+                        "no_published_product": "No product is published.",
+                        "no_category": "No product category exists."
+                    },
+                    "siteBasics": {
+                        "site_name": "The site name is missing (General settings).",
+                        "contact_email": "The contact email is missing (Website footer).",
+                        "contact_phone": "The contact phone is missing (Website footer).",
+                        "header_logo": "The header logo is missing (Website header)."
+                    },
+                    "language": {
+                        "default_missing": "The default language ({code}) is not in the language list.",
+                        "default_inactive": "The default language ({code}) is switched off."
+                    }
+                }
             },
-            "configureNow": "Configure now",
             "charts": {
                 "products": "Products",
                 "sources": "Products Source",
@@ -2874,6 +3405,8 @@
                 "addBarcode": "Add barcode",
                 "removeBarcode": "Remove barcode",
                 "barcodePlaceholder": "Barcode number",
+                "barcodeImageAfterSave": "The barcode image appears once the product is saved.",
+                "barcodeNotPrintable": "This barcode cannot be shown as an image.",
                 "variation": "Product variation",
                 "moveAttributeUp": "Move {attribute} up",
                 "moveAttributeDown": "Move {attribute} down",
@@ -2983,6 +3516,13 @@
             }
         },
         "googleMap": {
+            "apiKey": "Google Maps API key",
+            "apiKeyPlaceholder": "AIza…",
+            "apiKeyHelp": "The browser key from the Google Cloud console (Maps JavaScript API and Places API). If no key is saved here, MAP_API_KEY from the server environment is used.",
+            "apiKeyStatusSaved": "A key is saved. Leave blank to keep it, or enter a new key to replace it.",
+            "apiKeyStatusEnv": "No key is saved here. The key from the server environment (MAP_API_KEY) is in use. Enter a key to override it.",
+            "apiKeyStatusNone": "No key is set. Maps will not load on the storefront until you add one.",
+            "apiKeyRequiredHint": "Required while the map is enabled and no key is set.",
             "title": "Google map settings",
             "requirementsHint": "Choose whether to enable the map when no coordinates are sent. Enter both coordinates together, or leave both empty.",
             "enabled": "Enable the storefront’s Google map",
@@ -3362,10 +3902,184 @@
             "tax_type.*": "tax type",
             "button": "publishing choice",
             "lang": "content language",
+            "google_analytics_tracking_id": "Google Analytics tracking ID",
+            "facebook_pixel_id": "Facebook pixel ID",
+            "facebook_page_id": "Facebook page ID",
+            "facebook_app_id": "Facebook app ID",
+            "recaptcha_site_key": "reCAPTCHA site key",
+            "recaptcha_secret_key": "reCAPTCHA secret key",
+            "delivery_lead_days": "delivery lead days",
+            "delivery_timezone": "delivery timezone",
+            "default_language": "default language",
             "slug": "slug",
             "old_photo": "Otajer images",
             "purchase_price": "purchase price",
-            "file": "product file"
+            "file": "product file",
+            "code": "code",
+            "address": "address",
+            "password": "password",
+            "current_password": "current password",
+            "enabled_source": "enabled gateways source",
+            "gateways.bkash.enabled": "bKash switch",
+            "gateways.bkash.mode": "bKash mode",
+            "gateways.bkash.app_key": "bKash app key",
+            "gateways.bkash.app_secret": "bKash app secret",
+            "gateways.bkash.app_secret_clear": "remove the saved bKash app secret",
+            "gateways.bkash.username": "bKash username",
+            "gateways.bkash.password": "bKash password",
+            "gateways.bkash.password_clear": "remove the saved bKash password",
+            "gateways.bkash.currency": "bKash currency",
+            "gateways.nagad.enabled": "Nagad switch",
+            "gateways.nagad.merchant_id": "Nagad merchant ID",
+            "gateways.nagad.merchant_number": "Nagad merchant number",
+            "gateways.nagad.pg_public_key": "Nagad gateway public key",
+            "gateways.nagad.merchant_private_key": "Nagad merchant private key",
+            "gateways.nagad.merchant_private_key_clear": "remove the saved Nagad merchant private key",
+            "gateways.nagad.mode": "Nagad mode",
+            "gateways.sslcommerz.enabled": "SSLCommerz switch",
+            "gateways.sslcommerz.mode": "SSLCommerz mode",
+            "gateways.sslcommerz.store_id": "SSLCommerz store ID",
+            "gateways.sslcommerz.store_password": "SSLCommerz store password",
+            "gateways.sslcommerz.store_password_clear": "remove the saved SSLCommerz store password",
+            "gateways.sslcommerz.currency": "SSLCommerz currency",
+            "gateways.iyzico.enabled": "iyzico switch",
+            "gateways.iyzico.mode": "iyzico mode",
+            "gateways.iyzico.api_key": "iyzico API key",
+            "gateways.iyzico.secret_key": "iyzico secret key",
+            "gateways.iyzico.secret_key_clear": "remove the saved iyzico secret key",
+            "gateways.iyzico.currency": "iyzico currency",
+            "gateways.payhere.enabled": "PayHere switch",
+            "gateways.payhere.mode": "PayHere mode",
+            "gateways.payhere.merchant_id": "PayHere merchant ID",
+            "gateways.payhere.secret": "PayHere merchant secret",
+            "gateways.payhere.secret_clear": "remove the saved PayHere merchant secret",
+            "gateways.payhere.currency": "PayHere currency",
+            "gateways.aamarpay.enabled": "AamarPay switch",
+            "gateways.aamarpay.mode": "AamarPay mode",
+            "gateways.aamarpay.store_id": "AamarPay store ID",
+            "gateways.aamarpay.signature_key": "AamarPay signature key",
+            "gateways.aamarpay.signature_key_clear": "remove the saved AamarPay signature key",
+            "gateways.aamarpay.currency": "AamarPay currency",
+            "gateways.ngenius.enabled": "N-Genius switch",
+            "gateways.ngenius.outlet_id": "N-Genius outlet ID",
+            "gateways.ngenius.api_key": "N-Genius API key",
+            "gateways.ngenius.api_key_clear": "remove the saved N-Genius API key",
+            "gateways.ngenius.currency": "N-Genius currency",
+            "gateways.ngenius.mode": "N-Genius mode",
+            "gateways.voguepay.enabled": "VoguePay switch",
+            "gateways.voguepay.mode": "VoguePay mode",
+            "gateways.voguepay.merchant_id": "VoguePay merchant ID",
+            "gateways.voguepay.currency": "VoguePay currency",
+            "gateways.toyyibpay.enabled": "ToyyibPay switch",
+            "gateways.toyyibpay.category_code": "ToyyibPay category code",
+            "gateways.toyyibpay.user_secret_key": "ToyyibPay user secret key",
+            "gateways.toyyibpay.user_secret_key_clear": "remove the saved ToyyibPay user secret key",
+            "gateways.toyyibpay.mode": "ToyyibPay mode",
+            "gateways.stripe.enabled": "Stripe switch",
+            "gateways.stripe.publishable_key": "Stripe publishable key",
+            "gateways.stripe.secret_key": "Stripe secret key",
+            "gateways.stripe.secret_key_clear": "remove the saved Stripe secret key",
+            "gateways.stripe.currency": "Stripe currency",
+            "gateways.paytm.enabled": "Paytm switch",
+            "gateways.paytm.merchant_id": "Paytm merchant ID",
+            "gateways.paytm.merchant_key": "Paytm merchant key",
+            "gateways.paytm.merchant_key_clear": "remove the saved Paytm merchant key",
+            "gateways.paytm.merchant_website": "Paytm merchant website",
+            "gateways.paytm.channel": "Paytm channel",
+            "gateways.paytm.industry_type": "Paytm industry type",
+            "gateways.paytm.mode": "Paytm mode"
+        }
+    },
+    "warehouses": {
+        "index": {
+            "title": "Warehouses",
+            "addWarehouse": "Add warehouse",
+            "columnName": "Name",
+            "columnCode": "Code",
+            "columnAddress": "Address",
+            "columnRows": "Rows",
+            "columnAction": "Action",
+            "empty": "No warehouses yet.",
+            "edit": "Edit",
+            "delete": "Delete",
+            "warehouseLabel": "warehouse {name}",
+            "hasRows": "Has rows",
+            "hasRowsTitle": "This warehouse still has rows, so it can't be deleted. Move or delete its rows first."
+        },
+        "create": {
+            "title": "Add warehouse",
+            "submit": "Create warehouse",
+            "submitting": "Creating..."
+        },
+        "edit": {
+            "title": "Edit warehouse {name}",
+            "submit": "Save changes",
+            "submitting": "Saving..."
+        },
+        "fields": {
+            "name": "Name",
+            "code": "Code",
+            "address": "Address"
+        },
+        "filters": {
+            "label": "Warehouse",
+            "searchPlaceholder": "Search warehouses…",
+            "noWarehousesFound": "No warehouses found."
+        },
+        "rowOption": "{letter} - {warehouse}"
+    },
+    "receipts": {
+        "index": {
+            "title": "Receipts",
+            "empty": "No receipts yet.",
+            "emptyFiltered": "No receipts match the filters.",
+            "columns": {
+                "id": "Receipt",
+                "warehouse": "Warehouse",
+                "status": "Status",
+                "pallets": "Pallets",
+                "files": "Bill files",
+                "createdBy": "Created by",
+                "createdAt": "Created at",
+                "finalizedAt": "Finalized at"
+            }
+        },
+        "filters": {
+            "status": "Status",
+            "all": "All"
+        },
+        "status": {
+            "draft": "Draft",
+            "finalized": "Finalized"
+        },
+        "show": {
+            "title": "Receipt #{id}",
+            "backToList": "Back to receipts",
+            "details": "Details",
+            "warehouse": "Warehouse",
+            "status": "Status",
+            "note": "Note",
+            "createdBy": "Created by",
+            "createdAt": "Created at",
+            "finalizedBy": "Finalized by",
+            "finalizedAt": "Finalized at",
+            "files": "Bill files ({count})",
+            "noFiles": "No bill files were uploaded.",
+            "imageFailed": "The image could not be loaded.",
+            "open": "Open",
+            "openFile": "Open {name}",
+            "sizeKb": "{size} KB",
+            "sizeMb": "{size} MB",
+            "pallets": "Pallets as written on the bill ({count})",
+            "palletsEmpty": "No pallets have been written down yet.",
+            "draftHint": "This receipt is still a draft. The pallets are created when it is finalized.",
+            "columns": {
+                "number": "No.",
+                "product": "Product",
+                "boxes": "Boxes",
+                "expiration": "Expiration date",
+                "note": "Note"
+            }
         }
     }
 }

@@ -36,11 +36,6 @@
     <!-- Favicon -->
     <link rel="icon" href="{{ uploaded_asset(get_setting('site_icon')) }}">
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-
     <!-- CSS Files -->
     <link rel="stylesheet" href="{{ static_asset('assets/css/vendors.css') }}">
     @if(\App\Support\StoreLocale::isRtl())
@@ -48,6 +43,14 @@
     @endif
     <link rel="stylesheet" href="{{ static_asset('assets/css/aiz-core.css') }}">
     <link rel="stylesheet" href="{{ static_asset('assets/css/custom-style.css') }}">
+    {{-- Storefront identity (Direction A): tokens, self-hosted IBM Plex fonts
+         and the theme overrides. It loads after the theme so it wins; the
+         base_color setting no longer drives the colour. --}}
+    @vite('resources/css/storefront.css')
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ \Illuminate\Support\Facades\Vite::asset('node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-400-normal.woff2') }}">
+    @if(\App\Support\StoreLocale::isRtl())
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ \Illuminate\Support\Facades\Vite::asset('node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2') }}">
+    @endif
 
 
     <script>
@@ -79,165 +82,26 @@
         }
     </script>
 
-    <style>
-        :root{
-            --blue: #3490f3;
-            --gray: #9d9da6;
-            --gray-dark: #8d8d8d;
-            --secondary: #919199;
-            --soft-secondary: rgba(145, 145, 153, 0.15);
-            --success: #85b567;
-            --soft-success: rgba(133, 181, 103, 0.15);
-            --warning: #f3af3d;
-            --soft-warning: rgba(243, 175, 61, 0.15);
-            --light: #f5f5f5;
-            --soft-light: #dfdfe6;
-            --soft-white: #b5b5bf;
-            --dark: #292933;
-            --soft-dark: #1b1b28;
-            --primary: {{ get_setting('base_color', '#d43533') }};
-            --hov-primary: {{ get_setting('base_hov_color', '#9d1b1a') }};
-            --soft-primary: {{ hex2rgba(get_setting('base_color','#d43533'),.15) }};
-        }
-        body{
-            font-family: 'Public Sans', sans-serif;
-            font-weight: 400;
-        }
-
-        .pagination .page-link,
-        .page-item.disabled .page-link {
-            min-width: 32px;
-            min-height: 32px;
-            line-height: 32px;
-            text-align: center;
-            padding: 0;
-            border: 1px solid var(--soft-light);
-            font-size: 0.875rem;
-            border-radius: 0 !important;
-            color: var(--dark);
-        }
-        .pagination .page-item {
-            margin: 0 5px;
-        }
-
-        .aiz-carousel.coupon-slider .slick-track{
-            margin-left: 0;
-        }
-
-        .form-control:focus {
-            border-width: 2px !important;
-        }
-        .iti__flag-container {
-            padding: 2px;
-        }
-        .modal-content {
-            border: 0 !important;
-            border-radius: 0 !important;
-        }
-
-        #map{
-            width: 100%;
-            height: 250px;
-        }
-        #edit_map{
-            width: 100%;
-            height: 250px;
-        }
-
-        .registration-tutorial {
-            position: fixed;
-            width: 110px;
-            /* height: 70px; */
-            top: 220px;
-            right: 15px;
-            background-color: #4CAF50;
-            color: #FFF;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            text-align: center;
-            padding: 5px;
-            margin-bottom: auto;
-            text-decoration: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-            z-index: 100;
-            transition: top 0.5s ease; /* Transition for smooth movement */
-            animation: moveUpAndDown 2s infinite; /* Adjust animation duration as needed */
-
-        }
-
-        .registration-tutorial:hover {
-            background-color: #45a049;
-            color: #FFF;
-        }
-        @keyframes moveUpAndDown {
-            0% {
-                top: 220px;
-            }
-            50% {
-                top: 200px; /* Change this value for the halfway point of the animation */
-            }
-            100% {
-                top: 220px;
-            }
-        }
-
-        .whats-app {
-        position: fixed;
-        width: 50px;
-        height: 50px;
-        bottom: 40px;
-        background-color: #25d366;
-        color: #FFF;
-        border-radius: 50px;
-        text-align: center;
-        font-size: 30px;
-        box-shadow: 3px 4px 3px #999;
-        right: 15px;
-        z-index: 100;
-                }
-
-        .visit-button {
-            position: fixed;
-            width: 150px;
-            /* height: 150px; */
-            top: 220px;
-            right: 15px;
-            background-color: #4CAF50;
-            color: #FFF;
-            border-radius: 20px;
-            font-size: 1rem;
-            text-align: center;
-            padding: 5px;
-            margin: auto;
-            text-decoration: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
-            z-index: 100;
-        }
-
-        .my-float {
-            margin-top: 10px;
-        }
-
-        .pac-container { z-index: 100000; }
-
-        .img-fit {
-            object-fit: contain !important;
-        }
-    </style>
-
-@if (get_setting('google_analytics') == 1)
+{{-- The IDs are the effective ones (saved in the admin, else .env: App\Support\StoreIntegrationIds); a block whose switch is on but whose ID is empty prints nothing. --}}
+@php
+    $trackingId = \App\Support\StoreIntegrationIds::get('google_analytics_tracking_id');
+@endphp
+@if (get_setting('google_analytics') == 1 && $trackingId !== null)
     <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ config('services.google_analytics.tracking_id') }}"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($trackingId) }}"></script>
 
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', '{{ config('services.google_analytics.tracking_id') }}');
+        gtag('config', {{ \Illuminate\Support\Js::from($trackingId) }});
     </script>
 @endif
 
-@if (get_setting('facebook_pixel') == 1)
+@php
+    $pixelId = \App\Support\StoreIntegrationIds::get('facebook_pixel_id');
+@endphp
+@if (get_setting('facebook_pixel') == 1 && $pixelId !== null)
     <!-- Facebook Pixel Code -->
     <script>
         !function(f,b,e,v,n,t,s)
@@ -248,11 +112,11 @@
         t.src=v;s=b.getElementsByTagName(e)[0];
         s.parentNode.insertBefore(t,s)}(window, document,'script',
         'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '{{ config('services.facebook.pixel_id') }}');
+        fbq('init', {{ \Illuminate\Support\Js::from($pixelId) }});
         fbq('track', 'PageView');
     </script>
     <noscript>
-        <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ config('services.facebook.pixel_id') }}&ev=PageView&noscript=1"/>
+        <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ urlencode($pixelId) }}&ev=PageView&noscript=1"/>
     </noscript>
     <!-- End Facebook Pixel Code -->
 @endif
@@ -355,7 +219,7 @@
                 <div class="c-preloader text-center p-3">
                     <i class="las la-spinner la-spin la-3x"></i>
                 </div>
-                <button type="button" class="close absolute-top-right btn-icon close z-1 btn-circle bg-gray mr-2 mt-2 d-flex justify-content-center align-items-center" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}" style="background: #ededf2; width: calc(2rem + 2px); height: calc(2rem + 2px);">
+                <button type="button" class="close absolute-top-right btn-icon close z-1 btn-circle sf-modal-close mr-2 mt-2 d-flex justify-content-center align-items-center" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                     <span aria-hidden="true" class="fs-24 fw-700" style="margin-left: 2px;">&times;</span>
                 </button>
                 <div id="addToCart-modal-body">
@@ -373,7 +237,10 @@
 
 
 
-    @if (get_setting('facebook_chat') == 1)
+    @php
+        $facebookPageId = \App\Support\StoreIntegrationIds::get('facebook_page_id');
+    @endphp
+    @if (get_setting('facebook_chat') == 1 && $facebookPageId !== null)
         <script type="text/javascript">
             window.fbAsyncInit = function() {
                 FB.init({
@@ -394,7 +261,7 @@
         <!-- Your customer chat code -->
         <div class="fb-customerchat"
           attribution=setup_tool
-          page_id="{{ config('services.facebook.page_id') }}">
+          page_id="{{ $facebookPageId }}">
         </div>
     @endif
 
@@ -718,7 +585,7 @@
             });
 
             setTimeout(function(){
-                $('.cart-ok').css({ fill: '#d43533' });
+                $('.cart-ok').css({ fill: 'var(--primary)' });
             }, 2000);
 
         });

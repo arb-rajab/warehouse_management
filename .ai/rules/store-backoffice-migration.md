@@ -116,14 +116,14 @@ methods and the cache button through the page permissions, and "the shop's own
 admin" is the lowest-id `user_type = 'admin'` row. Empty groups disappear.
 Button gates use the same permission names as their action middleware. The
 account block uses the store logout route and the current actor's profile and
-notifications; cache clearing stays narrowly scoped. Notifications is a sidebar item above the footer and Clear dashboard cache (dashboard graph keys only) sits in the footer with a tooltip and confirm dialog; there is no top strip.
+notifications; cache clearing stays narrowly scoped. Notifications is a sidebar item above the footer and Clear dashboard cache (dashboard graph keys only) sits in the footer with a tooltip and confirm dialog. Both layouts render through the shared `BackofficeShell` (layouts.md), whose header carries only the crumb, the language switcher and "Browse website"; the profile link and logout are in the sidebar's user block.
 
 Use Inertia links only for Inertia destinations. `StoreAdminNavLink` uses a
 plain anchor for Blade destinations; build URLs through Wayfinder. The shared
 layout helpers are `SkipToContentLink`, `LogoutLink.href` and
 `ResourceFormPage`'s layout/width support. The store sidebar's active state
 comes only from `findActiveStoreMenuLink` (`store-admin-menu-highlighting.md`). Avoid merging the otherwise distinct
-WMS and store layouts.
+WMS and store layouts: they share only the `BackofficeShell` chrome, never a menu.
 
 ### 2.3 Translations
 
@@ -227,6 +227,8 @@ authorized extension. Trace routes and all remaining consumers before deletion.
    deletes. Keep explicit route methods and route names; state-changing routes
    use POST/PUT/DELETE as appropriate. Regenerate Wayfinder with repository
    tooling; never hand-edit generated actions/routes.
+   Every write that succeeds and redirects flashes a success message with
+   `flashSuccess()`; see [success-messages.md](success-messages.md).
 6. Pages live under `Store/Admin`, use `StoreAdminLayout`, `ResourceFormPage`
    and existing tables, field/error/button/pagination/confirmation components.
    A module's shared form group lives in `Store<Resource>FormFields.vue`.
@@ -281,12 +283,44 @@ preserves permissions the editor does not hold. Super Admin remains unrestricted
 Super Admin role/account invariants still apply. Who receives staff-edit powers
 is an owner decision; removing one's own held permissions can still lock one out.
 
+Sensitive permissions (`StorePermissions::SENSITIVE`, today `smtp_settings`, which
+can read all outgoing mail, and `payment_methods_configurations`, which can
+redirect payments) only a Super Admin grants: anyone else neither adds
+nor removes them on a role nor gives a role carrying one, even when holding it
+(2026-11-11 and 2026-11-12, [admin-env-overrides.md](admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail)).
+Existing grants are never revoked by a migration; the owner reviews the holders.
+
 ## 5. Conflict decisions and retained work
 
 - Typed settings writers reject unknown/foreign/reserved keys, including localized
   keys, **before any write**. `business_settings.update` is retired. Timezone is
   config-managed (`app.timezone`, UTC); a settings form accepts only the configured
-  value and never writes `.env`. Settings writers forget only `business_settings`.
+  value and never writes `.env`. Settings writers forget only `business_settings`
+  (the SMTP writer also its own `business_settings:mail` entry, the reCAPTCHA writer its own `business_settings:recaptcha`).
+- A setting only `.env` held may become editable in the admin: it is stored in
+  `business_settings`, the saved value wins and `.env` stays the fallback, secrets
+  are encrypted and never sent back, and it is applied at runtime, never in the
+  console ([admin-env-overrides.md](admin-env-overrides.md)). SMTP is managed on the
+  SMTP settings page this way (2026-11-11, `StoreMailSettings`): a save needs the
+  staff member's current password, is written to `admin_audit_logs` (field names
+  only) and mailed to the Super Admins through the previous settings; the Google Maps key
+  already was (`GoogleMapsKey`). So are the Analytics, Facebook chat and Facebook
+  comments IDs (`StoreIntegrationIds`) and the reCAPTCHA site key and secret
+  (`StoreRecaptchaSettings`, the secret encrypted and read through the class, never
+  laid over config). Those four pages are dedicated Inertia pages
+  (`Settings/{Analytics,FacebookChat,FacebookComments,Recaptcha}.vue`), not the
+  plain switch list. The delivery lead days and timezone are saved on the Order
+  configuration page (`StoreDeliverySettings`, read by the order API) and the default
+  content language on the Languages page (`StoreDefaultLanguage`, laid over
+  `config('app.default_language')` on web requests and queued jobs only, never at
+  console boot; the Languages page, its guards and the setup checklist read the
+  class). The payment gateways (all 11: credentials, currency, mode, and which
+  are enabled) are saved on the Payment methods page (2026-11-12,
+  `StorePaymentGateways`, `Settings/Payments.vue`) in their own
+  `payment_gateway_settings` table, one group per gateway, read through the
+  class by every gateway consumer and hardened like SMTP (sensitive permission,
+  current password, audit, Super Admin mail). The README's Deployment section lists the
+  superseded `.env` keys.
 - Website script fields remain plain code on the restricted compatibility endpoint
   with existing rendering, appearance gate and WAF behavior. New script policy,
   `manage_website_scripts` activation and broad rich-text WAF exceptions stay held.
@@ -321,6 +355,12 @@ Seven protected files remain under `resources/views/shop/backend/`:
 
 The old backend app shell and its two navigation includes are retired. Keep
 storefront/seller/auth layouts and assets, the Inertia root and Blade CSP.
+
+The two retained customer-facing files carry the Direction A identity:
+`layouts/layout.blade.php` loads `storefront.css`, and `invoices/invoice.blade.php`
+takes the brand colours, logo and `messages.brand_name` (mPDF keeps DejaVu Sans
+for Arabic). The seller panel layout loads `resources/css/seller.css`. The
+`downloads/*` exports are back-office tools and keep their own styling (views.md).
 
 ## 6. Registered migrated controllers and consumers
 
@@ -485,9 +525,16 @@ redirect and launch steps remain in the go-live checklist.
   migration. `migrate --pretend` still creates migration bookkeeping, so it is
   unsafe before that rename; `migrate:status --pending` is read-only. Follow the
   [README deployment procedure](../../README.md#deployment) and go-live checklist.
-- Production setup, data rehearsals, external delivery/payments, gateway activation,
+- Production setup, data rehearsals, external delivery/payments, gateway activation
+  (the Payment methods page can enable a gateway; which one, with which merchant
+  account, is the owner's decision),
   fetch-button policy, finance/impersonation grants, accepted risks and search-engine
   setup remain owner/system decisions. Repository checks cannot certify those.
+- Product barcodes are one table, `product_barcodes`, shared with the WMS
+  (2026-11-08). Deploy the two `2026_11_08_1000xx` migrations together with the
+  code; follow [the runbook](../barcode-single-source-runbook-20261108.md). The
+  retired `wms_product_barcodes` is dropped by a follow-up migration after one
+  release; that task is open.
 - Keep held script/WAF, order-tax and global image-policy decisions above. Retained
   legacy uploader deletion failure handling, missing legacy API/seller handlers,
   import-created external-upload ownership and POST verification-status repetition

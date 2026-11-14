@@ -1,7 +1,7 @@
 @php
     $featured_products = remember_models(\App\Models\Product::class, 'featured_products', 3600, function () {
         return filter_products(\App\Models\Product::where('published', 1)->where('featured', '1'))->latest()->limit(12)->get();
-    });
+    }, \App\Models\Product::WITH_STORE_CARD);
 @endphp
 
 @if (count($featured_products) > 0)

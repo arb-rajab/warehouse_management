@@ -5,9 +5,13 @@ use App\Enums\CellState;
 use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductImageReview;
+use App\Models\Receipt;
 use App\Models\Row;
 use App\Models\Setting;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the matching pallets list orders by expiration date ascending, then add date ascending, with a null expiration sorting last', function () {
@@ -73,6 +77,20 @@ test('the matching pallets list says whether each product is still sold and each
             ->where('pallets.data.1.id', $retired->id)
             ->where('pallets.data.1.product.active', false)
             ->where('pallets.data.1.cell_active', false)
+    );
+});
+
+test('the matching pallets list names the warehouse of each pallet\'s cell, so a link to its row can address the right row', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $row = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $row->cells()->first()->id, 'expiration_date' => '2026-09-01']);
+
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Pallets/Index')
+            ->where('pallets.data.0.id', $pallet->id)
+            ->where('pallets.data.0.location.row_letter', 'A')
+            ->where('pallets.data.0.location.warehouse', ['id' => $annex->id, 'name' => 'Annex'])
     );
 });
 
@@ -223,6 +241,27 @@ test('an unauthenticated caller is redirected to login when viewing the matching
     $response->assertRedirect(route('login'));
 });
 
+test('storing a pallet records no product image review and ignores old image review fields', function () {
+    actingAsAdmin();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
+    $product = Product::factory()->boxesCount(10)->create();
+
+    $response = $this->post("/admin/cells/{$cell->id}/pallet", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+        'image_review_status' => 'doesnt_match',
+        'image_source' => 'https://cdn.example.com/old-client.png',
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->letter));
+    $response->assertSessionHasNoErrors();
+    $response->assertInertiaFlash('success', 'Pallet has been stored successfully');
+    expect(Pallet::query()->count())->toBe(1);
+    expect(ProductImageReview::query()->count())->toBe(0);
+});
+
 test('an authenticated admin can store a pallet into an empty cell', function () {
     $admin = actingAsAdmin();
 
@@ -232,14 +271,13 @@ test('an authenticated admin can store a pallet into an empty cell', function ()
     $expirationDate = now()->addMonth()->toDateString();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => $expirationDate,
         'note' => 'Admin backfill.',
     ]);
 
     $response->assertRedirect(route('admin.rows.show', $row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been stored successfully');
 
     $pallet = Pallet::query()->sole();
     expect($pallet->cell_id)->toBe($cell->id);
@@ -267,8 +305,6 @@ test('storing a pallet into a first-level cell opens it automatically', function
     $product = Product::factory()->boxesCount(10)->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -297,8 +333,6 @@ test('an authenticated admin can store a pallet with no expiration date', functi
     $product = Product::factory()->boxesCount(10)->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => null,
     ]);
@@ -317,8 +351,6 @@ test('storing a pallet into a non-empty cell is rejected with a non-field action
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -338,8 +370,6 @@ test('storing a pallet into an inactive cell is rejected with a non-field action
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -359,8 +389,6 @@ test('storing a pallet into a row under an unfinished verification round is reje
     CellVerificationRound::factory()->covering($row)->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -377,8 +405,6 @@ test('a mobile app user cannot store a pallet via the admin route', function () 
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -393,8 +419,6 @@ test('an unauthenticated caller cannot store a pallet and nothing changes', func
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -423,6 +447,7 @@ test('an authenticated admin can open a full pallet, removing boxes at the same 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 3]);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been opened successfully');
     expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
     expect($pallet->refresh()->remaining_boxes)->toBe(7);
 
@@ -567,6 +592,7 @@ test('an authenticated admin can remove more boxes from an already-opened pallet
     $response = $this->post("/admin/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 4]);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Boxes have been removed from the pallet successfully');
     expect($pallet->refresh()->remaining_boxes)->toBe(2);
 
     $this->assertDatabaseHas('cell_status_logs', [
@@ -662,6 +688,7 @@ test('an authenticated admin can empty a pallet regardless of remaining boxes', 
     $response = $this->post("/admin/pallets/{$pallet->id}/empty", ['note' => 'Damaged.']);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been emptied successfully');
     $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 
@@ -739,6 +766,7 @@ test('an authenticated admin can transfer a pallet to another empty cell', funct
     ]);
 
     $response->assertRedirect(route('admin.rows.show', $sourceRow->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been transferred successfully');
     expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
     expect($destinationCell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->cell_id)->toBe($destinationCell->id);
@@ -918,6 +946,7 @@ test('an authenticated admin can update a pallet\'s product, expiration date, an
     ]);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been updated successfully');
 
     $pallet->refresh();
     expect($pallet->product_id)->toBe($newProduct->id);
@@ -1143,11 +1172,425 @@ test('storing a pallet into a first-level cell leaves it full when level 1 is no
     $product = Product::factory()->boxesCount(10)->create();
 
     $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ])->assertRedirect(route('admin.rows.show', $row->letter));
 
     expect($cell->refresh()->state)->toBe(CellState::Full);
+});
+
+test('the pallets list can be filtered by warehouse, hydrating the selected warehouse labels', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = Pallet::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    Pallet::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    $this->get("/admin/pallets?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)
+            ->where('pallets.data.0.id', $inNorth->id)
+            ->where('filters.warehouse_ids', [(string) $north->id])
+            ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
+    );
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 2)->where('filterOptions.warehouses', [])
+    );
+});
+
+test('the matching pallets list includes unplaced pallets in the rows and the total, placed pallets keeping their shape', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $north = Warehouse::factory()->create();
+    $placed = placedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-09-01']);
+    $unplaced = unplacedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
+    $undated = unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id, 'expiration_date' => null]);
+
+    foreach (['/admin/pallets', "/admin/pallets?product_id[]={$product->id}"] as $url) {
+        $this->get($url)->assertOk()->assertInertia(
+            fn (Assert $page) => $page->where('pallets.meta.total', 3)
+                ->where('pallets.data', fn ($rows) => collect($rows)->pluck('id')->all() === [$unplaced->id, $placed->id, $undated->id])
+        );
+    }
+    $this->get("/admin/pallets?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.meta.total', 2)
+    );
+});
+
+test('an unplaced row has no location, names the warehouse and receipt it arrived on, and a placed row keeps its location', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create();
+    $placed = placedPalletIn($north, ['expiration_date' => '2026-09-01']);
+    $unplaced = unplacedPalletIn($north, ['expiration_date' => '2026-08-01']);
+
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.data.0.id', $unplaced->id)
+            ->where('pallets.data.0.placed', false)
+            ->where('pallets.data.0.state', null)
+            ->where('pallets.data.0.location', null)
+            ->where('pallets.data.0.cell_active', null)
+            ->where('pallets.data.0.receipt_id', $unplaced->receipt_id)
+            ->where('pallets.data.0.warehouse', ['id' => $north->id, 'name' => $north->name])
+            ->where('pallets.data.1.id', $placed->id)
+            ->where('pallets.data.1.placed', true)
+            ->where('pallets.data.1.state', 'full')
+            ->where('pallets.data.1.location.warehouse', ['id' => $north->id, 'name' => $north->name])
+            ->where('pallets.data.1.cell_active', true)
+            ->where('pallets.data.1.warehouse', null)
+    );
+});
+
+test('a pallet that was received and then placed is a placed row that still carries its receipt', function () {
+    actingAsAdmin();
+    $pallet = placedPalletIn(Warehouse::firstOrCreateDefault());
+    $receipt = Receipt::factory()->finalized()->create();
+    $pallet->forceFill(['receipt_id' => $receipt->id])->save();
+
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.data.0.placed', true)->where('pallets.data.0.receipt_id', $receipt->id)->where('pallets.data.0.warehouse', null)
+    );
+});
+
+test('the unplaced filter lists only the pallets with no cell, composes with the warehouse and product filters, and is echoed', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $widgets = Product::factory()->create();
+    placedPalletIn($north, ['product_id' => $widgets->id]);
+    $inNorth = unplacedPalletIn($north, ['product_id' => $widgets->id]);
+    unplacedPalletIn($north);
+    unplacedPalletIn($south, ['product_id' => $widgets->id]);
+
+    $this->get('/admin/pallets?unplaced=true')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.meta.total', 3)->where('filters.unplaced', true)
+    );
+    $this->get("/admin/pallets?unplaced=1&warehouse_ids[]={$north->id}&product_id[]={$widgets->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)->where('pallets.data.0.id', $inNorth->id)
+    );
+});
+
+test('the cell filters never match an unplaced pallet, so combined with unplaced they list nothing', function () {
+    actingAsAdmin();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    foreach (['state=full', 'state=empty', 'is_active=false'] as $query) {
+        $this->get("/admin/pallets?unplaced=1&{$query}")->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 0));
+        $this->get("/admin/pallets?{$query}")->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 0));
+    }
+});
+
+test('the expired, expiring and stale filters match unplaced pallets like placed ones', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-01']);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-20']);
+    backdate(unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => null]), '2026-06-01 10:00:00');
+
+    $this->get('/admin/pallets?expired=1')->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 1));
+    $this->get('/admin/pallets?expires_within_days=30')->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 1));
+    $this->get('/admin/pallets?stale_after_days=30')->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 1));
+
+    Carbon::setTestNow();
+});
+
+test('the unplaced filter rejects a value that is not a boolean', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/pallets?unplaced=bogus')->assertSessionHasErrors('unplaced');
+});
+
+test('an unplaced pallet is a 404 on every admin pallet action, which are offered from a cell page only, and nothing changes', function (string $method, string $suffix, array $payload) {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['remaining_boxes' => 6]);
+
+    $this->call($method, "/admin/pallets/{$pallet->id}{$suffix}", $payload)->assertNotFound();
+
+    expect($pallet->fresh()->cell_id)->toBeNull()
+        ->and($pallet->fresh()->remaining_boxes)->toBe(6)
+        ->and($row->cells()->first()->state)->toBe(CellState::Empty)
+        ->and(Pallet::query()->count())->toBe(1);
+})->with([
+    'update' => ['PUT', '', ['product_id' => 1, 'remaining_boxes' => 3]],
+    'open' => ['POST', '/open', []],
+    'remove boxes' => ['POST', '/remove-boxes', ['boxes_count' => 1]],
+    'empty' => ['POST', '/empty', []],
+    'transfer' => ['POST', '/transfer', ['row_letter' => 'A', 'cell_number' => 1, 'flat_number' => 1]],
+]);
+
+test('an admin can transfer a pallet to a cell in another warehouse, logging both cells', function () {
+    $admin = actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'remaining_boxes' => 9]);
+    $destinationRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 2, 'flats_count' => 2]);
+    $destinationCell = $destinationRow->cells()->where('cell_number', 2)->where('flat_number', 2)->first();
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 2,
+        'flat_number' => 2,
+        'note' => 'To the annex.',
+    ])
+        ->assertRedirect(route('admin.rows.show', $sourceRow->routeParameters()))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+
+    expect($pallet->refresh()->cell_id)->toBe($destinationCell->id)
+        ->and($pallet->cell->row->warehouse_id)->toBe($annex->id)
+        ->and($sourceCell->refresh()->state)->toBe(CellState::Empty)
+        ->and($destinationCell->refresh()->state)->toBe(CellState::Full);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $sourceCell->id,
+        'related_cell_id' => $destinationCell->id,
+        'action' => CellLogAction::TransferredOut->value,
+        'pallet_id' => $pallet->id,
+        'user_id' => $admin->id,
+        'boxes_count' => 9,
+        'note' => 'To the annex.',
+    ]);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $destinationCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn->value,
+        'pallet_id' => $pallet->id,
+        'user_id' => $admin->id,
+        'boxes_count' => 9,
+        'note' => 'To the annex.',
+    ]);
+    $this->assertDatabaseCount('cell_status_logs', 2);
+});
+
+test('a transfer to a row letter two warehouses use goes to the row of the named warehouse', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->where('cell_number', 1)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $annexCell = $annexRow->cells()->where('cell_number', 1)->first();
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'A',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        // The source letter is shared, so the row page link names its warehouse.
+        ->assertRedirect(route('admin.rows.show', ['row' => 'A', 'warehouse_id' => $sourceRow->warehouse_id]))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+
+    expect($pallet->refresh()->cell_id)->toBe($annexCell->id);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $annexCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn->value,
+    ]);
+});
+
+test('a transfer to a row letter two warehouses use, naming no warehouse, is refused on warehouse_id', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->where('cell_number', 1)->first()->id]);
+    Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => 'A',
+        'cell_number' => 2,
+        'flat_number' => 1,
+    ])
+        ->assertSessionHasErrors(['warehouse_id' => __('messages.row_letter_in_several_warehouses')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->where('cell_number', 1)->first()->id);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('a transfer naming a warehouse without that row letter is refused and nothing moves', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        ->assertSessionHasErrors(['cell_number' => __('messages.slot_does_not_exist')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->first()->id);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('a transfer naming a warehouse that does not exist is refused on warehouse_id', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => 999999,
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])->assertSessionHasErrors(['warehouse_id']);
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->first()->id);
+});
+
+test('a transfer to a full cell in another warehouse is refused with an action error, no flash and no log', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+    $occupied = Pallet::factory()->create(['cell_id' => $annexRow->cells()->first()->id]);
+    $logsBefore = DB::table('cell_status_logs')->count();
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        ->assertRedirect(route('admin.rows.show', $sourceRow->routeParameters()))
+        ->assertSessionHasErrors(['action' => __('messages.destination_not_empty')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id)
+        ->and($occupied->refresh()->cell_id)->toBe($annexRow->cells()->first()->id);
+    expect(DB::table('cell_status_logs')->count())->toBe($logsBefore);
+});
+
+test('a transfer to an inactive cell in another warehouse is refused with an action error', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexRow->cells()->first()->update(['is_active' => false]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        ->assertSessionHasErrors(['action' => __('messages.slot_inactive')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('a transfer from the warehouse map returns to the map with its warehouse filter and flashes there', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'return_to' => 'map',
+        'warehouse_ids' => [$sourceRow->warehouse_id, $annex->id],
+    ])
+        ->assertRedirect(route('admin.warehouse-map.index', ['warehouse_ids' => [$sourceRow->warehouse_id, $annex->id]]))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+
+    expect($pallet->refresh()->cell_id)->toBe($annexRow->cells()->first()->id);
+});
+
+test('a transfer from the unfiltered warehouse map returns to the unfiltered map', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'return_to' => 'map',
+    ])
+        ->assertRedirect(route('admin.warehouse-map.index'))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+});
+
+test('a refused transfer from the warehouse map returns to the map with the action error and no flash', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    Pallet::factory()->create(['cell_id' => $destinationRow->cells()->first()->id]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'return_to' => 'map',
+    ])
+        ->assertRedirect(route('admin.warehouse-map.index'))
+        ->assertSessionHasErrors(['action' => __('messages.destination_not_empty')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('a transfer refuses an unknown return target and an unknown warehouse filter', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $payload = ['row_letter' => 'B', 'cell_number' => 1, 'flat_number' => 1];
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [...$payload, 'return_to' => 'dashboard'])
+        ->assertSessionHasErrors('return_to');
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [...$payload, 'return_to' => 'map', 'warehouse_ids' => [999999]])
+        ->assertSessionHasErrors('warehouse_ids.0');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->first()->id);
+});
+
+test('the row page offers transfer destinations in every warehouse', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 3, 'flats_count' => 2]);
+
+    $this->get("/admin/rows/{$row->letter}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Show')
+            ->where('transferTargets.warehouses', [
+                ['id' => $annex->id, 'name' => 'Annex'],
+                ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME],
+            ])
+            ->has('transferTargets.rows', 2)
+            ->where('transferTargets.rows.0', [
+                'id' => $row->id,
+                'warehouse_id' => $row->warehouse_id,
+                'letter' => 'A',
+                'cells_count' => 2,
+                'flats_count' => 1,
+            ])
+            ->where('transferTargets.rows.1', [
+                'id' => $annexRow->id,
+                'warehouse_id' => $annex->id,
+                'letter' => 'C',
+                'cells_count' => 3,
+                'flats_count' => 2,
+            ])
+            ->missing('rows')
+    );
 });

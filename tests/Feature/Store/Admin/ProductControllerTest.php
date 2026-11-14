@@ -238,7 +238,7 @@ test('the all-products list shows every owner and digital product, hides retired
     }
 });
 
-test('the in-house search matches one phrase against both names and both barcode tables, inside the list', function () {
+test('the in-house search matches one phrase against both names and the barcodes, inside the list', function () {
     actingAsStoreUser(createStoreStaff('show_in_house_products'));
     $noise = productListNoise();
     DB::table('products')->where('id', $noise['seller']->id)->update(['ar_name' => 'زيت البائع']);
@@ -475,7 +475,7 @@ test('deleting a product changes nothing while a warehouse pallet references it'
     expect(productListSnapshot())->toEqual($before);
 });
 
-test('deleting a product removes its store barcodes and variations itself, cascades WMS rows and keeps logs and reports without it', function () {
+test('deleting a product removes its barcodes (store and WMS-added alike) and variations itself, cascades WMS rows and keeps logs and reports without it', function () {
     actingAsStoreUser(createStoreStaff('product_delete'));
     DB::table('product_variations')->insert(['product_id' => $this->product->id, 'name' => '1L']);
     DB::table('product_barcodes')->insert(['product_id' => $this->product->id, 'barcode' => '100027']);
@@ -484,7 +484,7 @@ test('deleting a product removes its store barcodes and variations itself, casca
     $report = CellVerificationReport::factory()->create(['expected_product_id' => $this->product->id, 'reported_product_id' => $this->product->id]);
     expectProductListCachesCleared();
     $this->delete(route('products.list.destroy', [$this->product, 'list' => 'all']))->assertRedirect(route('products.all'));
-    $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['id' => $barcode->id]);
     $this->assertDatabaseMissing('wms_product_settings', ['product_id' => $this->product->id]);
     $this->assertDatabaseMissing('product_barcodes', ['product_id' => $this->product->id]);
     $this->assertDatabaseMissing('product_variations', ['product_id' => $this->product->id]);
@@ -515,7 +515,8 @@ test('bulk deletion removes every selected product of the list and returns to it
     ProductTranslation::create(['product_id' => $second->id, 'lang' => 'en', 'name' => 'Second oil']);
     expectProductListCachesCleared();
     $this->post(route('products.list.bulk_destroy', ['list' => 'admin', 'search' => 'oil']), ['id' => [$this->product->id, $second->id]])
-        ->assertRedirect(route('products.admin', ['search' => 'oil']));
+        ->assertRedirect(route('products.admin', ['search' => 'oil']))
+        ->assertInertiaFlash('success', 'Products have been deleted successfully');
     $this->assertDatabaseMissing('products', ['id' => $this->product->id]);
     $this->assertDatabaseMissing('products', ['id' => $second->id]);
     $this->assertDatabaseMissing('product_translations', ['product_id' => $second->id]);
@@ -636,7 +637,7 @@ test('the create and edit forms are Inertia on the store controller with their r
         expect(Route::getRoutes()->getByName($name)->getActionName())->toBe(ProductController::class.'@'.$action);
     }
     expect(collect(ProductController::middleware())->map(fn ($entry) => [$entry->middleware, $entry->only]))
-        ->toContain(['permission:product_edit', ['edit', 'sellerEdit', 'update', 'editVariantCombinations']]);
+        ->toContain(['permission:product_edit', ['edit', 'sellerEdit', 'update', 'editVariantCombinations', 'storeBarcodeImage']]);
     foreach (['admin_product_edit', 'seller_product_edit', 'update', 'sku_combination_edit'] as $method) {
         expect(method_exists(LegacyProductController::class, $method))->toBeFalse();
     }

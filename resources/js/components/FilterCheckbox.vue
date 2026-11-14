@@ -13,10 +13,8 @@ const model = defineModel<boolean>({ required: true });
             :id="id"
             v-model="model"
             type="checkbox"
-            class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700"
+            class="h-4 w-4 rounded border-line-strong"
         />
-        <label :for="id" class="text-sm text-gray-700 dark:text-neutral-300">{{
-            label
-        }}</label>
+        <label :for="id" class="text-sm text-ink">{{ label }}</label>
     </div>
 </template>

@@ -49,7 +49,8 @@ test('brand discounts update only the legacy eligible products and preserve peri
     $auction = createStoreProduct(['brand_id' => $brand->id, 'user_id' => $admin->id, 'auction_product' => 1, 'discount' => 5]);
     $other = createStoreProduct(['brand_id' => 999, 'user_id' => $admin->id, 'auction_product' => 0, 'discount' => 6]);
     $payload = ['brand_id' => $brand->id, 'discount' => 7.25, 'date_range' => '09-10-2026 12:00:00 to 11-10-2026 16:30:00', 'seller_product_discount' => 0];
-    $this->post('/temp/admin/set-product-discount?search=Dates&per_page=10', $payload)->assertSessionHasNoErrors()->assertRedirect(route('brands_wise_product_discount', ['search' => 'Dates', 'per_page' => 10]));
+    $this->post('/temp/admin/set-product-discount?search=Dates&per_page=10', $payload)->assertSessionHasNoErrors()->assertRedirect(route('brands_wise_product_discount', ['search' => 'Dates', 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Brand discounts have been updated successfully');
     $product->refresh();
     expect((float) $product->getAttribute('discount'))->toBe(7.25)->and($product->getAttribute('discount_type'))->toBe('percent')
         ->and((int) $product->getAttribute('discount_start_date'))->toBe(strtotime('09-10-2026 12:00:00'))

@@ -43,7 +43,7 @@ test('the pagination active-page link and per-page selector have readable contra
 
     await page.goto('/admin/cell-logs');
 
-    const activeLink = page.locator('nav .bg-gray-900').first();
+    const activeLink = page.locator('nav .bg-brand').first();
     await expect(activeLink).toBeVisible();
     await expect
         .poll(() => elementContrast(activeLink))

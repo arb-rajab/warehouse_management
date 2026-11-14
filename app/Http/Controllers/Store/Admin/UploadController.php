@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\DeleteUploadsRequest;
 use App\Http\Requests\Store\Admin\FilterUploadsRequest;
 use App\Http\Requests\Store\Admin\PreviewUploadsRequest;
@@ -23,6 +24,8 @@ use Inertia\Response;
 
 class UploadController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return list<Middleware> */
     public static function middleware(): array
     {
@@ -122,6 +125,7 @@ class UploadController extends Controller implements HasMiddleware
                 $uploads->delete($file);
             }
         });
+        $this->flashSuccess('all_files_have_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('uploaded-files.index', $request);
     }

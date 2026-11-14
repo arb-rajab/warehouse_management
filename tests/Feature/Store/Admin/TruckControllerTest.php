@@ -83,7 +83,8 @@ describe('truck writes', function () {
     test('staff can create a truck with existing images and cannot set its availability', function () {
         actingAsStoreUser(createStoreStaff('add_truck'));
         $photo = Upload::factory()->create(['type' => 'image', 'user_id' => auth('store')->id()]);
-        $this->post(route('trucks.store'), storeTruckForm(['photos' => [$photo->id], 'is_available' => false]))->assertRedirect(route('trucks.index'));
+        $this->post(route('trucks.store'), storeTruckForm(['photos' => [$photo->id], 'is_available' => false]))->assertRedirect(route('trucks.index'))
+            ->assertInertiaFlash('success', 'Truck has been created successfully');
         $truck = Truck::firstOrFail();
         expect($truck->name)->toBe('Cargo truck')->and($truck->photos)->toBe((string) $photo->id)->and($truck->is_available)->toBeTrue();
     });
@@ -94,7 +95,8 @@ describe('truck writes', function () {
         $other = Truck::create(['name' => 'Other']);
         $photo = Upload::factory()->create(['type' => 'image', 'user_id' => auth('store')->id()]);
         $trip = Trip::create(['driver_id' => createStoreUser('driver')->id, 'truck_id' => $truck->id, 'due_date' => '2026-10-10', 'status' => 'pending', 'code' => 'ASSIGNED']);
-        $this->put(route('trucks.update', $truck), storeTruckForm(['id' => $other->id, 'is_available' => true, 'photos' => [$photo->id]]))->assertRedirect(route('trucks.index'));
+        $this->put(route('trucks.update', $truck), storeTruckForm(['id' => $other->id, 'is_available' => true, 'photos' => [$photo->id]]))->assertRedirect(route('trucks.index'))
+            ->assertInertiaFlash('success', 'Truck has been updated successfully');
         expect($truck->fresh()->name)->toBe('Cargo truck')->and($truck->fresh()->photos)->toBe((string) $photo->id)->and($truck->fresh()->is_available)->toBeFalse()->and($other->fresh()->name)->toBe('Other')->and($trip->fresh()->truck_id)->toBe($truck->id);
         $this->put(route('trucks.update', $truck), storeTruckForm())->assertRedirect(route('trucks.index'));
         expect($truck->fresh()->photos)->toBe('');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateSellerCommissionRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -13,6 +14,7 @@ use Inertia\Response;
 
 class SellerCommissionController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use UpdatesStoreSettings;
 
     /** @return array<int, Middleware> */
@@ -36,6 +38,7 @@ class SellerCommissionController extends Controller implements HasMiddleware
     public function update(UpdateSellerCommissionRequest $request): RedirectResponse
     {
         $this->updateSettings($request->settings());
+        $this->flashSuccess('seller_commission_has_been_updated_successfully');
 
         return redirect()->route('business_settings.vendor_commission');
     }

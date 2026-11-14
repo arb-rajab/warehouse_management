@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -48,6 +49,36 @@ test('a cell status log belongs to its product', function () {
 
     expect($log->product->id)->toBe($product->id);
     expect($log->product->id)->not->toBe($otherProduct->id);
+});
+
+test('a cell status log names the product a pallet held before a product change, and none otherwise', function () {
+    $old = Product::factory()->create();
+    $new = Product::factory()->create();
+    $change = CellStatusLog::factory()->create(['action' => CellLogAction::ProductChanged, 'product_id' => $new->id, 'old_product_id' => $old->id]);
+    $plain = CellStatusLog::factory()->create(['product_id' => $old->id]); // noise
+
+    expect($change->oldProduct->id)->toBe($old->id)
+        ->and($change->product->id)->toBe($new->id)
+        ->and($plain->oldProduct)->toBeNull();
+});
+
+test('a correction of an unplaced pallet is logged without a cell or states', function () {
+    $log = CellStatusLog::factory()->create([
+        'cell_id' => null,
+        'from_state' => null,
+        'to_state' => null,
+        'action' => CellLogAction::NoteChanged,
+        'batch_id' => '7c1d4a52-5b2e-4a51-9d3a-0f2b8d9c1e11',
+        'old_note' => 'Before',
+        'new_note' => 'After',
+        'reason' => null,
+    ])->fresh();
+
+    expect($log->cell)->toBeNull()
+        ->and($log->from_state)->toBeNull()
+        ->and($log->to_state)->toBeNull()
+        ->and($log->action)->toBe(CellLogAction::NoteChanged)
+        ->and($log->only(['batch_id', 'old_note', 'new_note']))->toBe(['batch_id' => '7c1d4a52-5b2e-4a51-9d3a-0f2b8d9c1e11', 'old_note' => 'Before', 'new_note' => 'After']);
 });
 
 test('a cell status log belongs to its pallet', function () {
@@ -475,4 +506,15 @@ test('attachNextLogs breaks ties on id when same-pallet siblings share the same 
 
     $secondFresh = $logs->firstWhere('id', $second->id);
     expect($secondFresh->next_log_at?->equalTo($third->created_at))->toBeTrue();
+});
+
+test('forWarehouses narrows logs to those written against cells of the given warehouses', function () {
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    $noise = CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    expect(CellStatusLog::query()->forWarehouses([$north->id])->pluck('id')->all())->toBe([$inNorth->id])
+        ->and(CellStatusLog::query()->forWarehouses(null)->pluck('id'))->toContain($noise->id);
 });

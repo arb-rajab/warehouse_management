@@ -23,6 +23,8 @@ const props = defineProps<{
         'footer_logo' | 'payment_method_images',
         StoreUpload[]
     >;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
 }>();
 const settings = ref<StoreWebsiteFooterSettings>({
     ...props.settings,
@@ -54,6 +56,7 @@ function transform() {
             v-model="settings"
             :initial-files="initialFiles"
             :errors="errors"
+            :highlight="highlight"
         />
     </ResourceFormPage>
 </template>

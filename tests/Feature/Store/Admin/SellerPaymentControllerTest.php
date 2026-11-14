@@ -30,7 +30,8 @@ test('an admin pays a seller out: the balance drops once and a payment is record
     $noiseShopId = createShopFor(createStoreUser('seller'), 70);
     actingAsStoreUser(createStoreAdmin());
 
-    $this->post('/temp/admin/pay_to_seller', payoutForm($shopId, ['txn_code' => 'T-1']))->assertRedirect(route('sellers.index'));
+    $this->post('/temp/admin/pay_to_seller', payoutForm($shopId, ['txn_code' => 'T-1']))->assertRedirect(route('sellers.index'))
+        ->assertInertiaFlash('success', 'Seller payment has been recorded successfully');
 
     expect(shopBalance($shopId))->toBe(60.0)
         ->and(shopBalance($noiseShopId))->toBe(70.0)

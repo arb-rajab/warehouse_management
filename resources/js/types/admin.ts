@@ -34,12 +34,55 @@ export interface UserSummary {
     name: string;
 }
 
+/**
+ * The id/name pair a row, cell or pallet payload carries for the warehouse it
+ * belongs to, and the option shape of the warehouse filter's search
+ * (`WarehouseSummaryResource`). Narrower than `Warehouse`, which the
+ * warehouses pages list.
+ */
+export interface WarehouseSummary {
+    id: number;
+    name: string;
+}
+
+/** A warehouse as the warehouses admin pages show it (`WarehouseResource`). */
+export interface Warehouse extends WarehouseSummary {
+    code: string | null;
+    address: string | null;
+    /** Present on the listing and the edit page; the delete button is offered only while it is 0. */
+    rows_count?: number;
+}
+
+/**
+ * Hydration data for a warehouse filter's already-selected ids (see
+ * `FilterWarehouseSelect.vue`'s `selected` prop) — not every warehouse,
+ * which the search endpoint fetches on demand.
+ */
+export interface WarehouseFilterOptions {
+    warehouses: WarehouseSummary[];
+}
+
+/**
+ * The `filters` prop of a page whose only filter is the warehouse one (the
+ * warehouse map). `null` means every warehouse.
+ */
+export interface WarehouseFilters {
+    warehouse_ids: number[] | null;
+}
+
 export interface Row {
     id: number;
     letter: string;
     cells_count: number;
     flats_count: number;
     has_pallets: boolean;
+    warehouse: WarehouseSummary;
+}
+
+/** The rows listing's `filters` prop: the warehouse filter and the page size. */
+export interface RowFilters {
+    warehouse_ids?: number[];
+    per_page?: number;
 }
 
 /**
@@ -113,9 +156,15 @@ export interface CellWithLocation extends Cell {
     row_letter: string;
 }
 
+/**
+ * One row of a row dropdown. `warehouse` is present only for a letter that
+ * more than one warehouse uses (`Row::filterOptions()`), so the label can tell
+ * the two apart — see `rowOptionLabel()` in `lib/location.ts`.
+ */
 export interface RowFilterOption {
     id: number;
     letter: string;
+    warehouse?: WarehouseSummary;
 }
 
 export interface RowAndColumnFilterOptions {
@@ -128,6 +177,18 @@ export interface CellMapRow {
     letter: string;
     cells_count: number;
     flats_count: number;
+    /** The row's warehouse, which a transfer to this row names (a letter alone is unique per warehouse only). */
+    warehouse_id: number;
+}
+
+/**
+ * Where an admin pallet transfer can go (`BuildsPalletTransferTargets`): every
+ * warehouse, and every row of every warehouse. The transfer fields list the
+ * rows of the chosen warehouse.
+ */
+export interface PalletTransferTargets {
+    warehouses: WarehouseSummary[];
+    rows: CellMapRow[];
 }
 
 /**
@@ -169,6 +230,12 @@ export interface CellSlotLocation {
     row_letter: string;
     cell_number: number;
     flat_number: number;
+    /**
+     * The warehouse of the cell's row, present in the admin listings. A row
+     * letter names one row per warehouse, so a link to the row carries
+     * `warehouse.id` (`rowRouteOptions()` in `lib/location.ts`).
+     */
+    warehouse?: WarehouseSummary;
 }
 
 export type CellLogAction =
@@ -180,7 +247,8 @@ export type CellLogAction =
     | 'transferred_in'
     | 'deactivated'
     | 'reactivated'
-    | 'product_changed';
+    | 'product_changed'
+    | 'note_changed';
 
 export type CellLogFlagReason = 'rapid_actions' | 'off_hours' | 'quick_flip';
 
@@ -191,14 +259,32 @@ export interface CellStatusLogFlag {
     acknowledged_by?: UserSummary | null;
 }
 
+/** A product a record correction names (`product_changed`). */
+export interface CellLogProductSummary {
+    id: number;
+    name: string;
+    ar_name: string;
+}
+
 export interface CellStatusLog {
     id: number;
     action: CellLogAction;
-    from_state: Cell['state'];
-    to_state: Cell['state'];
+    /** Null only on a correction of a pallet with no cell yet. */
+    from_state: Cell['state'] | null;
+    to_state: Cell['state'] | null;
     note: string | null;
     boxes_count: number | null;
-    cell: CellSlotLocation;
+    /** Shared by the entries one bulk correction wrote. */
+    batch_id: string | null;
+    /** Why the product was changed (bulk product change). */
+    reason: string | null;
+    /** The pallet's own note before and after a correction. */
+    old_note: string | null;
+    new_note: string | null;
+    old_product: CellLogProductSummary | null;
+    new_product: CellLogProductSummary | null;
+    /** Null only on a correction of a pallet with no cell yet. */
+    cell: CellSlotLocation | null;
     related_cell: CellSlotLocation | null;
     product: ProductDetails | null;
     pallet: {
@@ -231,18 +317,32 @@ export interface CellStatusLogFilters {
     sort_by?: CellStatusLogSortBy;
     sort_direction?: 'asc' | 'desc';
     flagged?: boolean;
+    warehouse_ids?: number[];
     per_page?: number;
 }
 
 export interface CellStatusLogFilterOptions
-    extends RowAndColumnFilterOptions, ProductFilterOptions {
+    extends
+        RowAndColumnFilterOptions,
+        ProductFilterOptions,
+        Partial<WarehouseFilterOptions> {
     users: UserSummary[];
     actions: CellLogAction[];
 }
 
+/**
+ * One row of the products page's Barcodes dialog: a `product_barcodes` row, the
+ * table the WMS shares with the store. The product's own-id rows (the import's
+ * Mat_ID) are left out, since the default barcode already is the id.
+ */
 export interface ProductBarcode {
     id: number;
     barcode: string;
+    /**
+     * Whether Code 128 can draw the value (Arabic digits converted). Store
+     * barcodes can be any text; preview and download answer 422 when false.
+     */
+    printable: boolean;
 }
 
 export interface ProductSummary {
@@ -272,7 +372,7 @@ export interface ProductSummary {
     opened_cells_count: number;
     expired_cells_count: number;
     expiring_soon_count: number;
-    /** Barcodes attached to this product, oldest first. Stored in this app's own `wms_product_barcodes`. */
+    /** Barcodes attached to this product, oldest first, from the shared `product_barcodes` table (the own-id rows are left out). */
     barcodes: ProductBarcode[];
 }
 
@@ -335,14 +435,22 @@ export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
  */
 export interface MatchingPallet {
     id: number;
-    state: Cell['state'];
+    /** False for a received pallet that has no cell yet. */
+    placed: boolean;
+    /** Null for an unplaced pallet. */
+    state: Cell['state'] | null;
     expiration_date: string | null;
     added_at: string | null;
     remaining_boxes: number;
     product: ProductDetails;
-    location: CellSlotLocation;
-    /** False when the pallet's cell is out of service. */
-    cell_active: boolean;
+    /** Null for an unplaced pallet: it has no map location. */
+    location: CellSlotLocation | null;
+    /** False when the pallet's cell is out of service; null when unplaced. */
+    cell_active: boolean | null;
+    /** The receipt the pallet arrived on (kept after it is placed). */
+    receipt_id: number | null;
+    /** The warehouse of the receipt, for an unplaced pallet only. */
+    warehouse: WarehouseSummary | null;
 }
 
 /**
@@ -353,9 +461,11 @@ export interface MatchingPalletFilters {
     state?: Cell['state'];
     is_active?: boolean;
     expired?: boolean;
+    unplaced?: boolean;
     expires_within_days?: number;
     stale_after_days?: number;
     product_id?: number[];
+    warehouse_ids?: number[];
     per_page?: number;
 }
 
@@ -405,10 +515,11 @@ export interface CellVerificationRoundFilters {
     date_to?: string;
     created_within_days?: number;
     sort_direction?: 'asc' | 'desc';
+    warehouse_ids?: number[];
     per_page?: number;
 }
 
-export interface CellVerificationRoundFilterOptions {
+export interface CellVerificationRoundFilterOptions extends WarehouseFilterOptions {
     users: UserSummary[];
 }
 
@@ -432,3 +543,61 @@ export interface CellVerificationReportFilters {
 
 export type CellVerificationReportFilterOptions = RowAndColumnFilterOptions &
     ProductFilterOptions;
+
+/** A truck receipt's state: a draft until it is finalized into pallets. */
+export type ReceiptStatus = 'draft' | 'finalized';
+
+/** One row of the receipts list (`ReceiptResource` without its files and pallets). */
+export interface ReceiptListItem {
+    id: number;
+    warehouse: WarehouseSummary;
+    note: string | null;
+    status: ReceiptStatus;
+    pallets_count: number;
+    files_count: number;
+    created_by: UserSummary;
+    finalized_by: UserSummary | null;
+    finalized_at: string | null;
+    created_at: string;
+}
+
+/**
+ * A bill photo or PDF. `url` is the session-authenticated admin download
+ * route; the storage path is never sent.
+ */
+export interface ReceiptFile {
+    id: number;
+    original_name: string;
+    mime_type: string;
+    /** Bytes stored. */
+    size: number;
+    url: string;
+    created_at: string | null;
+}
+
+/**
+ * One pallet exactly as the merchant wrote it on the bill, in the order it was
+ * typed. Carries no pallet id and no entry id.
+ */
+export interface ReceiptPalletEntry {
+    product_id: number;
+    product: ProductDetails;
+    boxes: number;
+    expiration_date: string | null;
+    /** Copied onto the pallet when the receipt is finalized. */
+    note: string | null;
+}
+
+export interface ReceiptDetail extends ReceiptListItem {
+    files: ReceiptFile[];
+    pallets: ReceiptPalletEntry[];
+}
+
+export interface ReceiptFilters {
+    warehouse_ids?: number[];
+    status?: ReceiptStatus;
+    sort_direction?: 'asc' | 'desc';
+    per_page?: number;
+}
+
+export type ReceiptFilterOptions = WarehouseFilterOptions;

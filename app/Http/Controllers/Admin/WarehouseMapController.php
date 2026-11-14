@@ -2,32 +2,52 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsPalletTransferTargets;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\FilterWarehouseMapRequest;
 use App\Http\Resources\RowResource;
 use App\Models\Row;
+use App\Models\Warehouse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WarehouseMapController extends Controller
 {
+    use BuildsPalletTransferTargets;
+
     /**
-     * The 2D / 3D warehouse map page. It carries no data of its own: the page
-     * fetches {@see self::rows()} so that it can revalidate it (ETag) whenever
-     * the tab regains focus, without reloading the Inertia page.
+     * The 2D / 3D warehouse map page. It carries no row data of its own: the
+     * page fetches {@see self::rows()} so that it can revalidate it (ETag)
+     * whenever the tab regains focus, without reloading the Inertia page. It
+     * does carry the warehouse filter (`warehouse_ids[]`) and every
+     * warehouse's `{id, name}` for the map's warehouse switcher (one small
+     * query, sent on every visit because the switcher needs it at mount).
+     * The pallet transfer dialog's destinations (`transferTargets`) are sent
+     * only when the page asks for them (a partial reload when the dialog
+     * first opens).
      */
-    public function index(): Response
+    public function index(FilterWarehouseMapRequest $request): Response
     {
-        return Inertia::render('Admin/WarehouseMap/Index');
+        $warehouseIds = $request->warehouseIds();
+
+        return Inertia::render('Admin/WarehouseMap/Index', [
+            'filters' => [
+                'warehouse_ids' => $warehouseIds,
+            ],
+            'warehouses' => Warehouse::query()->select(['id', 'name'])->orderBy('name')->orderBy('id')->get(),
+            'transferTargets' => Inertia::optional(fn (): array => $this->palletTransferTargets()),
+        ]);
     }
 
     /**
      * The whole warehouse grid, in exactly the shape of the mobile app's
      * `GET /api/v1/rows/full`, for the session-authenticated panel (the
-     * mobile endpoint only accepts Sanctum tokens). The route adds an ETag.
+     * mobile endpoint only accepts Sanctum tokens), narrowed by the same
+     * optional `warehouse_ids[]`. The route adds an ETag.
      */
-    public function rows(): AnonymousResourceCollection
+    public function rows(FilterWarehouseMapRequest $request): AnonymousResourceCollection
     {
-        return RowResource::collection(Row::query()->withFullGrid()->get());
+        return RowResource::collection(Row::query()->withFullGrid()->forWarehouses($request->warehouseIds())->get());
     }
 }

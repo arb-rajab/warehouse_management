@@ -93,7 +93,8 @@ test('a new page is a custom page with its default-language translation, a norma
     $staff = actingAsStoreUser(createStoreStaff('add_website_page'));
     $image = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image']);
     $this->post(route('custom-pages.store'), [...$this->payload, 'slug' => 'Our Story!', 'content' => '<p>Since <strong>1990</strong></p><img src="x" onfocus="alert(1)">', 'meta_image' => $image->id])
-        ->assertRedirect(route('website.pages'));
+        ->assertRedirect(route('website.pages'))
+        ->assertInertiaFlash('success', 'Page has been created successfully');
     $page = Page::query()->where('slug', 'Our-Story')->sole();
     expect($page->type)->toBe('custom_page')
         ->and($page->title)->toBe('Our story')
@@ -219,7 +220,8 @@ test('page meta images allow own and library images while a retained foreign ima
 
 test('deleting a custom page removes it with its translations and returns to the list query', function () {
     actingAsStoreUser(createStoreStaff('delete_website_page'));
-    $this->delete(route('custom-pages.destroy', ['page' => $this->page, 'page_number' => 2]))->assertRedirect(route('website.pages', ['page_number' => 2]));
+    $this->delete(route('custom-pages.destroy', ['page' => $this->page, 'page_number' => 2]))->assertRedirect(route('website.pages', ['page_number' => 2]))
+        ->assertInertiaFlash('success', 'Page has been deleted successfully');
     expect(Page::query()->find($this->page->id))->toBeNull()
         ->and(PageTranslation::query()->where('page_id', $this->page->id)->count())->toBe(0)
         ->and($this->policy->fresh())->not->toBeNull();

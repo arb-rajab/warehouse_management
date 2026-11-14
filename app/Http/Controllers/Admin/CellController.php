@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\CellLogAction;
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ToggleCellActiveRequest;
@@ -16,14 +17,14 @@ use Illuminate\Support\Facades\DB;
 
 class CellController extends Controller
 {
-    use BuildsCellQrLabels, RedirectsAfterCellAction;
+    use BuildsCellQrLabels, FlashesAdminSuccess, RedirectsAfterCellAction;
 
     public function exportQrCode(Cell $cell): HttpResponse
     {
-        $cell->loadMissing('row:id,letter,flats_count');
+        $cell->loadMissing('row:id,warehouse_id,letter,flats_count');
         $setting = Setting::current();
 
-        return response($this->cellQrLabelImage($cell->row->letter, $cell, $setting->qr_code_width, $setting->qr_code_height, $cell->row->flats_count))
+        return response($this->cellQrLabelImage($cell->row, $cell, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr.svg\"");
     }
@@ -57,6 +58,8 @@ class CellController extends Controller
                 'user_id' => $request->user()->id,
                 'note' => $request->input('note'),
             ]);
+
+            $this->flashAdminSuccess($activating ? 'cell_has_been_activated_successfully' : 'cell_has_been_deactivated_successfully');
 
             return $this->redirectAfterCellAction($lockedCell);
         });

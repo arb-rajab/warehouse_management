@@ -5,7 +5,6 @@ namespace App\Http\Requests\Api\V1;
 use App\Http\Requests\Concerns\ResolvesSlotFromCoordinates;
 use App\Http\Requests\Concerns\ValidatesOptionalNote;
 use App\Http\Requests\Concerns\ValidatesPalletContents;
-use App\Http\Requests\Concerns\ValidatesProductImageReview;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,7 +14,6 @@ class StorePalletRequest extends FormRequest
     use ResolvesSlotFromCoordinates;
     use ValidatesOptionalNote;
     use ValidatesPalletContents;
-    use ValidatesProductImageReview;
 
     /**
      * Get the validation rules that apply to the request.
@@ -27,7 +25,6 @@ class StorePalletRequest extends FormRequest
         return [
             ...$this->coordinateRules(),
             ...$this->noteRules(),
-            ...$this->imageReviewRules(),
             ...$this->palletContentsRules(),
         ];
     }

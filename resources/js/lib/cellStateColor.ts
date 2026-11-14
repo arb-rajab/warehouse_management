@@ -19,8 +19,8 @@ interface CellStateColor {
 
 export const CELL_STATE_COLOR: Record<Cell['state'], CellStateColor> = {
     empty: {
-        backgroundClass: 'bg-gray-100 dark:bg-neutral-900',
-        borderClass: 'border-gray-400 dark:border-neutral-700',
+        backgroundClass: 'bg-cell-empty dark:bg-cell-empty-dark',
+        borderClass: 'border-cell-empty-line dark:border-cell-empty-line-dark',
         icon: CircleDashed,
     },
     full: {

@@ -17,7 +17,9 @@ class CellStatusLogController extends Controller
 
         $query = CellStatusLog::query()
             ->forListing()
+            ->with(CellStatusLog::WITH_WAREHOUSES)
             ->filtered($request)
+            ->forWarehouses($request->warehouseIds())
             ->sorted($request);
 
         // This endpoint deliberately doesn't eager-load WITH_FLAG_DETAILS for

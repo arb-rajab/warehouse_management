@@ -3,6 +3,7 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Warehouse;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ function loadMakeExpirationDateNullableOnPalletsTableMigration(): object
 test('down() backfills a null expiration_date before restoring NOT NULL', function () {
     // RowObserver auto-generates cells_count x flats_count empty cells, so
     // creating them here directly would collide with the generated rows.
-    $row = Row::create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $row = Row::create(['warehouse_id' => Warehouse::firstOrCreateDefault()->id, 'letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
     [$cell, $secondCell] = $row->cells()->orderBy('cell_number')->get();
     $product = Product::create(['name' => 'Widgets', 'ar_name' => '', 'published' => 1]);
     $pallet = Pallet::create([

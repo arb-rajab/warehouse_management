@@ -9,9 +9,10 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * `product_barcodes` is the inherited store table used by
-     * Product::storeBarcodes() and integrated store product writers. It is
-     * separate from the warehouse's wms_product_barcodes. Mirrors the
+     * `product_barcodes` is the inherited store table, and since
+     * 2026-11-08 the one barcode table (App\Models\ProductBarcode, read by
+     * Product::barcodes(); the WMS rows of wms_product_barcodes were copied
+     * in by copy_wms_product_barcodes_into_product_barcodes). Mirrors the
      * store's own `create_product_barcodes_table` migration: `product_id`
      * matches `products.id`'s signed `integer` type (see
      * `create_products_table`'s own docblock on why every product_id FK in

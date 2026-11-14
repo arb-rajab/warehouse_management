@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { storeBarcodeImage } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { activation } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shippingConfigurationIndex } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import StoreProductDiscountFields from '@/components/StoreProductDiscountFields.vue';
@@ -243,6 +244,138 @@ describe('StoreProductFormFields', () => {
             ['meta_img', 'image', false, t('store.products.form.metaImage')],
         ]);
     });
+
+    it('shows each saved barcode as its barcode image below its input, and a note for any other value', async () => {
+        const wrapper = mountFields({
+            product: storeProductForm({
+                product_barcodes: ['8712345678906', 'متجر', 'EVOO-1'],
+            }),
+            barcodeImages: [
+                { id: 3, barcode: '8712345678906', printable: true },
+                { id: 4, barcode: 'متجر', printable: false },
+                { id: 5, barcode: 'EVOO-1', printable: true },
+            ],
+        });
+        const rows = () => wrapper.get('#product_barcodes').findAll('li');
+        const images = () =>
+            wrapper
+                .get('#product_barcodes')
+                .findAll('img')
+                .map((img) => [img.attributes('src'), img.attributes('alt')]);
+
+        expect(images()).toEqual([
+            [
+                storeBarcodeImage.url({ product: 41, barcode: 3 }),
+                '8712345678906',
+            ],
+            [storeBarcodeImage.url({ product: 41, barcode: 5 }), 'EVOO-1'],
+        ]);
+        expect(storeBarcodeImage.url({ product: 41, barcode: 3 })).toBe(
+            '/temp/admin/products/41/store-barcodes/3/image',
+        );
+        expect(rows()[1].text()).toContain(
+            t('store.products.form.barcodeNotPrintable'),
+        );
+        expect(rows()[0].find('img').classes()).toEqual(
+            expect.arrayContaining(['bg-surface', 'max-w-xs']),
+        );
+
+        // A changed value keeps its input editable and loses the image until saved.
+        await rows()[2].get('input').setValue('EVOO-2');
+        expect(rows()[2].find('img').exists()).toBe(false);
+        expect(rows()[2].text()).toContain(
+            t('store.products.form.barcodeImageAfterSave'),
+        );
+        // Typing the saved value back shows its image again.
+        await rows()[2].get('input').setValue(' EVOO-1 ');
+        expect(rows()[2].get('img').attributes('src')).toBe(
+            storeBarcodeImage.url({ product: 41, barcode: 5 }),
+        );
+
+        // A new row says nothing while empty, then the after-save note.
+        await wrapper
+            .findAll('button')
+            .find(
+                (button) =>
+                    button.text() === t('store.products.form.addBarcode'),
+            )!
+            .trigger('click');
+        expect(rows()[3].text()).toBe('');
+        await rows()[3].get('input').setValue('5901234123457');
+        expect(rows()[3].text()).toContain(
+            t('store.products.form.barcodeImageAfterSave'),
+        );
+        expect(rows()[3].find('img').exists()).toBe(false);
+    });
+
+    it('posts the loaded barcodes as the seen list on the edit form only, blank when it loaded none', async () => {
+        const seen = (wrapper: ReturnType<typeof mountFields>) =>
+            wrapper
+                .findAll('input[name="product_barcodes_seen[]"]')
+                .map((input) => (input.element as HTMLInputElement).value);
+        const edit = mountFields({
+            product: storeProductForm({
+                product_barcodes: ['8712345678906', 'EVOO-1'],
+            }),
+        });
+
+        expect(seen(edit)).toEqual(['8712345678906', 'EVOO-1']);
+        await edit
+            .get(
+                'button[aria-label="' +
+                    t('store.products.form.removeBarcode') +
+                    ' 1"]',
+            )
+            .trigger('click');
+        expect(seen(edit)).toEqual(['8712345678906', 'EVOO-1']);
+
+        // A product that loaded none still posts the key, blank.
+        expect(
+            seen(
+                mountFields({
+                    product: storeProductForm({ product_barcodes: [] }),
+                }),
+            ),
+        ).toEqual(['']);
+        // The create form has no seen list.
+        expect(seen(mountFields())).toEqual([]);
+        // The product types are not tracked.
+        expect(edit.find('input[name="product_types_seen[]"]').exists()).toBe(
+            false,
+        );
+    });
+
+    it.each(['en', 'ar'] as const)(
+        'labels the barcode notes in %s, and the create form has no image',
+        async (locale) => {
+            i18n.global.locale.value = locale;
+            const wrapper = mountFields();
+            await wrapper
+                .findAll('button')
+                .find(
+                    (button) =>
+                        button.text() === t('store.products.form.addBarcode'),
+                )!
+                .trigger('click');
+            await wrapper
+                .get('input[name="product_barcodes[]"]')
+                .setValue('8712345678906');
+
+            expect(t('store.products.form.barcodeImageAfterSave')).not.toBe(
+                'store.products.form.barcodeImageAfterSave',
+            );
+            expect(t('store.products.form.barcodeNotPrintable')).not.toBe(
+                'store.products.form.barcodeNotPrintable',
+            );
+            expect(wrapper.get('#product_barcodes').text()).toContain(
+                t('store.products.form.barcodeImageAfterSave'),
+            );
+            expect(wrapper.find('#product_barcodes img').exists()).toBe(false);
+            expect(wrapper.get('#product_types').text()).not.toContain(
+                t('store.products.form.barcodeImageAfterSave'),
+            );
+        },
+    );
 
     it('offers the slug and the Otajer images only on the edit form', () => {
         const create = mountFields();

@@ -6,7 +6,7 @@ use App\Models\Product;
  * Regression coverage for Product::product_translations()/getTranslation(),
  * merged in from the legacy store's own Product model (see
  * .ai/rules/legacy-albaraka-holland.md section 2). Unlike most of that
- * merge's other relations (category(), storeBarcodes(), Upload::user()),
+ * merge's other relations (category(), Upload::user()),
  * this one needs no column beyond what the local `products`/
  * `product_translations` stand-in tables already carry, so it's the one
  * actually exercisable before the DB-merge phase adds the rest.

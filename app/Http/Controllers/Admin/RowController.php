@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
+use App\Http\Controllers\Concerns\BuildsPalletTransferTargets;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterRowsRequest;
 use App\Http\Requests\Admin\ShowRowRequest;
@@ -14,6 +16,7 @@ use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
+use App\Models\Warehouse;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,34 +28,50 @@ use SimpleXMLElement;
 
 class RowController extends Controller
 {
-    use BuildsCellQrLabels;
+    use BuildsCellQrLabels, BuildsPalletTransferTargets, FlashesAdminSuccess;
 
     public function index(FilterRowsRequest $request): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
+        $warehouseIds = $request->warehouseIds();
 
         return Inertia::render('Admin/Rows/Index', [
             'rows' => $this->paginated(RowResource::collection(
                 Row::query()
                     ->select(Row::SELECT_COLUMNS)
+                    ->with(Row::WITH_WAREHOUSE)
                     ->withHasPallets()
+                    ->forWarehouses($warehouseIds)
                     ->paginate($perPage)
                     ->withQueryString()
             )),
-            'filters' => ['per_page' => $perPage],
+            'filters' => [
+                ...$request->only(['warehouse_ids']),
+                'per_page' => $perPage,
+            ],
+            'filterOptions' => [
+                'warehouses' => Warehouse::selectedOptions($warehouseIds ?? []),
+            ],
         ]);
     }
 
+    /**
+     * `warehouses` feeds the form's required warehouse select; there are few
+     * enough warehouses to send them all.
+     */
     public function create(): Response
     {
-        return Inertia::render('Admin/Rows/Create');
+        return Inertia::render('Admin/Rows/Create', [
+            'warehouses' => Warehouse::query()->select(['id', 'name'])->orderBy('name')->get(),
+        ]);
     }
 
     public function store(StoreRowRequest $request): RedirectResponse
     {
         $row = DB::transaction(fn () => Row::create($request->validated()));
+        $this->flashAdminSuccess('row_has_been_created_successfully');
 
-        return redirect()->route('admin.rows.show', $row);
+        return redirect()->route('admin.rows.show', $row->routeParameters());
     }
 
     public function show(ShowRowRequest $request, Row $row): Response
@@ -61,8 +80,9 @@ class RowController extends Controller
         $flatNumber = $request->integer('flat_number') ?: null;
 
         return Inertia::render('Admin/Rows/Show', [
-            'row' => new RowResource($row->loadHasPallets()),
-            'rows' => Row::query()->select(Row::SELECT_COLUMNS)->orderBy('letter')->get(),
+            'row' => new RowResource($row->loadHasPallets()->load(Row::WITH_WAREHOUSE)),
+            // The pallet transfer dialog's destinations, in every warehouse.
+            'transferTargets' => $this->palletTransferTargets(),
             'cells' => CellResource::collection(
                 $row->cells()
                     ->select(Cell::SELECT_COLUMNS)
@@ -85,7 +105,7 @@ class RowController extends Controller
     public function edit(Row $row): Response
     {
         return Inertia::render('Admin/Rows/Edit', [
-            'row' => new RowResource($row->loadHasPallets()),
+            'row' => new RowResource($row->loadHasPallets()->load(Row::WITH_WAREHOUSE)),
         ]);
     }
 
@@ -102,7 +122,7 @@ class RowController extends Controller
             ->orderedByCoordinates()
             ->get();
         $setting = Setting::current();
-        $labels = $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height, $row->flats_count);
+        $labels = $this->cellQrLabels($row, $cells, $setting->qr_code_width, $setting->qr_code_height);
         $pageHeight = $setting->qr_code_height;
 
         if ($labels !== []) {
@@ -158,13 +178,14 @@ class RowController extends Controller
                 }
 
                 if ($errors !== []) {
-                    return redirect()->route('admin.rows.edit', $row)->withErrors($errors);
+                    return redirect()->route('admin.rows.edit', $row->routeParameters())->withErrors($errors);
                 }
             }
 
             $row->update($validated);
+            $this->flashAdminSuccess('row_has_been_updated_successfully');
 
-            return redirect()->route('admin.rows.show', $row);
+            return redirect()->route('admin.rows.show', $row->routeParameters());
         });
     }
 
@@ -182,6 +203,7 @@ class RowController extends Controller
             }
 
             $row->delete();
+            $this->flashAdminSuccess('row_has_been_deleted_successfully');
 
             return $this->redirectPreservingQuery('admin.rows.index', $request);
         });

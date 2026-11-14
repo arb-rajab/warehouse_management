@@ -7,15 +7,14 @@ import { t } from '@/lib/i18n';
  * CellHighlightFilters.vue and CellStatusLogs/Index.vue).
  */
 export const filterSectionHeadingClass =
-    'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
+    'mb-3 text-xs font-semibold tracking-wide text-muted uppercase';
 
 /**
  * The divider above each section inside a filter dialog — the sibling of
  * `filterSectionHeadingClass` (CellStatusLogs/Index.vue, Products/Index.vue,
  * CellVerificationRounds/Index.vue + Show.vue).
  */
-export const filterSectionClass =
-    'border-t border-gray-200 pt-6 dark:border-neutral-800';
+export const filterSectionClass = 'border-t border-line pt-6';
 
 /**
  * The same divider for a filter dialog's action row, which lays its Apply/Clear
@@ -23,57 +22,63 @@ export const filterSectionClass =
  * `mt-6`, since its footer follows plain content rather than a divided section.
  */
 export const filterFooterClass =
-    'flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800';
+    'flex items-center gap-2 border-t border-line pt-6';
 
 /**
  * The small rounded-pill count badge used by every filter-dialog trigger's
- * active-filter count. Blue rather than the page's usual gray-900/white pairing,
- * matching the blue highlight ring cells get.
+ * active-filter count: brand red with white text, so it stays visible on a
+ * selected or dark background.
  */
 export const countBadgeClass =
-    'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-medium text-white dark:bg-blue-500';
+    'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-xs font-semibold text-on-brand';
 
 /**
  * The "open filter dialog" trigger button shared by CellHighlightFilters.vue
  * and CellStatusLogs/Index.vue.
  */
 export const filterTriggerButtonClass =
-    'inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800 cursor-pointer';
+    'inline-flex items-center gap-2 rounded-md border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-subtle cursor-pointer';
 
 /**
  * The filter-dialog "Clear" button shared by CellHighlightFilters.vue and
  * CellStatusLogs/Index.vue.
  */
 export const filterClearButtonClass =
-    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800 cursor-pointer';
+    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted hover:bg-subtle cursor-pointer';
 
 /**
  * A square icon-only toolbar button (the rich-text editor's toolbar).
  */
 export const mapToolbarButtonClass =
-    'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
+    'cursor-pointer rounded-md border border-line-strong p-2 text-ink hover:bg-subtle';
 
 /**
  * The "this item is the selected one" variant applied on top of a toggle
  * button (flat tabs, 2D/3D view mode, orbit camera mode, touch sprint) or a
  * pagination page link.
  */
-export const selectedToggleClass =
-    'bg-gray-900 text-white dark:bg-white dark:text-gray-900';
+export const selectedToggleClass = 'bg-brand text-on-brand';
 
 /**
  * The filter-dialog "Apply" submit button shared by CellStatusLogs/Index.vue
  * and Dashboard/Index.vue's custom-expiring-days dialog.
  */
 export const filterApplyButtonClass =
-    'inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200';
+    'inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-on-brand shadow-btn hover:bg-brand-hover';
+
+/**
+ * A destructive action button (Delete selection, Delete selected files): the
+ * soft danger style, so it never reads as the brand-red primary button.
+ * SubmitButton's `variant="danger"` uses it; pair it with the Trash2 icon.
+ */
+export const dangerButtonClass =
+    'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent bg-danger-soft px-3.5 py-2 text-sm font-semibold text-danger-strong hover:bg-danger-soft-hover disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * The filter-field label shared by every FilterDateField/FilterMultiSelect/
  * FilterNumberField/FilterSelect/FormField.
  */
-export const fieldLabelClass =
-    'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
+export const fieldLabelClass = 'mb-1 block text-sm text-ink';
 
 /**
  * The plain bordered text/number/date/select/textarea input shared by the
@@ -81,7 +86,7 @@ export const fieldLabelClass =
  * — extracted once it was repeated 7 times across the first two files.
  */
 export const plainFieldInputClass =
-    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800';
+    'w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm focus:border-focus focus:ring-2 focus:ring-focus-ring focus:outline-none';
 
 /**
  * The `selectedCountLabel` FilterMultiSelect expects, shared by every

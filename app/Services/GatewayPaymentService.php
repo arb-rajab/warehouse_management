@@ -10,6 +10,7 @@ use App\Models\SellerPackage;
 use App\Models\Shop;
 use App\Models\StoreUser;
 use App\Models\Wallet;
+use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -40,12 +41,12 @@ class GatewayPaymentService
     public const string SELLER_PACKAGE = 'seller_package_payment';
 
     /**
-     * Whether `$paid` pays `$due`. The gateways that charge whole units send
-     * `round($due)`, which can be up to half a unit less than the total.
+     * Whether `$paid` pays `$due`, to the cent. Every gateway now sends the exact
+     * amount (converted to its currency where needed), so no shortfall is allowed.
      */
     public static function covers(float $paid, float $due): bool
     {
-        return $due > 0 && $paid + 0.005 >= min($due, round($due));
+        return $due > 0 && $paid + 0.005 >= $due;
     }
 
     /**
@@ -90,11 +91,13 @@ class GatewayPaymentService
     }
 
     /**
-     * Record a payment the mobile API started, for a callback that arrives with
-     * no session or token to say whose it is. Everything the callback will
-     * credit is fixed here, by the signed-in payer.
+     * Record a payment the mobile API or a storefront gateway that returns
+     * with a cross-site POST started, for a callback that arrives with no
+     * session or token to say whose it is. Everything the callback will credit
+     * is fixed here, by the signed-in payer; the storefront also fixes the
+     * converted amount charged, its currency and an expiry (GatewayReturn).
      */
-    public function begin(string $gateway, string $reference, int $userId, string $paymentType, ?int $combinedOrderId, ?int $packageId, float $amount): GatewayPayment
+    public function begin(string $gateway, string $reference, int $userId, string $paymentType, ?int $combinedOrderId, ?int $packageId, float $amount, ?float $gatewayAmount = null, ?string $gatewayCurrency = null, ?CarbonInterface $expiresAt = null): GatewayPayment
     {
         return GatewayPayment::create([
             'gateway' => $gateway,
@@ -104,12 +107,17 @@ class GatewayPaymentService
             'combined_order_id' => $combinedOrderId,
             'package_id' => $packageId,
             'amount' => $amount,
+            'gateway_amount' => $gatewayAmount,
+            'gateway_currency' => $gatewayCurrency,
+            'expires_at' => $expiresAt,
         ]);
     }
 
     /**
      * Credit the payment begin() recorded under `$payment`'s reference, once,
-     * when the verified amount pays the amount recorded then.
+     * when the verified amount pays the amount recorded then. The row is read
+     * under a lock and must still be pending and unexpired: of two returns that
+     * both passed the gateway's verification, the second finds it completed.
      */
     public function completePending(VerifiedPayment $payment): bool
     {
@@ -118,6 +126,7 @@ class GatewayPaymentService
                 ->where('gateway', $payment->gateway)
                 ->where('reference', $payment->reference)
                 ->whereNull('completed_at')
+                ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
                 ->lockForUpdate()
                 ->first();
 

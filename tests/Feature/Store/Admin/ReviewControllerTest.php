@@ -56,7 +56,8 @@ test('publishing updates product average and preserves the filter query', functi
     actingAsStoreUser(createStoreStaff('publish_product_review'));
     $review = catalogueReview(['status' => 0]);
     Review::forceCreate(['product_id' => $review->product_id, 'user_id' => $review->user_id, 'rating' => 2, 'comment' => 'Another review', 'status' => 1]);
-    $this->post("/temp/admin/reviews/{$review->id}/published?per_page=10", ['status' => 1])->assertRedirect(route('admin.reviews.index', ['per_page' => 10]));
+    $this->post("/temp/admin/reviews/{$review->id}/published?per_page=10", ['status' => 1])->assertRedirect(route('admin.reviews.index', ['per_page' => 10]))
+        ->assertInertiaFlash('success', 'Review published status has been updated successfully');
     expect((int) $review->fresh()->status)->toBe(1)->and((float) $review->product->fresh()->rating)->toBe(3.0);
     $this->post("/temp/admin/reviews/{$review->id}/published", ['status' => 0])->assertRedirect();
     expect((float) $review->product->fresh()->rating)->toBe(2.0);

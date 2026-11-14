@@ -1,6 +1,7 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { Check, Filter, X } from '@lucide/vue';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
@@ -31,6 +32,15 @@ import type {
 import Index from './Index.vue';
 
 enableAutoUnmount(afterEach);
+
+/**
+ * The barcodes dialog. Its list and previews are looked up inside it: the
+ * shell around the page has its own <li> items (the sidebar menu) and a logo
+ * <img>.
+ */
+function barcodesDialog(wrapper: VueWrapper) {
+    return wrapper.get('[role="dialog"]');
+}
 
 const { usePageMock, routerGetMock, formSlotPropsMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -213,7 +223,10 @@ describe('Products Index', () => {
     it('links the help icon to the products help page', () => {
         const wrapper = mountPage([]);
 
+        // The shell's own header carries a "Help" link with the same name, so
+        // look inside the page content.
         const helpLink = wrapper
+            .get('main')
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
         expect(helpLink?.attributes('href')).toBe(
@@ -695,10 +708,10 @@ describe('Products Index', () => {
         ]);
 
         expect(rowCells(wrapper, 0)[3].get('button').classes()).toContain(
-            'text-red-600',
+            'text-danger',
         );
         expect(rowCells(wrapper, 1)[3].get('button').classes()).not.toContain(
-            'text-red-600',
+            'text-danger',
         );
     });
 
@@ -762,7 +775,9 @@ describe('Products Index', () => {
                 name: 'Widgets',
                 ar_name: 'ودجات',
                 active: true,
-                barcodes: [{ id: 1, barcode: '1234567890123' }],
+                barcodes: [
+                    { id: 1, barcode: '1234567890123', printable: true },
+                ],
             }),
         ]);
 
@@ -786,15 +801,15 @@ describe('Products Index', () => {
         const wrapper = mountPage([
             product({
                 barcodes: [
-                    { id: 1, barcode: '1111111111111' },
-                    { id: 2, barcode: '2222222222222' },
+                    { id: 1, barcode: '1111111111111', printable: true },
+                    { id: 2, barcode: '2222222222222', printable: true },
                 ],
             }),
         ]);
 
         await rowCells(wrapper)[4].get('button').trigger('click');
 
-        const items = wrapper.findAll('li');
+        const items = barcodesDialog(wrapper).findAll('li');
         expect(items).toHaveLength(3);
         expect(items[1].text()).toContain('1111111111111');
         expect(items[2].text()).toContain('2222222222222');
@@ -804,13 +819,15 @@ describe('Products Index', () => {
         const wrapper = mountPage([
             product({
                 id: 42,
-                barcodes: [{ id: 7, barcode: '1111111111111' }],
+                barcodes: [
+                    { id: 7, barcode: '1111111111111', printable: true },
+                ],
             }),
         ]);
 
         await rowCells(wrapper)[4].get('button').trigger('click');
 
-        const items = wrapper.findAll('li');
+        const items = barcodesDialog(wrapper).findAll('li');
         const fallback = items[0];
         expect(fallback.attributes('data-testid')).toBe('default-barcode');
         expect(fallback.text()).toContain('42');
@@ -848,7 +865,7 @@ describe('Products Index', () => {
                 `button[aria-label="${t('products.viewBarcode', { barcode: '42' })}"]`,
             )
             .trigger('click');
-        expect(wrapper.get('img').attributes('src')).toBe(
+        expect(barcodesDialog(wrapper).get('img').attributes('src')).toBe(
             previewDefaultBarcode.url(42),
         );
 
@@ -883,29 +900,110 @@ describe('Products Index', () => {
             product({
                 id: 42,
                 barcodes: [
-                    { id: 7, barcode: '1111111111111' },
-                    { id: 8, barcode: '2222222222222' },
+                    { id: 7, barcode: '1111111111111', printable: true },
+                    { id: 8, barcode: '2222222222222', printable: true },
                 ],
             }),
         ]);
 
         await rowCells(wrapper)[4].get('button').trigger('click');
-        expect(wrapper.find('img').exists()).toBe(false);
+        expect(barcodesDialog(wrapper).find('img').exists()).toBe(false);
 
         const view = wrapper.get(
             `button[aria-label="${t('products.viewBarcode', { barcode: '2222222222222' })}"]`,
         );
         await view.trigger('click');
 
-        const images = wrapper.findAll('img');
+        const images = barcodesDialog(wrapper).findAll('img');
         expect(images).toHaveLength(1);
         expect(images[0].attributes('src')).toBe(
             previewBarcode.url({ product: 42, barcode: 8 }),
         );
 
         await view.trigger('click');
-        expect(wrapper.find('img').exists()).toBe(false);
+        expect(barcodesDialog(wrapper).find('img').exists()).toBe(false);
     });
+
+    it('lists a barcode that cannot be drawn with a note, disabled preview and download, and a working remove', async () => {
+        const wrapper = mountPage([
+            product({
+                id: 42,
+                barcodes: [
+                    { id: 7, barcode: '1111111111111', printable: true },
+                    { id: 8, barcode: 'متجر-٢٠٢٦', printable: false },
+                ],
+            }),
+        ]);
+
+        await rowCells(wrapper)[4].get('button').trigger('click');
+        const rows = barcodesDialog(wrapper).findAll('li');
+        const buttonFor = (row: number, key: string, barcode: string) =>
+            rows[row].get(
+                `button[aria-label="${t(`products.${key}`, { barcode })}"]`,
+            );
+
+        // The drawable row has no note and live buttons.
+        expect(rows).toHaveLength(3);
+        expect(rows[1].find('#barcode-note-7').exists()).toBe(false);
+
+        for (const key of ['viewBarcode', 'downloadBarcode']) {
+            const live = buttonFor(1, key, '1111111111111');
+            expect(live.attributes('disabled')).toBeUndefined();
+            expect(live.attributes('aria-describedby')).toBeUndefined();
+            expect(live.classes()).toContain('cursor-pointer');
+        }
+
+        // The other row says why, under its value, in the Store form's muted style.
+        const note = rows[2].get('#barcode-note-8');
+        expect(note.text()).toBe(t('products.barcodeNotPrintable'));
+        expect(note.classes()).toEqual(['mt-1', 'text-xs', 'text-muted']);
+
+        for (const key of ['viewBarcode', 'downloadBarcode']) {
+            const off = buttonFor(2, key, 'متجر-٢٠٢٦');
+            expect(off.attributes('disabled')).toBeDefined();
+            expect(off.attributes('aria-describedby')).toBe('barcode-note-8');
+            expect(off.classes()).toEqual(
+                expect.arrayContaining(['cursor-not-allowed', 'opacity-50']),
+            );
+            expect(off.classes()).not.toContain('cursor-pointer');
+        }
+
+        // A click on a disabled preview shows nothing.
+        await buttonFor(2, 'viewBarcode', 'متجر-٢٠٢٦').trigger('click');
+        expect(barcodesDialog(wrapper).find('img').exists()).toBe(false);
+
+        // Removing stays available, with its normal link and label.
+        const remove = rows[2].findComponent(Link);
+        expect(remove.attributes('disabled')).toBeUndefined();
+        expect(remove.props('href')).toEqual(
+            destroyBarcode({ product: 42, barcode: 8 }, { mergeQuery: {} }),
+        );
+        expect(remove.attributes('aria-label')).toBe(
+            t('products.removeBarcode', { barcode: 'متجر-٢٠٢٦' }),
+        );
+        // The default line is untouched.
+        expect(
+            wrapper
+                .get('[data-testid="default-barcode"] button')
+                .attributes('disabled'),
+        ).toBeUndefined();
+    });
+
+    it.each(['en', 'ar'] as const)(
+        'words the not-drawable note in %s as its own admin key',
+        (locale) => {
+            i18n.global.locale.value = locale;
+
+            expect(t('products.barcodeNotPrintable')).not.toBe(
+                'products.barcodeNotPrintable',
+            );
+            expect(t('products.barcodeNotPrintable')).toBe(
+                locale === 'en'
+                    ? 'This barcode cannot be shown as an image.'
+                    : 'لا يمكن عرض هذا الباركود كصورة.',
+            );
+        },
+    );
 
     it('shows an empty-state message for custom barcodes, still listing the default', async () => {
         const wrapper = mountPage([product({ barcodes: [] })]);
@@ -913,7 +1011,7 @@ describe('Products Index', () => {
         await rowCells(wrapper)[4].get('button').trigger('click');
 
         expect(wrapper.text()).toContain(t('products.noBarcodes'));
-        expect(wrapper.findAll('li')).toHaveLength(1);
+        expect(barcodesDialog(wrapper).findAll('li')).toHaveLength(1);
     });
 
     describe('downloading barcodes', () => {
@@ -927,8 +1025,8 @@ describe('Products Index', () => {
                 product({
                     id: 42,
                     barcodes: [
-                        { id: 7, barcode: '1111111111111' },
-                        { id: 8, barcode: '2222222222222' },
+                        { id: 7, barcode: '1111111111111', printable: true },
+                        { id: 8, barcode: '2222222222222', printable: true },
                     ],
                 }),
             ]);
@@ -1090,14 +1188,16 @@ describe('Products Index', () => {
             products: paginated([
                 product({
                     id: 42,
-                    barcodes: [{ id: 9, barcode: '9999999999999' }],
+                    barcodes: [
+                        { id: 9, barcode: '9999999999999', printable: true },
+                    ],
                 }),
             ]),
         });
         wrapper.getComponent(Form).vm.$emit('success');
         await flushPromises();
 
-        const items = wrapper.findAll('li');
+        const items = barcodesDialog(wrapper).findAll('li');
         expect(items).toHaveLength(2);
         expect(items[1].text()).toContain('9999999999999');
     });
@@ -1111,7 +1211,9 @@ describe('Products Index', () => {
             return mountPage([
                 product({
                     id: 42,
-                    barcodes: [{ id: 7, barcode: '1234567890123' }],
+                    barcodes: [
+                        { id: 7, barcode: '1234567890123', printable: true },
+                    ],
                 }),
             ]);
         }
@@ -1180,7 +1282,7 @@ describe('Products Index', () => {
             (removeLink(wrapper).props('onSuccess') as () => void)();
             await flushPromises();
 
-            expect(wrapper.findAll('li')).toHaveLength(1);
+            expect(barcodesDialog(wrapper).findAll('li')).toHaveLength(1);
             expect(wrapper.text()).toContain(t('products.noBarcodes'));
         });
     });
@@ -1461,7 +1563,7 @@ describe('Products Index', () => {
         return columnHeader(wrapper, label)
             .get('button[title]')
             .classes()
-            .includes('text-blue-600');
+            .includes('text-link');
     }
 
     it("shows the primary column's filter icon in each shared group, none active, when no filters are set", () => {

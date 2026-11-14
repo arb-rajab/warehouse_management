@@ -25,6 +25,44 @@ paths:
   - 'lang/en/validation.php'
   - 'lang/ar/validation.php'
   - 'tests/Feature/Store/Admin/ProductClientValidationParityTest.php'
+  - 'resources/js/lib/warehouseForm.ts'
+  - 'resources/js/lib/warehouseRules.json'
+  - 'resources/js/pages/Admin/Warehouses/{Create,Edit}.vue'
+  - 'tests/Feature/Admin/WarehouseClientValidationParityTest.php'
+  - 'resources/js/lib/palletTransferForm.ts'
+  - 'resources/js/lib/palletTransferRules.json'
+  - 'resources/js/components/PalletTransferFields.vue'
+  - 'resources/js/components/PalletTransferDialog.vue'
+  - 'resources/js/components/PalletActionsDialog.vue'
+  - 'tests/Feature/Admin/TransferPalletClientValidationParityTest.php'
+  - 'resources/js/lib/smtpSettingsForm.ts'
+  - 'resources/js/lib/smtpSettingsRules.json'
+  - 'resources/js/pages/Store/Admin/Settings/Smtp.vue'
+  - 'app/Http/Requests/Store/Admin/UpdateSmtpSettingsRequest.php'
+  - 'tests/Feature/Store/Admin/SmtpSettingsClientValidationParityTest.php'
+  - 'resources/js/lib/integrationIdsForm.ts'
+  - 'resources/js/lib/integrationIdsRules.json'
+  - 'resources/js/lib/recaptchaSettingsForm.ts'
+  - 'resources/js/lib/recaptchaSettingsRules.json'
+  - 'resources/js/components/StoreIntegrationIdsForm.vue'
+  - 'resources/js/pages/Store/Admin/Settings/Analytics.vue'
+  - 'resources/js/pages/Store/Admin/Settings/FacebookChat.vue'
+  - 'resources/js/pages/Store/Admin/Settings/FacebookComments.vue'
+  - 'resources/js/pages/Store/Admin/Settings/Recaptcha.vue'
+  - 'app/Http/Requests/Store/Admin/UpdateIntegrationIdsRequest.php'
+  - 'app/Http/Requests/Store/Admin/UpdateRecaptchaSettingsRequest.php'
+  - 'tests/Feature/Store/Admin/IntegrationIdsClientValidationParityTest.php'
+  - 'tests/Feature/Store/Admin/RecaptchaSettingsClientValidationParityTest.php'
+  - 'resources/js/lib/deliverySettingsForm.ts'
+  - 'resources/js/lib/deliverySettingsRules.json'
+  - 'resources/js/lib/defaultLanguageForm.ts'
+  - 'resources/js/lib/defaultLanguageRules.json'
+  - 'resources/js/components/StoreDeliverySettingsForm.vue'
+  - 'resources/js/components/StoreDefaultLanguageForm.vue'
+  - 'app/Http/Requests/Store/Admin/UpdateDeliverySettingsRequest.php'
+  - 'app/Http/Requests/Store/Admin/UpdateDefaultLanguageRequest.php'
+  - 'tests/Feature/Store/Admin/DeliverySettingsClientValidationParityTest.php'
+  - 'tests/Feature/Store/Admin/DefaultLanguageClientValidationParityTest.php'
 ---
 
 # Forms validate in the browser first
@@ -33,8 +71,41 @@ Added 2026-11-05. Every mistake the browser can see is reported before a
 request is sent, from a copy of the server's rules; **the backend remains the
 authority** and is never removed or weakened for it. New or changed server
 rules update the client copy in the same change, and every new form should
-adopt the layer. The physical and digital product create/edit forms use it
-today; other forms adopt it one at a time.
+adopt the layer. The physical and digital product create/edit forms and the WMS
+warehouse create/edit forms use it today; other forms adopt it one at a time
+(the warehouse copy is `lib/warehouseRules.json`, checked by
+`WarehouseClientValidationParityTest`). The admin pallet transfer (the row
+page's pallet dialog, transfer tab, and the warehouse map's transfer dialog)
+uses `lib/palletTransferRules.json`, checked by
+`TransferPalletClientValidationParityTest`: the `exists` rules stay on the
+server, and `return_to`/`warehouse_ids` have no control. Those dialogs are not
+`ResourceFormPage`s: they call `useFormValidation` themselves (its handlers on
+the `<form>`, `onBefore()` before `form.submit`, `onStart` on the visit) and
+read inline errors through `errorsFor(form.errors)`; the banner shows only the
+errors no field shows (`nonFieldErrors`). The store SMTP settings form uses
+`lib/smtpSettingsRules.json`, checked by `SmtpSettingsClientValidationParityTest`;
+its `serverOnly` list holds `email:rfc` (the engine has no email rule) and
+`current_password:store` (the staff member's own password, checked and throttled
+on the server; the browser only requires it), and the request's `after()` checks
+read the saved settings, so they stay on the server.
+The Analytics, Facebook chat and Facebook comments forms use
+`lib/integrationIdsRules.json` (one rule set per page, built by
+`UpdateIntegrationIdsRequest::rulesFor()`), checked by
+`IntegrationIdsClientValidationParityTest`; the reCAPTCHA form uses
+`lib/recaptchaSettingsRules.json`, checked by
+`RecaptchaSettingsClientValidationParityTest`. In both, the on/off switches
+(`settings`, `settings.*`) are selects that always post a value and sit on the
+file's `serverOnly` list, and the reCAPTCHA request's `after()` checks (the secret
+for a new or changed site key) stay on the server.
+The Order configuration page's delivery form (`StoreDeliverySettingsForm`) uses
+`lib/deliverySettingsRules.json` (its `serverOnly` holds the timezone's
+`Rule::in(DateTimeZone::listIdentifiers())`, which the select offers whole), and the
+Languages page's default-language form (`StoreDefaultLanguageForm`) uses
+`lib/defaultLanguageRules.json` (the request's `after()` check that the language
+exists and is active reads the database). Both are inline `<Form>`s in a page that is
+not a `ResourceFormPage`, so they call `useFormValidation` themselves; the parity
+tests are `DeliverySettingsClientValidationParityTest` and
+`DefaultLanguageClientValidationParityTest`.
 
 ## The layer
 

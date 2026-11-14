@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ReadsTextInput;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\StoreUser;
@@ -17,6 +18,8 @@ use Illuminate\Support\Str;
 #[Description('Create the first store Super Admin (role, user and assignment); asks for the password with a hidden prompt')]
 class CreateStoreAdminCommand extends Command
 {
+    use ReadsTextInput;
+
     private const MINIMUM_PASSWORD_LENGTH = 12;
 
     /**
@@ -31,7 +34,7 @@ class CreateStoreAdminCommand extends Command
      */
     public function handle(): int
     {
-        $email = Str::lower(trim((string) $this->argument('email')));
+        $email = Str::lower(trim($this->textArgument('email')));
 
         if (Validator::make(['email' => $email], ['email' => ['required', 'email:rfc', 'max:255']])->fails()) {
             $this->components->error('"'.$email.'" is not a valid email address.');
@@ -63,7 +66,7 @@ class CreateStoreAdminCommand extends Command
             return self::FAILURE;
         }
 
-        $name = trim((string) $this->option('name')) ?: Str::before($email, '@');
+        $name = trim($this->textOption('name') ?? '') ?: Str::before($email, '@');
 
         $lines = DB::transaction(function () use ($email, $name, $password): array {
             $lines = $this->prepareRoleAndPermissions();

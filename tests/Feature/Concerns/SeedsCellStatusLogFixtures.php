@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 
 /**
  * Shared fixture setup for the cell status log filters/scopes and the
@@ -327,5 +328,38 @@ trait SeedsCellStatusLogFixtures
         CellStatusLog::factory()->create(['product_id' => $otherProduct->id, 'action' => CellLogAction::Stored]);
 
         return compact('matchingProduct', 'matchingPallet');
+    }
+
+    /**
+     * Two warehouses for the dashboard's warehouse filter, with the test
+     * clock at 2026-08-13 (the caller sets it). "North" holds row N
+     * (3 cells): a full pallet of `$stocked` expiring in 10 days, an opened
+     * pallet of the inactive `$inactiveNorth` and an empty cell. The
+     * Default warehouse holds row D (3 cells): an expired, stale pallet of
+     * `$stocked`, a pallet of the inactive `$inactiveDefault` and an empty
+     * cell. `$stocked` needs 2 pallets: enough across both warehouses, short
+     * in North. Each warehouse has one `stored` log today.
+     *
+     * @return array{north: Warehouse, stocked: Product}
+     */
+    public function seedDashboardWarehouseFilterFixture(): array
+    {
+        $north = Warehouse::factory()->create(['name' => 'North']);
+        $northCells = Row::factory()->for($north)->create(['letter' => 'N', 'cells_count' => 3, 'flats_count' => 1])->cells()->orderBy('cell_number')->get();
+        $defaultCells = Row::factory()->create(['letter' => 'D', 'cells_count' => 3, 'flats_count' => 1])->cells()->orderBy('cell_number')->get();
+
+        $stocked = Product::factory()->minimumPallets(2)->create();
+        $inactiveNorth = Product::factory()->inactive()->create();
+        $inactiveDefault = Product::factory()->inactive()->create();
+
+        Pallet::factory()->create(['cell_id' => $northCells[0]->id, 'product_id' => $stocked->id, 'expiration_date' => '2026-08-23']);
+        Pallet::factory()->opened()->create(['cell_id' => $northCells[1]->id, 'product_id' => $inactiveNorth->id, 'expiration_date' => null]);
+        Pallet::factory()->stale()->create(['cell_id' => $defaultCells[0]->id, 'product_id' => $stocked->id, 'expiration_date' => '2026-08-12']);
+        Pallet::factory()->create(['cell_id' => $defaultCells[1]->id, 'product_id' => $inactiveDefault->id, 'expiration_date' => null]);
+
+        CellStatusLog::factory()->create(['cell_id' => $northCells[0]->id, 'product_id' => $stocked->id, 'action' => CellLogAction::Stored]);
+        CellStatusLog::factory()->create(['cell_id' => $defaultCells[0]->id, 'product_id' => $stocked->id, 'action' => CellLogAction::Stored]);
+
+        return compact('north', 'stocked');
     }
 }

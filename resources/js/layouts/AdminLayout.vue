@@ -4,36 +4,46 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     Boxes,
-    CircleUser,
+    Building2,
+    CircleHelp,
     ClipboardCheck,
+    Layers,
     LayoutDashboard,
-    Menu,
     Package,
     Rows3,
     Settings,
+    Truck,
     Users,
-    Warehouse,
-    X,
 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import type { Component } from 'vue';
+import { computed } from 'vue';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
+import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import { index as receiptsIndex } from '@/actions/App/Http/Controllers/Admin/ReceiptController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { index as warehousesIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseController';
 import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
-import AccountMenu from '@/components/AccountMenu.vue';
+import BackofficeShell from '@/components/BackofficeShell.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
-import SkipToContentLink from '@/components/SkipToContentLink.vue';
+import SidebarNavLink from '@/components/SidebarNavLink.vue';
+import SidebarSectionHeading from '@/components/SidebarSectionHeading.vue';
+import SidebarUser from '@/components/SidebarUser.vue';
 import { t } from '@/lib/i18n';
 import { isActiveNavUrl } from '@/lib/navigation';
 
 /**
- * `fullBleed` hands the whole area under the app bar to the page (the 2D / 3D
- * warehouse map): no width limit, no padding, and the page fills the height.
+ * The warehouse (WMS) back office, drawn by the shared BackofficeShell
+ * (.ai/rules/layouts.md). Its menu, groups and active-state logic live here.
+ * `fullBleed` hands the whole area beside the sidebar and under the header
+ * to the page (the 2D / 3D warehouse map): no width limit, no padding, and
+ * the sidebar starts folded to its icon rail (remembered separately).
  */
 defineProps<{
     fullBleed?: boolean;
@@ -41,33 +51,74 @@ defineProps<{
 
 const page = usePage();
 
-const isMobileMenuOpen = ref(false);
+interface NavItem {
+    labelKey: string;
+    href: UrlMethodPair;
+    icon: Component;
+}
 
-const navItems = computed(() => [
+interface NavGroup {
+    labelKey?: string;
+    items: NavItem[];
+}
+
+const navGroups = computed<NavGroup[]>(() => [
     {
-        labelKey: 'nav.dashboard',
-        href: dashboardIndex(),
-        icon: LayoutDashboard,
-    },
-    { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
-    {
-        labelKey: 'nav.warehouseMap',
-        href: warehouseMapIndex(),
-        icon: Boxes,
-    },
-    {
-        labelKey: 'nav.cellLog',
-        href: cellLogsIndex(),
-        icon: ArrowLeftRight,
+        items: [
+            {
+                labelKey: 'nav.dashboard',
+                href: dashboardIndex(),
+                icon: LayoutDashboard,
+            },
+        ],
     },
     {
-        labelKey: 'nav.cellVerificationRounds',
-        href: cellVerificationRoundsIndex(),
-        icon: ClipboardCheck,
+        labelKey: 'nav.groupInventory',
+        items: [
+            {
+                labelKey: 'nav.warehouses',
+                href: warehousesIndex(),
+                icon: Building2,
+            },
+            { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
+            { labelKey: 'nav.pallets', href: palletsIndex(), icon: Layers },
+            { labelKey: 'nav.receipts', href: receiptsIndex(), icon: Truck },
+            {
+                labelKey: 'nav.warehouseMap',
+                href: warehouseMapIndex(),
+                icon: Boxes,
+            },
+            { labelKey: 'nav.products', href: productsIndex(), icon: Package },
+        ],
     },
-    { labelKey: 'nav.products', href: productsIndex(), icon: Package },
-    { labelKey: 'nav.users', href: usersIndex(), icon: Users },
+    {
+        labelKey: 'nav.groupActivity',
+        items: [
+            {
+                labelKey: 'nav.cellLog',
+                href: cellLogsIndex(),
+                icon: ArrowLeftRight,
+            },
+            {
+                labelKey: 'nav.cellVerificationRounds',
+                href: cellVerificationRoundsIndex(),
+                icon: ClipboardCheck,
+            },
+        ],
+    },
+    {
+        labelKey: 'nav.groupAdmin',
+        items: [
+            { labelKey: 'nav.users', href: usersIndex(), icon: Users },
+            { labelKey: 'nav.settings', href: settingsEdit(), icon: Settings },
+            { labelKey: 'nav.help', href: helpIndex(), icon: CircleHelp },
+        ],
+    },
 ]);
+
+const navItems = computed(() =>
+    navGroups.value.flatMap((group) => group.items),
+);
 
 /**
  * The dashboard's href ('/admin') is itself a prefix of every other nav
@@ -81,141 +132,79 @@ function isActive({ url }: UrlMethodPair): boolean {
     );
 }
 
-function navLinkStateClass(href: UrlMethodPair): string[] {
-    return isActive(href)
-        ? [
-              'border-gray-900',
-              'font-medium',
-              'text-gray-900',
-              'dark:border-white',
-              'dark:text-white',
-          ]
-        : [
-              'border-transparent',
-              'text-gray-600',
-              'hover:text-gray-900',
-              'dark:text-neutral-400',
-              'dark:hover:text-white',
-          ];
-}
+const section = computed(() => {
+    const item = navItems.value.find((candidate) => isActive(candidate.href));
+
+    return item ? t(item.labelKey) : undefined;
+});
 </script>
 
 <template>
-    <div
-        class="bg-gray-50 text-gray-900 dark:bg-neutral-950 dark:text-neutral-100"
-        :class="fullBleed ? 'flex h-dvh flex-col' : 'min-h-screen'"
+    <BackofficeShell
+        sidebar-id="admin-sidebar"
+        :area="t('nav.brand')"
+        :section="section"
+        :full-bleed="fullBleed"
+        :collapse-scope="fullBleed ? 'map' : 'page'"
+        :default-collapsed="fullBleed"
     >
-        <SkipToContentLink />
-        <nav
-            class="border-b border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
-            :class="{ 'shrink-0': fullBleed }"
-        >
-            <div
-                class="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6"
+        <template #nav="{ close, collapsed }">
+            <nav
+                :aria-label="t('nav.menuLabel')"
+                class="flex-1 overflow-y-auto px-2.5 pb-3"
             >
-                <div class="flex items-center gap-6">
-                    <span
-                        class="inline-flex items-center gap-1.5 py-3 font-semibold"
-                    >
-                        <Warehouse class="h-5 w-5 shrink-0" />
-                        {{ t('nav.brand') }}
-                    </span>
-                    <div class="hidden items-center gap-6 xl:flex">
-                        <Link
-                            v-for="item in navItems"
-                            :key="item.labelKey"
-                            :href="item.href"
-                            :aria-current="
-                                isActive(item.href) ? 'page' : undefined
-                            "
-                            class="inline-flex items-center gap-1.5 border-b-2 py-3 text-sm transition-colors"
-                            :class="navLinkStateClass(item.href)"
-                        >
-                            <component :is="item.icon" class="h-4 w-4" />
-                            {{ t(item.labelKey) }}
-                        </Link>
-                    </div>
-                </div>
-                <div class="hidden items-center xl:flex">
-                    <AccountMenu :user-name="page.props.auth.user?.name" />
-                </div>
-                <button
-                    type="button"
-                    class="cursor-pointer rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 xl:hidden dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
-                    :aria-label="
-                        t(isMobileMenuOpen ? 'nav.closeMenu' : 'nav.openMenu')
-                    "
-                    aria-controls="admin-mobile-menu"
-                    :aria-expanded="isMobileMenuOpen"
-                    @click="isMobileMenuOpen = !isMobileMenuOpen"
-                >
-                    <component
-                        :is="isMobileMenuOpen ? X : Menu"
-                        class="h-5 w-5"
+                <div v-for="group in navGroups" :key="group.labelKey ?? ''">
+                    <SidebarSectionHeading
+                        v-if="group.labelKey"
+                        :label="t(group.labelKey)"
+                        :collapsed="collapsed"
                     />
-                </button>
+                    <ul class="space-y-0.5">
+                        <li v-for="item in group.items" :key="item.labelKey">
+                            <SidebarNavLink
+                                :href="item.href"
+                                :label="t(item.labelKey)"
+                                :icon="item.icon"
+                                :active="isActive(item.href)"
+                                :collapsed="collapsed"
+                                @click="close()"
+                            />
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </template>
+        <template #footer="{ collapsed }">
+            <div class="px-4 pt-3 sm:hidden">
+                <LanguageSwitcher />
             </div>
-            <div
-                v-if="isMobileMenuOpen"
-                id="admin-mobile-menu"
-                class="border-t border-gray-200 xl:hidden dark:border-neutral-800"
+            <SidebarUser
+                :name="page.props.auth.user?.name"
+                :detail="page.props.auth.user?.email"
+                :collapsed="collapsed"
             >
-                <div class="flex flex-col gap-1 px-4 py-3">
-                    <Link
-                        v-for="item in navItems"
-                        :key="item.labelKey"
-                        :href="item.href"
-                        :aria-current="isActive(item.href) ? 'page' : undefined"
-                        class="flex items-center gap-2 rounded-md border-s-4 px-3 py-2 text-sm transition-colors"
-                        :class="navLinkStateClass(item.href)"
-                        @click="isMobileMenuOpen = false"
-                    >
-                        <component :is="item.icon" class="h-4 w-4" />
-                        {{ t(item.labelKey) }}
-                    </Link>
-                </div>
-                <div
-                    class="border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
-                >
-                    <Link
-                        :href="settingsEdit()"
-                        class="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
-                        @click="isMobileMenuOpen = false"
-                    >
-                        <Settings class="h-4 w-4 shrink-0" />
-                        {{ t('nav.settings') }}
-                    </Link>
-                </div>
-                <div
-                    class="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
-                >
-                    <LanguageSwitcher />
-                </div>
-                <div
-                    class="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm dark:border-neutral-800"
-                >
-                    <span
-                        class="inline-flex items-center gap-1.5 text-gray-600 dark:text-neutral-400"
-                    >
-                        <CircleUser class="h-4 w-4 shrink-0" />
-                        {{ page.props.auth.user?.name }}
-                    </span>
-                    <LogoutLink
-                        class="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
-                        @click="isMobileMenuOpen = false"
-                    />
-                </div>
+                <LogoutLink
+                    label-class="sr-only"
+                    :title="t('nav.logout')"
+                    class="flex shrink-0 cursor-pointer items-center rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-strong"
+                />
+            </SidebarUser>
+        </template>
+        <template #actions>
+            <div
+                class="hidden h-9 items-center rounded-md border border-line bg-surface px-2 sm:flex"
+            >
+                <LanguageSwitcher />
             </div>
-        </nav>
-        <main
-            id="main"
-            :class="
-                fullBleed
-                    ? 'relative min-h-0 flex-1'
-                    : 'mx-auto max-w-6xl min-w-0 overflow-x-auto px-4 py-8 sm:px-6'
-            "
-        >
-            <slot />
-        </main>
-    </div>
+            <Link
+                :href="helpIndex()"
+                :aria-label="t('nav.help')"
+                :title="t('nav.help')"
+                class="grid h-9 w-9 place-items-center rounded-md border border-line bg-surface text-muted hover:bg-subtle hover:text-ink"
+            >
+                <CircleHelp class="h-[18px] w-[18px]" aria-hidden="true" />
+            </Link>
+        </template>
+        <slot />
+    </BackofficeShell>
 </template>

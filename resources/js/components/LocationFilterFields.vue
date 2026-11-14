@@ -3,6 +3,7 @@ import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
 import { columnNumberOptions, selectedCountLabel } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { rowOptionLabel } from '@/lib/location';
 import type { RowFilterOption } from '@/types/admin';
 
 const props = defineProps<{
@@ -34,7 +35,7 @@ const columnNumbers = columnNumberOptions(props.maxColumnNumber);
             :options="
                 rows.map((row) => ({
                     value: String(row.id),
-                    label: row.letter,
+                    label: rowOptionLabel(row),
                 }))
             "
         />

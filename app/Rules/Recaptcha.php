@@ -2,6 +2,7 @@
 
 namespace App\Rules;
 
+use App\Support\StoreRecaptchaSettings;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Http\Client\ConnectionException;
@@ -11,7 +12,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * The Google reCAPTCHA v2 token a storefront form posts as
  * `g-recaptcha-response`, verified with Google using
- * services.recaptcha.secret_key (CAPTCHA_SECRET).
+ * the effective secret: the one saved on the reCAPTCHA settings page, else
+ * CAPTCHA_SECRET (StoreRecaptchaSettings, which keeps the site key and secret
+ * a pair).
  *
  * It fails closed: a missing secret, an error or a non-answer from Google, or
  * no connection refuses the form as a wrong answer does, so an outage or a
@@ -47,10 +50,10 @@ class Recaptcha implements ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $secret = config('services.recaptcha.secret_key');
+        $secret = app(StoreRecaptchaSettings::class)->secret();
 
-        if (! is_string($secret) || $secret === '') {
-            Log::warning('reCAPTCHA is on but CAPTCHA_SECRET is not set: every form that shows it is refused.');
+        if ($secret === null) {
+            Log::warning('reCAPTCHA is on but no secret key is set (reCAPTCHA settings or CAPTCHA_SECRET): every form that shows it is refused.');
             $fail(__('validation.recaptcha.robot_check_failed'));
 
             return;

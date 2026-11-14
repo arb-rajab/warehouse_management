@@ -19,7 +19,8 @@ function writableSettingsPages(): array
         'pixel alias' => ['analytics', 'facebook_pixel.update', 'analytics_tools_configuration'],
         'recaptcha' => ['recaptcha', 'google_recaptcha.update', 'google_recaptcha_configuration'],
         'firebase' => ['firebase', 'google-firebase.update', 'google_firebase_setting'],
-        'payments' => ['payments', 'payment_method.update', 'payment_methods_configurations'],
+        // The payments page posts its gateways and the current password
+        // (PaymentGatewaySettingsTest), not a switch list.
     ];
 }
 
@@ -28,7 +29,7 @@ dataset('writable settings pages', writableSettingsPages());
 
 test('each settings page can be rendered before any settings rows exist', function (string $section, string $route, string $permission) {
     actingAsStoreUser(createStoreStaff($permission));
-    $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Settings/Index'));
+    $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page->component(SettingsController::PAGES[$section]['component'] ?? 'Store/Admin/Settings/Index'));
 })->with('plain settings pages');
 
 test('WMS authentication alone never grants settings page access', function (string $section, string $route, string $permission) {
@@ -51,7 +52,7 @@ test('each settings page renders with only its boolean settings and no environme
     }
     $expected = array_fill_keys(SettingsController::PAGES[$section]['keys'], true);
     $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->component('Store/Admin/Settings/Index')->where('section', $section)->where('settings', $expected))
+        ->component(SettingsController::PAGES[$section]['component'] ?? 'Store/Admin/Settings/Index')->where('section', $section)->where('settings', $expected))
         ->assertDontSee('smtp-secret')->assertDontSee('social-secret')->assertDontSee('storage-secret')->assertDontSee('firebase-secret')->assertDontSee('private-setting');
 })->with('plain settings pages');
 
@@ -66,6 +67,41 @@ test('the activation page passes on only a highlight key it holds', function () 
         ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
     $this->get(route('activation.index'))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+});
+
+test('the SMTP page says whether each server mail credential is set, never its value, and passes on its field highlight', function () {
+    actingAsStoreUser(createStoreStaff('smtp_settings'));
+    config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'mail.example.com', 'mail.mailers.smtp.username' => 'smtp-user-secret', 'mail.mailers.smtp.password' => null]);
+
+    $this->get(route('smtp_settings.index', ['highlight' => 'mail_credentials']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Settings/Smtp')->where('highlight', 'mail_credentials')
+            ->where('effective.mailer', ['value' => 'smtp', 'source' => 'env'])
+            ->where('effective.host', ['value' => 'mail.example.com', 'source' => 'env'])
+            ->where('effective.username', ['set' => true, 'source' => 'env'])
+            ->where('effective.password', ['set' => false, 'source' => 'env']))
+        ->assertDontSee('smtp-user-secret');
+    $this->get(route('smtp_settings.index', ['highlight' => 'cash_payment']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+});
+
+test('the Firebase page says whether the project and credentials file are there and passes on its section highlight', function () {
+    actingAsStoreUser(createStoreStaff('google_firebase_setting'));
+    config(['services.fcm.firebase_project' => 'albarakabv-store', 'services.fcm.project_id' => null, 'services.fcm.firebase_credentials' => 'framework/testing/missing-fcm.json']);
+
+    $this->get(route('google-firebase.index', ['highlight' => 'firebase_server']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'firebase_server')
+            ->where('server', ['project_set' => true, 'credentials_found' => false]));
+    $this->get(route('google-firebase.index', ['highlight' => 'google_firebase']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'google_firebase'));
+    $this->get(route('google-firebase.index', ['highlight' => 'mail_credentials']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+});
+
+test('settings pages without server values send none', function () {
+    actingAsStoreUser(createStoreStaff('features_activation'));
+
+    $this->get(route('activation.index'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('server', null));
 });
 
 test('each settings page refuses unauthorized callers', function (string $section, string $route, string $permission, string $caller) {
@@ -152,21 +188,21 @@ test('SMTP testing requires both permissions and validates the recipient', funct
     Mail::fake();
     actingAsStoreUser(createStoreStaff('smtp_settings', 'send_newsletter'));
     $this->postJson(route('test.smtp'), ['email' => 'invalid'])->assertUnprocessable()->assertJsonValidationErrors('email');
-    Mail::assertNothingQueued();
+    Mail::assertNothingOutgoing();
     $this->post(route('test.smtp'), ['email' => 'recipient@example.com'])->assertRedirectToRoute('smtp_settings.index');
-    Mail::assertQueued(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('recipient@example.com'));
+    Mail::assertSent(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('recipient@example.com'));
 });
 
 test('SMTP testing refuses unauthorized callers without sending', function (string $caller) {
     Mail::fake();
     actingAsRefusedStoreCaller($caller);
     assertStoreCallerRefused($this->post(route('test.smtp'), ['email' => 'recipient@example.com']), $caller);
-    Mail::assertNothingQueued();
+    Mail::assertNothingOutgoing();
 })->with('refused store admin callers');
 
 test('SMTP testing refuses callers holding only one of its permissions', function (string $permission) {
     Mail::fake();
     actingAsStoreUser(createStoreStaff($permission));
     $this->post(route('test.smtp'), ['email' => 'recipient@example.com'])->assertForbidden();
-    Mail::assertNothingQueued();
+    Mail::assertNothingOutgoing();
 })->with(['smtp_settings', 'send_newsletter']);

@@ -17,23 +17,46 @@ withDefaults(
 );
 
 const toneClasses: Record<'default' | 'warning' | 'danger', string> = {
-    default: 'text-gray-900 dark:text-neutral-100',
-    warning: 'text-amber-600 dark:text-amber-400',
-    danger: 'text-red-600 dark:text-red-400',
+    default: 'text-ink',
+    warning: 'text-warning',
+    danger: 'text-danger',
+};
+
+/** The icon well beside the label (Direction A stat tile). */
+const wellClasses: Record<'default' | 'warning' | 'danger', string> = {
+    default: 'bg-brand-soft text-brand-strong',
+    warning: 'bg-warning-soft text-warning',
+    danger: 'bg-danger-soft text-danger',
 };
 </script>
 
 <template>
     <div
-        class="rounded-lg border border-gray-200 p-4 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-neutral-800 dark:hover:border-neutral-700 dark:hover:bg-neutral-900"
+        class="rounded-lg border border-line bg-surface p-4 shadow-card transition-colors hover:border-line-strong hover:bg-row-hover"
     >
         <Link :href="href" class="block">
-            <div class="flex items-center gap-2" :class="toneClasses[tone]">
-                <component :is="icon" v-if="icon" class="h-5 w-5 shrink-0" />
-                <div class="text-2xl font-semibold">{{ value }}</div>
+            <div class="flex items-start justify-between gap-3">
+                <div class="text-sm text-muted">
+                    {{ label }}
+                </div>
+                <span
+                    v-if="icon"
+                    data-testid="stat-icon-well"
+                    class="grid h-9 w-9 shrink-0 place-items-center rounded-md"
+                    :class="wellClasses[tone]"
+                >
+                    <component
+                        :is="icon"
+                        class="h-[18px] w-[18px]"
+                        aria-hidden="true"
+                    />
+                </span>
             </div>
-            <div class="mt-1 text-sm text-gray-500 dark:text-neutral-400">
-                {{ label }}
+            <div
+                class="mt-1 text-2xl font-semibold tabular-nums"
+                :class="toneClasses[tone]"
+            >
+                {{ value }}
             </div>
         </Link>
         <slot name="footer" />

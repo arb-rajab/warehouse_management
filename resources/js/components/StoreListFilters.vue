@@ -180,12 +180,12 @@ function clearDialogFilters(submit: () => void): void {
         <li
             v-for="chip in chips"
             :key="chip.key"
-            class="inline-flex max-w-full items-center gap-1 rounded-full bg-gray-100 ps-3 pe-1 text-sm text-gray-800 dark:bg-neutral-800 dark:text-neutral-100"
+            class="inline-flex max-w-full items-center gap-1 rounded-full bg-subtle ps-3 pe-1 text-sm text-ink"
         >
             <span class="min-w-0 truncate">{{ chipText(chip) }}</span>
             <button
                 type="button"
-                class="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-neutral-700"
+                class="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-line"
                 :aria-label="
                     t('store.listFilters.removeFilter', {
                         label: chipText(chip),

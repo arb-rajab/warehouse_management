@@ -28,12 +28,7 @@ beforeEach(function () {
     config(['store.enabled_payment_gateways' => ['aamarpay', 'bkash', 'iyzico', 'nagad', 'ngenius', 'payhere', 'sslcommerz', 'voguepay']]);
     Http::preventStrayRequests();
     Sleep::fake();
-    $_SERVER['SSLCZ_STORE_ID'] = 'store-1';
-    $_SERVER['SSLCZ_STORE_PASSWD'] = 'store-pass';
-});
-
-afterEach(function () {
-    unset($_SERVER['SSLCZ_STORE_ID'], $_SERVER['SSLCZ_STORE_PASSWD']);
+    config(['services.sslcommerz.store_id' => 'store-1', 'services.sslcommerz.store_password' => 'store-pass']);
 });
 
 function gatewayCustomer(float $balance = 0): StoreUser
@@ -145,9 +140,10 @@ test('the sink refuses another account\'s order, a short amount and an order alr
     expectOrderUnpaid($combined);
 });
 
-test('a whole-unit charge for a fractional total pays it, and nothing less does', function () {
-    expect(GatewayPaymentService::covers(30, 30.4))->toBeTrue()
+test('a payment covers the amount due to the cent, and nothing less does', function () {
+    expect(GatewayPaymentService::covers(30.4, 30.4))->toBeTrue()
         ->and(GatewayPaymentService::covers(30.6, 30.6))->toBeTrue()
+        ->and(GatewayPaymentService::covers(30, 30.4))->toBeFalse()
         ->and(GatewayPaymentService::covers(30, 30.6))->toBeFalse()
         ->and(GatewayPaymentService::covers(0, 0))->toBeFalse();
 });
@@ -180,52 +176,59 @@ test('the storefront wallet pays the order once and is not charged for an order 
 
 // --- SSLCommerz (storefront) -------------------------------------------------
 
-test('SSLCommerz: a post its validation server does not confirm pays nothing', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
-    $combined = unpaidGatewayOrder($customer, 30);
-    fakeSslcommerzValidation('T-1', '30.00', 'INVALID_TRANSACTION');
+// SSLCommerz posts back cross-site, with no session: the return names only the
+// transaction id pay() recorded as pending (GatewayReturn); see also
+// GatewayReturnWithoutSessionTest.
 
-    $this->withSession(cartSession($combined, ['sslcommerz_tran_id' => 'T-1']))
-        ->post('/temp/sslcommerz/success', sslcommerzPost('T-1', '30.00'));
+test('SSLCommerz: a post its validation server does not confirm pays nothing', function () {
+    $customer = gatewayCustomer();
+    $combined = unpaidGatewayOrder($customer, 30);
+    pendingGatewayReturn('sslcommerz', 'WEB-T-1', $customer, 'cart_payment', 30, 30, 'BDT', $combined->id);
+    fakeSslcommerzValidation('WEB-T-1', '30.00', 'INVALID_TRANSACTION');
+
+    $this->post('/temp/sslcommerz/success', sslcommerzPost('WEB-T-1', '30.00'));
 
     expectOrderUnpaid($combined);
 });
 
-test('SSLCommerz: a post for another transaction, or naming another order, pays nothing', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+test('SSLCommerz: a post for a transaction nobody started, or naming another order, pays nothing', function () {
+    $customer = gatewayCustomer();
     $combined = unpaidGatewayOrder($customer, 30);
     $other = unpaidGatewayOrder(gatewayCustomer(), 30);
-    fakeSslcommerzValidation('T-OTHER', '30.00');
+    pendingGatewayReturn('sslcommerz', 'WEB-T-1', $customer, 'cart_payment', 30, 30, 'BDT', $combined->id);
 
-    $this->withSession(cartSession($combined, ['sslcommerz_tran_id' => 'T-1']))
-        ->post('/temp/sslcommerz/success', sslcommerzPost('T-OTHER', '30.00', ['value_b' => (string) $other->id, 'value_c' => 'cart_payment']));
+    $this->post('/temp/sslcommerz/success', sslcommerzPost('WEB-T-OTHER', '30.00', ['value_b' => (string) $other->id, 'value_c' => 'cart_payment']))
+        ->assertRedirect(route('gateway_payment.outcome', ['outcome' => 'unverified']));
 
     expectOrderUnpaid($combined);
     expectOrderUnpaid($other);
+    Http::assertNothingSent();
 });
 
 test('SSLCommerz: a top-up post naming another account neither signs it in nor credits it', function () {
+    $payer = gatewayCustomer(0);
     $victim = gatewayCustomer(0);
-    fakeSslcommerzValidation('T-1', '500.00');
+    pendingGatewayReturn('sslcommerz', 'WEB-T-1', $payer, 'wallet_payment', 500, 500);
+    fakeSslcommerzValidation('WEB-T-1', '500.00');
 
-    $this->withSession(['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 500], 'sslcommerz_tran_id' => 'T-1'])
-        ->post('/temp/sslcommerz/success', sslcommerzPost('T-1', '500.00', ['value_c' => 'wallet_payment', 'value_b' => '500', 'value_d' => (string) $victim->id]));
+    $this->post('/temp/sslcommerz/success', sslcommerzPost('WEB-T-1', '500.00', ['value_c' => 'wallet_payment', 'value_b' => '500', 'value_d' => (string) $victim->id]));
 
     $this->assertGuest('store');
     expect((float) $victim->fresh()->balance)->toBe(0.0)
-        ->and(Wallet::count())->toBe(0);
+        ->and((float) $payer->fresh()->balance)->toBe(500.0)
+        ->and(Wallet::query()->where('user_id', $victim->id)->count())->toBe(0);
 });
 
-test('SSLCommerz: a validated post pays the session\'s order once', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+test('SSLCommerz: a validated post pays the recorded order once', function () {
+    $customer = gatewayCustomer();
     $combined = unpaidGatewayOrder($customer, 30);
-    fakeSslcommerzValidation('T-1', '30.00');
+    $pending = pendingGatewayReturn('sslcommerz', 'WEB-T-1', $customer, 'cart_payment', 30, 30, 'BDT', $combined->id);
+    fakeSslcommerzValidation('WEB-T-1', '30.00');
 
-    $this->withSession(cartSession($combined, ['sslcommerz_tran_id' => 'T-1']))
-        ->post('/temp/sslcommerz/success', sslcommerzPost('T-1', '30.00'))
-        ->assertRedirect(route('order_confirmed'));
-    $this->withSession(cartSession($combined, ['sslcommerz_tran_id' => 'T-1']))
-        ->post('/temp/sslcommerz/success', sslcommerzPost('T-1', '30.00'));
+    $this->post('/temp/sslcommerz/success', sslcommerzPost('WEB-T-1', '30.00'))
+        ->assertStatus(303)
+        ->assertRedirectContains('/temp/payment/finished/'.$pending->id);
+    $this->post('/temp/sslcommerz/success', sslcommerzPost('WEB-T-1', '30.00'));
 
     expectOrderPaidOnce($combined);
 });
@@ -238,40 +241,40 @@ test('SSLCommerz: the IPN handler and its route are gone', function () {
 
 function fakeAamarpaySearch(string $tranId, string $amount, string $status = 'Successful'): void
 {
-    Http::fake(['*aamarpay.com/api/v1/trxcheck/*' => Http::response(['pay_status' => $status, 'mer_txnid' => $tranId, 'amount' => $amount])]);
+    Http::fake(['*aamarpay.com/api/v1/trxcheck/*' => Http::response(['pay_status' => $status, 'mer_txnid' => $tranId, 'amount' => $amount, 'currency' => 'BDT'])]);
 }
 
 test('aamarpay: a success post its search API does not report paid pays nothing', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+    $customer = gatewayCustomer();
     $combined = unpaidGatewayOrder($customer, 30);
-    fakeAamarpaySearch('A-1', '30.00', 'Failed');
+    pendingGatewayReturn('aamarpay', 'WEB-A-1', $customer, 'cart_payment', 30, 30, 'BDT', $combined->id);
+    fakeAamarpaySearch('WEB-A-1', '30.00', 'Failed');
 
-    $this->withSession(cartSession($combined, ['aamarpay_tran_id' => 'A-1']))
-        ->post(route('aamarpay.success'), ['mer_txnid' => 'A-1', 'opt_a' => 'cart_payment', 'opt_b' => $combined->id]);
+    $this->post(route('aamarpay.success'), ['mer_txnid' => 'WEB-A-1', 'opt_a' => 'cart_payment', 'opt_b' => $combined->id]);
 
     expectOrderUnpaid($combined);
 });
 
-test('aamarpay: a post naming an order or a top-up amount of its own pays only what the search API reports for this session', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+test('aamarpay: a post naming an order or a top-up amount of its own pays only what was recorded', function () {
+    $customer = gatewayCustomer();
     $other = unpaidGatewayOrder(gatewayCustomer(), 30);
-    fakeAamarpaySearch('A-1', '10.00');
+    pendingGatewayReturn('aamarpay', 'WEB-A-1', $customer, 'wallet_payment', 10, 10);
+    fakeAamarpaySearch('WEB-A-1', '10.00');
 
-    $this->withSession(['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 10], 'aamarpay_tran_id' => 'A-1'])
-        ->post(route('aamarpay.success'), ['mer_txnid' => 'A-1', 'opt_a' => 'cart_payment', 'opt_b' => $other->id, 'opt_c' => json_encode(['amount' => 9999])]);
+    $this->post(route('aamarpay.success'), ['mer_txnid' => 'WEB-A-1', 'opt_a' => 'cart_payment', 'opt_b' => $other->id, 'opt_c' => json_encode(['amount' => 9999])]);
 
     expectOrderUnpaid($other);
     expect((float) $customer->fresh()->balance)->toBe(10.0);
 });
 
-test('aamarpay: a reported payment pays the session\'s order once', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+test('aamarpay: a reported payment pays the recorded order once', function () {
+    $customer = gatewayCustomer();
     $combined = unpaidGatewayOrder($customer, 30);
-    fakeAamarpaySearch('A-1', '30.00');
+    pendingGatewayReturn('aamarpay', 'WEB-A-1', $customer, 'cart_payment', 30, 30, 'BDT', $combined->id);
+    fakeAamarpaySearch('WEB-A-1', '30.00');
 
     foreach ([1, 2] as $attempt) {
-        $this->withSession(cartSession($combined, ['aamarpay_tran_id' => 'A-1']))
-            ->post(route('aamarpay.success'), ['mer_txnid' => 'A-1']);
+        $this->post(route('aamarpay.success'), ['mer_txnid' => 'WEB-A-1']);
     }
 
     expectOrderPaidOnce($combined);
@@ -286,8 +289,8 @@ function fakeBkash(array $result): void
 {
     Http::fake([
         '*bka.sh/*checkout/token/grant' => Http::response(['id_token' => 'grant-token']),
-        '*bka.sh/*checkout/execute' => Http::response($result),
-        '*bka.sh/*checkout/payment/status' => Http::response($result),
+        '*bka.sh/*checkout/execute' => Http::response($result + ['currency' => 'BDT']),
+        '*bka.sh/*checkout/payment/status' => Http::response($result + ['currency' => 'BDT']),
     ]);
 }
 
@@ -349,43 +352,56 @@ function fakeIyzico(array $payment): void
 {
     test()->mock(IyzicoPayments::class)
         ->shouldReceive('retrieve')
-        ->andReturn($payment + ['paid' => true, 'paid_price' => 0.0, 'basket_id' => 'BASKET-1', 'raw' => '{}']);
+        ->andReturn($payment + ['paid' => true, 'paid_price' => 0.0, 'currency' => 'TRY', 'basket_id' => 'BASKET-1', 'raw' => '{}']);
 }
 
-test('iyzico: a token for another basket pays nothing', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+test('iyzico: a token nobody started pays nothing and is not looked up', function () {
+    $customer = gatewayCustomer();
     $combined = unpaidGatewayOrder($customer, 30);
-    fakeIyzico(['paid_price' => 30.0, 'basket_id' => 'BASKET-ELSEWHERE']);
+    pendingGatewayReturn('iyzico', 'TOKEN-1', $customer, 'cart_payment', 30, 30, 'TRY', $combined->id);
+    test()->mock(IyzicoPayments::class)->shouldNotReceive('retrieve');
 
-    $this->withSession(cartSession($combined, ['iyzico_basket_id' => 'BASKET-1']))
-        ->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'TOKEN-1']);
+    $this->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'TOKEN-ELSEWHERE']);
 
     expectOrderUnpaid($combined);
 });
 
 test('iyzico: the amount and the order in the callback URL are ignored', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+    $customer = gatewayCustomer();
     $other = unpaidGatewayOrder(gatewayCustomer(), 30);
+    pendingGatewayReturn('iyzico', 'TOKEN-1', $customer, 'wallet_payment', 25, 25, 'TRY');
     fakeIyzico(['paid_price' => 25.0]);
 
-    $this->withSession(['payment_type' => 'wallet_payment', 'payment_data' => ['amount' => 25], 'iyzico_basket_id' => 'BASKET-1'])
-        ->post('/temp/iyzico/payment/callback/cart_payment/1000/iyzico/'.$other->id, ['token' => 'TOKEN-1']);
+    $this->post('/temp/iyzico/payment/callback/cart_payment/1000/iyzico/'.$other->id, ['token' => 'TOKEN-1']);
 
     expectOrderUnpaid($other);
     expect((float) $customer->fresh()->balance)->toBe(25.0);
 });
 
-test('iyzico: a successful payment pays the session\'s order once per token', function () {
-    $customer = actingAsStoreUser(gatewayCustomer());
+test('iyzico: a successful payment pays the recorded order once per token', function () {
+    $customer = gatewayCustomer();
     $combined = unpaidGatewayOrder($customer, 30);
+    pendingGatewayReturn('iyzico', 'TOKEN-1', $customer, 'cart_payment', 30, 30, 'TRY', $combined->id);
     fakeIyzico(['paid_price' => 30.0]);
 
     foreach ([1, 2] as $attempt) {
-        $this->withSession(cartSession($combined, ['iyzico_basket_id' => 'BASKET-1']))
-            ->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'TOKEN-1']);
+        $this->post(route('iyzico.callback', ['payment_type' => 'cart_payment']), ['token' => 'TOKEN-1']);
     }
 
     expectOrderPaidOnce($combined);
+});
+
+test('iyzico: a web token cannot be credited a second time through the app\'s success call', function () {
+    $customer = gatewayCustomer();
+    pendingGatewayReturn('iyzico', 'TOKEN-1', $customer, 'wallet_payment', 25, 25, 'TRY');
+    fakeIyzico(['paid_price' => 25.0]);
+
+    $this->post(route('iyzico.callback', ['payment_type' => 'wallet_payment']), ['token' => 'TOKEN-1']);
+    $this->withToken(storeApiToken($customer))
+        ->postJson('/api/v1/store/iyzico/success', ['payment_type' => 'wallet_payment', 'amount' => 25, 'token' => 'TOKEN-1']);
+
+    expect((float) $customer->fresh()->balance)->toBe(25.0)
+        ->and(Wallet::query()->where('user_id', $customer->id)->count())->toBe(1);
 });
 
 // --- PayHere -----------------------------------------------------------------
@@ -468,7 +484,7 @@ function fakeNgenius(string $reference, int $minorAmount, string $state = 'CAPTU
     Http::fake([
         'identity-uat.ngenius-payments.com/*' => Http::response(['access_token' => 'token']),
         'api-gateway-uat.ngenius-payments.com/*' => Http::response([
-            'reference' => $reference, 'amount' => ['value' => $minorAmount], '_embedded' => ['payment' => [['state' => $state]]],
+            'reference' => $reference, 'amount' => ['value' => $minorAmount, 'currencyCode' => 'AED'], '_embedded' => ['payment' => [['state' => $state]]],
         ]),
     ]);
 }

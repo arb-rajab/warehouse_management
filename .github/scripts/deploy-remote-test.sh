@@ -128,6 +128,34 @@ for arg in "\$@"; do
 done
 exec $(command -v git) "\$@"
 STUB
+
+    # Ghostscript step. `id`, `sudo` and the package managers are stubbed so no
+    # case depends on who runs this test or on what the machine has installed:
+    # by default the deploy user is unprivileged (uid 1000) and sudo -n fails.
+    # INSTALL_LOG records every privileged or package-manager call; a successful
+    # install drops a stub $GS_NAME into bin/ reporting $FAKE_GS_AFTER.
+    cat > "$WORK/bin/id" <<'STUB'
+#!/bin/bash
+echo "${FAKE_UID:-1000}"
+STUB
+    cat > "$WORK/bin/sudo" <<'STUB'
+#!/bin/bash
+echo "sudo $*" >> "$INSTALL_LOG"
+[ "$*" = "-n true" ] && exit "${SUDO_STATUS:-1}"
+shift
+exec "$@"
+STUB
+    for manager in apt-get dnf yum; do
+        cat > "$WORK/bin/$manager" <<'STUB'
+#!/bin/bash
+echo "$(basename "$0") $*" >> "$INSTALL_LOG"
+if [[ "$*" == *update* ]]; then exit 0; fi
+if [ "${INSTALL_HANGS:-0}" = 1 ]; then exec sleep 30; fi
+[ "${FAIL_INSTALL:-0}" = 1 ] && { echo "E: Unable to locate package ghostscript" >&2; exit 100; }
+printf '#!/bin/bash\necho "%s"\n' "${FAKE_GS_AFTER:-10.02.1}" > "$BIN_DIR/$GS_NAME"
+chmod +x "$BIN_DIR/$GS_NAME"
+STUB
+    done
     chmod +x "$WORK/bin"/*
 
     (
@@ -155,8 +183,9 @@ deploy() {
         COMPOSER_LOG="$WORK/composer.log" FETCH_LOG="$WORK/fetch.log" FETCH_RETRY_DELAY=0 \
         DEPLOY_PATH="$WORK/host" TARGET_BRANCH=develop TARGET_SHA="$1" \
         PHP_BINARY=php85 KEEP_RELEASES=2 \
+        INSTALL_LOG="$WORK/install.log" BIN_DIR="$WORK/bin" GS_NAME=gs \
         "${@:2}" \
-        bash "$SCRIPT_UNDER_TEST" >/dev/null 2>&1
+        bash "$SCRIPT_UNDER_TEST" >"$WORK/deploy.out" 2>&1
 }
 
 published() { basename "$(readlink "$WORK/host/current")"; }
@@ -405,6 +434,173 @@ check "live release is unchanged" "$(published)" "$before_release"
 check "database is untouched" "$(tables)" "$before_tables"
 check "site is out of maintenance" "$(maintenance_state)" "off"
 check "no half-built release is left" "$(ls -1 "$WORK/host/releases" | wc -l | tr -d ' ')" "1"
+
+# --------------------------------------------------------------------------
+# Ghostscript: checked before the release goes live, never fatal
+# --------------------------------------------------------------------------
+#
+# The binary the app runs comes from GHOSTSCRIPT_BINARY in the shared .env, so
+# the "missing" cases point it at a name only these stubs can provide (wms-gs)
+# and do not depend on a real Ghostscript being installed on the machine.
+
+readonly GS_WARNING="WARNING: Ghostscript not available: bill PDFs will be stored uncompressed; install the 'ghostscript' package (>= 9.50) on the host or set GHOSTSCRIPT_COMPRESS_PDFS=false"
+
+gs_stub() { printf '#!/bin/bash\necho "%s"\n' "$2" > "$WORK/bin/$1"; chmod +x "$WORK/bin/$1"; }
+env_add() { echo "$1" >> "$WORK/host/shared/.env"; }
+first_sha() { git -C "$WORK/origin" rev-parse HEAD; }
+out_count() { grep -cF -- "$1" "$WORK/deploy.out" || true; }
+install_calls() { { cat "$WORK/install.log" 2>/dev/null || true; } | tr '\n' '|'; }
+manager_installs() { { grep -E '^(apt-get|dnf|yum) install ' "$WORK/install.log" 2>/dev/null || true; } | wc -l | tr -d ' '; }
+
+# A PATH holding every system command except Ghostscript and the package
+# managers, for the hosts that have none of them.
+restricted_path() {
+    local dir="$WORK/restricted" entry
+    mkdir -p "$dir"
+    for entry in /usr/bin/* /bin/*; do
+        case "$(basename "$entry")" in apt-get | dnf | yum | gs) continue ;; esac
+        [ -e "$dir/$(basename "$entry")" ] || ln -s "$entry" "$dir/$(basename "$entry")"
+    done
+    echo "$WORK/bin:$dir"
+}
+
+gs_deployed_ok() {
+    check "the deploy still succeeds" "$1" "0"
+    check "the release is published" "$([ -L "$WORK/host/current" ] && echo yes || echo no)" "yes"
+    check "the site is live" "$(maintenance_state)" "off"
+}
+
+echo "Ghostscript already installed and new enough: nothing is installed"
+setup
+gs_stub gs 10.02.1
+deploy "$(first_sha)" FAKE_UID=0 SUDO_STATUS=0 && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "no sudo or package manager was called" "$(install_calls)" ""
+check "no warning is printed" "$(out_count 'WARNING')" "0"
+check "the version is reported" "$(out_count 'Ghostscript 10.02.1 found')" "1"
+
+echo "the binary named in GHOSTSCRIPT_BINARY is the one that is checked"
+setup
+env_add 'GHOSTSCRIPT_BINARY="wms-gs"'
+gs_stub wms-gs 9.56.1
+deploy "$(first_sha)" && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "the configured binary is found and nothing is installed" "$(out_count 'Ghostscript 9.56.1 found (wms-gs)')" "1"
+check "no package manager was called" "$(install_calls)" ""
+
+echo "Ghostscript missing and sudo -n works: the package is installed without prompting"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" SUDO_STATUS=0 GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "sudo was probed, then apt-get ran through sudo -n, non-interactively" "$(install_calls)" \
+    "sudo -n true|sudo -n env DEBIAN_FRONTEND=noninteractive apt-get update -q|apt-get update -q|sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends ghostscript|apt-get install -y -q --no-install-recommends ghostscript|"
+check "the install is reported" "$(out_count 'Ghostscript 10.02.1 is now installed (wms-gs)')" "1"
+check "no warning is printed" "$(out_count 'WARNING')" "0"
+check "no secret reaches the log" "$(out_count 'p@ss w0rd')" "0"
+
+echo "the install happens before the site enters maintenance mode"
+check "the package manager ran before maintenance began" \
+    "$(awk '/Ghostscript: installing/ {i=NR} /Entering maintenance mode/ {m=NR} END {print (i && m && i < m) ? "yes" : "no"}' "$WORK/deploy.out")" "yes"
+
+echo "a second deploy finds Ghostscript and does not install again"
+rm -f "$WORK/install.log"
+deploy "$(commit_new_revision)" SUDO_STATUS=0 GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "nothing was installed" "$(install_calls)" ""
+
+echo "Ghostscript missing and the deploy user is root: no sudo is used"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" FAKE_UID=0 GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "apt-get ran directly" "$(install_calls)" \
+    "apt-get update -q|apt-get install -y -q --no-install-recommends ghostscript|"
+
+echo "dnf is used where apt-get does not exist"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+rm -f "$WORK/bin/apt-get" "$WORK/bin/yum"
+deploy "$(first_sha)" FAKE_UID=0 GS_NAME=wms-gs PATH="$(restricted_path)" && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "dnf installed the package" "$(install_calls)" "dnf install -y -q ghostscript|"
+
+echo "Ghostscript missing and no privileges: warns once and the deploy continues"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "only sudo was probed; no package manager ran" "$(install_calls)" "sudo -n true|"
+check "exactly one warning, with the full message" "$(out_count "$GS_WARNING")" "1"
+check "the reason is logged" "$(out_count 'not root and has no passwordless sudo')" "1"
+
+echo "Ghostscript missing and no package manager: warns and the deploy continues"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+rm -f "$WORK/bin/apt-get" "$WORK/bin/dnf" "$WORK/bin/yum"
+deploy "$(first_sha)" FAKE_UID=0 GS_NAME=wms-gs PATH="$(restricted_path)" && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "no package manager ran" "$(install_calls)" ""
+check "exactly one warning" "$(out_count "$GS_WARNING")" "1"
+check "the reason is logged" "$(out_count 'no supported package manager')" "1"
+
+echo "a failing install warns and the deploy continues"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" SUDO_STATUS=0 FAIL_INSTALL=1 GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "the install was attempted" "$(manager_installs)" "1"
+check "its error output is shown" "$(out_count 'Unable to locate package ghostscript')" "1"
+check "exactly one warning" "$(out_count "$GS_WARNING")" "1"
+check "database migrations still ran" "$(grep -c '^migrate$' "$WORK/artisan.log" | tr -d ' ')" "1"
+
+echo "an install that hangs is cut off by its timeout and the deploy continues"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" SUDO_STATUS=0 INSTALL_HANGS=1 GHOSTSCRIPT_INSTALL_TIMEOUT=1 GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "the timeout is reported" "$(out_count '124 means it timed out')" "1"
+check "exactly one warning" "$(out_count "$GS_WARNING")" "1"
+
+echo "an installed Ghostscript older than 9.50 warns, is left alone, and the deploy continues"
+setup
+gs_stub gs 9.26
+deploy "$(first_sha)" FAKE_UID=0 SUDO_STATUS=0 && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "nothing was installed or upgraded" "$(install_calls)" ""
+check "exactly one warning" "$(out_count "$GS_WARNING")" "1"
+
+echo "a package that installs a version older than 9.50 still warns"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" SUDO_STATUS=0 FAKE_GS_AFTER=9.26 GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "the install was attempted" "$(manager_installs)" "1"
+check "exactly one warning" "$(out_count "$GS_WARNING")" "1"
+
+echo "an unreadable version output counts as not usable, not as a failure"
+setup
+printf '#!/bin/bash\necho "not a version"\n' > "$WORK/bin/gs"
+chmod +x "$WORK/bin/gs"
+deploy "$(first_sha)" && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "exactly one warning" "$(out_count "$GS_WARNING")" "1"
+
+echo "compression turned off in .env skips the whole step"
+setup
+env_add 'GHOSTSCRIPT_COMPRESS_PDFS=false'
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" FAKE_UID=0 SUDO_STATUS=0 GS_NAME=wms-gs && rc=0 || rc=$?
+gs_deployed_ok "$rc"
+check "nothing was installed" "$(install_calls)" ""
+check "no warning is printed" "$(out_count 'WARNING')" "0"
+
+echo "a failure before the live window never reaches the Ghostscript step's install"
+setup
+env_add 'GHOSTSCRIPT_BINARY=wms-gs'
+deploy "$(first_sha)" FAIL_BUILD=1 SUDO_STATUS=0 GS_NAME=wms-gs && rc=0 || rc=$?
+check "the failed build still fails the deploy" "$rc" "1"
+check "nothing was installed for a release that never shipped" "$(install_calls)" ""
 
 echo
 if [ "$failures" -eq 0 ]; then

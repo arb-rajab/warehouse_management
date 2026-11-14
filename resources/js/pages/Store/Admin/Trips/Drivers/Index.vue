@@ -90,9 +90,7 @@ const tableColumns = computed(() => [
             :empty-message="t('store.drivers.index.empty')"
         >
             <template #row="{ row: driver }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ driver.name }}
                 </td>
                 <td v-if="shown.id" class="px-4 py-2">{{ driver.id }}</td>

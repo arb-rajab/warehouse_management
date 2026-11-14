@@ -162,7 +162,7 @@ The scripts in `.claude/scripts/`:
 | `install_php.sh` | installs PHP 8.5 and its extensions from the ondrej PPA (key pinned by fingerprint); run first by the SessionStart hook |
 | `install_playwright.py` | checks for existing Chromium and FFmpeg after frontend dependencies are ready and installs only missing binaries; called by SessionStart, or directly by Codex before browser tests; exports are written under ignored node_modules |
 | `install_dev_tools.py` | the dependency installer described above (shallow git fetches as local dists), run by the SessionStart hook |
-| `build_without_fonts.py` | Vite build from a temporary font-less copy of `vite.config.ts`, for sandboxes where `fonts.bunny.net` is blocked (403) and `npm run build` fails; the SessionStart hook falls back to it, `vite.config.ts` is never modified |
+| `build_without_fonts.py` | Vite build from a temporary font-less copy of `vite.config.ts`, for sandboxes where `fonts.bunny.net` is blocked (403) and `npm run build` fails; the SessionStart hook falls back to it, `vite.config.ts` is never modified. The current config fetches no remote font (IBM Plex is self-hosted), so it is built unchanged |
 | `wait_for_setup.py` | blocks until the background SessionStart setup has finished and prints its summary; exit 0 ready, 1 failed/interrupted/timed out |
 | `pre_push_check.py` | the one command to run before every push: waits for setup, then the ESLint, Prettier, vue-tsc, Vitest, Pint, PHPStan and Pest steps the branch's changes need, scoped to the changed files where the tool allows (`--full` for all of them, unscoped) |
 | `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs; a deliberate review tool, not a per-push gate |

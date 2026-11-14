@@ -45,7 +45,7 @@ describe('DashboardStatTile', () => {
             props: { label: 'Empty', value: 12, href: palletsIndex.url() },
         });
 
-        expect(wrapper.find('.text-gray-900').exists()).toBe(true);
+        expect(wrapper.find('.text-ink').exists()).toBe(true);
     });
 
     it('applies the warning tone', () => {
@@ -58,7 +58,7 @@ describe('DashboardStatTile', () => {
             },
         });
 
-        expect(wrapper.find('.text-amber-600').exists()).toBe(true);
+        expect(wrapper.find('.text-warning').exists()).toBe(true);
     });
 
     it('applies the danger tone', () => {
@@ -71,7 +71,7 @@ describe('DashboardStatTile', () => {
             },
         });
 
-        expect(wrapper.find('.text-red-600').exists()).toBe(true);
+        expect(wrapper.find('.text-danger').exists()).toBe(true);
     });
 
     it('renders the given icon next to the value', () => {
@@ -87,6 +87,22 @@ describe('DashboardStatTile', () => {
         expect(wrapper.findComponent(CircleDashed).exists()).toBe(true);
     });
 
+    it('sets the icon in a tinted well that follows the tone', () => {
+        const wrapper = mount(DashboardStatTile, {
+            props: {
+                label: 'Expired',
+                value: 2,
+                href: palletsIndex.url(),
+                icon: CircleDashed,
+                tone: 'danger',
+            },
+        });
+
+        const well = wrapper.get('[data-testid="stat-icon-well"]');
+        expect(well.classes()).toContain('bg-danger-soft');
+        expect(well.findComponent(CircleDashed).exists()).toBe(true);
+    });
+
     it('renders no icon when none is given', () => {
         const wrapper = mount(DashboardStatTile, {
             props: { label: 'Empty', value: 12, href: palletsIndex.url() },
@@ -100,8 +116,9 @@ describe('DashboardStatTile', () => {
             props: { label: 'Empty', value: 12, href: palletsIndex.url() },
         });
 
-        expect(wrapper.classes()).toContain('hover:border-gray-300');
-        expect(wrapper.classes()).toContain('hover:bg-gray-50');
+        expect(wrapper.classes()).toContain('hover:border-line-strong');
+        expect(wrapper.classes()).toContain('hover:bg-row-hover');
+        expect(wrapper.classes()).toContain('shadow-card');
     });
 
     it('renders footer slot content outside the link', () => {

@@ -36,7 +36,8 @@ test('home saves only its keys and preserves their public JSON and misspelt coup
     $category = Category::forceCreate(['name' => 'Food', 'slug' => 'food', 'parent_id' => 0]);
     $noise = BusinessSetting::forceCreate(['type' => 'header_logo', 'value' => 'unchanged']);
     $payload = websiteHomePayload(['home_slider_images' => [(string) $image->id], 'home_slider_links' => ['/offers'], 'cupon_background_color' => '#abcdef', 'cupon_title' => 'Coupon', 'cupon_subtitle' => 'Save', 'home_categories' => [(string) $category->id]]);
-    $this->put(route('website.home.update'), ['settings' => $payload])->assertRedirect(route('website.home.edit'));
+    $this->put(route('website.home.update'), ['settings' => $payload])->assertRedirect(route('website.home.edit'))
+        ->assertInertiaFlash('success', 'Website home page has been updated successfully');
     expect(json_decode(get_setting('home_slider_images'), true))->toBe($payload['home_slider_images'])
         ->and(json_decode(get_setting('home_slider_links'), true))->toBe(['/offers'])
         ->and(json_decode(get_setting('home_categories'), true))->toBe($payload['home_categories'])

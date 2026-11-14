@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Utility;
+use App\Support\StorePaymentGateways;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Cache;
 
@@ -24,7 +26,7 @@ class NagadUtility {
      */
     public static function EncryptDataWithPublicKey($data)
     {
-        $pgPublicKey = env('NAGAD_PG_PUBLIC_KEY');
+        $pgPublicKey = StorePaymentGateways::get('nagad', 'pg_public_key');
         $public_key = "-----BEGIN PUBLIC KEY-----\n" . $pgPublicKey . "\n-----END PUBLIC KEY-----";
         // echo $public_key;
         // exit();
@@ -38,7 +40,7 @@ class NagadUtility {
      */
     public static function SignatureGenerate($data)
     {
-        $merchantPrivateKey = env('NAGAD_MERCHANT_PRIVATE_KEY');
+        $merchantPrivateKey = StorePaymentGateways::get('nagad', 'merchant_private_key');
         $private_key = "-----BEGIN RSA PRIVATE KEY-----\n" . $merchantPrivateKey . "\n-----END RSA PRIVATE KEY-----";
         // echo $private_key;
         // exit();
@@ -71,36 +73,34 @@ class NagadUtility {
 
     public static function DecryptDataWithPrivateKey($crypttext)
     {
-        $merchantPrivateKey = env('NAGAD_MERCHANT_PRIVATE_KEY');
+        $merchantPrivateKey = StorePaymentGateways::get('nagad', 'merchant_private_key');
         $private_key = "-----BEGIN RSA PRIVATE KEY-----\n" . $merchantPrivateKey . "\n-----END RSA PRIVATE KEY-----";
         openssl_private_decrypt(base64_decode($crypttext), $plain_text, $private_key);
         return $plain_text;
     }
 
+    /**
+     * POST `$PostData` as JSON and return Nagad's decoded answer, or null when it did not answer
+     * with JSON. A timeout keeps a slow Nagad from holding the customer's request.
+     */
     public static function HttpPostMethod($PostURL, $PostData)
     {
-        $url = curl_init($PostURL);
-        $posttoken = json_encode($PostData);
-        $header = [
-            'Content-Type:application/json',
-            'X-KM-Api-Version:v-0.2.0',
-            'X-KM-IP-V4:' . self::get_client_ip(),
-            'X-KM-Client-Type:PC_WEB',
-        ];
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'X-KM-Api-Version' => 'v-0.2.0',
+                    'X-KM-IP-V4' => self::get_client_ip(),
+                    'X-KM-Client-Type' => 'PC_WEB',
+                ])
+                ->withBody(json_encode($PostData), 'application/json')
+                ->post($PostURL);
+        } catch (ConnectionException) {
+            return null;
+        }
 
-        curl_setopt($url, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($url, CURLOPT_POSTFIELDS, $posttoken);
-        curl_setopt($url, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($url, CURLOPT_SSL_VERIFYHOST, 2);
-        curl_setopt($url, CURLOPT_SSL_VERIFYPEER, true);
+        $ResultArray = $response->json();
 
-        $resultdata = curl_exec($url);
-
-        $ResultArray = json_decode($resultdata, true);
-        return $ResultArray;
-
+        return is_array($ResultArray) ? $ResultArray : null;
     }
 
     public static function HttpGet($url)

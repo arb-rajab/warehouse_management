@@ -10,11 +10,11 @@ Work through these phases in order.
 
 ## 1. Interview
 
-Ask whatever questions you need and keep asking until you have no more. Research the codebase first (`.ai/rules`, `CLAUDE.md`, sibling files) so you only ask what the code cannot answer. Do not generate any prompt until the user confirms there is nothing left to clarify.
+Ask whatever questions you need and keep asking until you have no more. Research the codebase first (`.ai/rules`, `CLAUDE.md`, sibling files) so you only ask what the code cannot answer. Do not generate any prompt until the user confirms there is nothing left to clarify. Never ask the user about testing: decide yourself which tests are required (behaviours, edge cases, permissions, failure paths, Playwright or MySQL migration coverage) and include them without approval, researching the existing tests next to the code you will touch (`tests/`, `.ai/rules` on testing) so new tests follow sibling patterns.
 
 ## 2. Rough outline
 
-Give a short, provisional outline of the likely steps (one line each), which sets the initial M (total prompts) so the user sees the direction. State clearly that it is not fixed: do not write, number, or commit to later prompts. Each later prompt is decided only after the previous one's response is reviewed, because its result may change or add to what comes next.
+Give a short, provisional outline of the likely steps (one line each), which sets the initial M (total prompts) so the user sees the direction. For each step say whether its tests ship with it or get their own prompt (see "Testing in prompts" below). State clearly that it is not fixed: do not write, number, or commit to later prompts. Each later prompt is decided only after the previous one's response is reviewed, because its result may change or add to what comes next.
 
 ## 3. Draft PR
 
@@ -27,14 +27,21 @@ You are the coordinator. Run each prompt yourself with the Agent tool (explicit 
 2. Launch one sub-agent with that prompt, then wait for it to finish.
 3. Read its response yourself and verify it against the task (inspect the diff/commits on the draft PR branch; do not trust the summary alone).
 4. If something is incomplete or wrong, continue the same agent with SendMessage (a follow-up prompt, same model/effort). Only when nothing is outstanding, move on to the next prompt (new agent), adapting it to what earlier responses changed, and revise the outline and M if needed.
-Repeat until all tasks are done.
+Repeat until all tasks are done, then go to phase 5 (open items).
 
 The user intervenes only to answer questions or approve things. Sub-agents cannot ask the user directly: if a sub-agent reports a question, a blocker, or a UI/example/sample proposal awaiting confirmation, relay it to the user (include the screenshot, snapshot, or example), wait for the answer, then send it back to the same agent with SendMessage. Never approve on the user's behalf, and never skip a confirmation they asked for. Run sub-agents one at a time, never in parallel, since they share one branch.
 
 Each prompt must be self-contained for a session with no memory of this conversation: what to build/fix and why, relevant paths, applicable constraints and conventions, the branch/draft PR to commit and push to, and what "done" looks like. Do not include triple-backtick fences inside the prompt text. In addition each prompt must say:
-- Do NOT run tests, type checks, or the pre-push script; they run once at the end. Commit and push the changes to the draft PR branch.
+- Which files to read first: name the specific `.ai/rules/*.md` files and code paths that apply to this prompt (found in the interview research), and tell the sub-agent to read only those plus `AGENTS.md`, not the whole `.ai/` tree, to keep its cold start cheap. Pick the lowest Model/Effort that fits the scope.
+- Cost rules: write large output (logs, listings, route lists) to the scratchpad and search it with `rg` instead of printing it; never print whole listings; push after each commit; do not poll background jobs, start one watcher and end the turn.
+- Tests: the prompt must name the tests to write or update for its behaviour (happy path, validation, authorization, edge and failure cases, and the existing tests the change may break, such as parity, flash and rule-mandated tests), following sibling test files. Say whether tests are written in this prompt or deferred to a later test prompt.
+- Do NOT run tests, type checks, or the pre-push script; they run once at the end. Writing tests is required; running them is not. Commit and push the changes to the draft PR branch.
 - End the response with a concise report: what changed, files touched, commit(s) pushed, open questions, and anything not done.
 - If the work involves UI changes, examples, or samples: before applying anything, show screenshots, a snapshot, or a concrete example of the proposed solution, then STOP, end the response with that proposal and an explicit request for confirmation, and apply nothing until the coordinator sends back the user's confirmation.
+
+### Testing in prompts
+
+Default: each feature prompt writes the tests for what it changes, in the same prompt, so code and tests stay in step. When a feature is complicated and needs intensive testing (many branches or states, money/stock/barcode/authorization logic, concurrency or locking, migrations, multi-step UI flows needing Playwright, or tests that would roughly double the prompt's size), put the tests in a separate prompt that comes right after the feature prompt, with its own Model/Effort. A test prompt must: list the scenarios to cover (derived from the interview and the actual diff, not the summary), read the implementation first, write tests that assert behaviour rather than mirror the code, and report any bug it finds instead of bending the test (the coordinator then sends the fix to the feature agent or a new prompt). Test prompts still do not run the suites; the attested run at the end does. Tell the user in the prompt header which approach you chose and why.
 
 Output format for each prompt, exactly:
 
@@ -46,10 +53,21 @@ Output format for each prompt, exactly:
 **Model:** <model: Haiku for trivial/mechanical work, Sonnet for typical contained work, Opus for architecturally significant or highly ambiguous work>
 **Effort:** <low/medium/high/xhigh/max matching actual scope>
 
-## 5. Final verification
+## 5. Open items loop
 
-When every prompt is finished, run (or delegate to one final sub-agent) the relevant tests and checks once for the whole change (see the verification table in `AGENTS.md`), report results faithfully, and mark nothing as passing that was skipped.
+When every prompt is finished, check whether anything is still open for the user: sub-agent questions, unconfirmed proposals, anything reported as not done, skipped or partial checks, and gaps against the original tasks, including behaviours with no test. List them clearly and wait for the user's approval or answers. Never approve on their behalf. Once approved, write new prompts exactly as in phase 4 (same output format, one sub-agent at a time, same draft PR) and verify them. Repeat this phase until nothing is open. Only then continue.
 
-## 6. Manual check list
+## 6. Attested verification
 
-Finish by giving the user an ordered, step-by-step list to manually verify everything works (where to click or run, and what to expect), covering every task.
+Commit everything and make sure the work tree is clean with an unpushed head commit, then run `python3 .claude/scripts/pre_push_check.py` with no flag, in the background, and wait for it to finish (about 10 minutes; see "Attested pre-push run" in `AGENTS.md`). It amends the head commit with the `CI-Verified` trailer. Never write or edit the trailer by hand. Report results faithfully and list any group that could not run. Check that tests were actually added for every task and none were skipped or loosened; a failure in a new test is a defect to fix, not a reason to weaken the test. If it fails, fix the cause without asking the user (never skip or loosen a test), report the failure and the fix, and run it again. Push only after it passes.
+
+## 7. Open PR, merge, deploy
+
+1. Mark the draft PR ready for review (never create a second PR).
+2. Merge it automatically with a merge commit (not squash or rebase: those drop or stale the `CI-Verified` trailer that CI's `Plan CI jobs` checks). The user works on a dev branch and has approved automatic merging.
+3. After merging, watch the GitHub Actions run of the deploy workflow for the merge commit until it finishes.
+4. If a check or the deploy fails, report the failure to the user, then fix it without asking (a new change on a fresh branch from the default branch if the PR is already merged, with its own attested run), and repeat until the deploy succeeds.
+
+## 8. Manual check list
+
+Only after the deploy has succeeded, give the user an ordered, step-by-step list to manually verify everything works (where to click or run, and what to expect), covering every task.

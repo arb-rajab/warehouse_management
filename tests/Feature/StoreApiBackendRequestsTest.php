@@ -4,6 +4,7 @@ use App\Models\Address;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Page;
+use App\Models\Product;
 use App\Models\ProductCollection;
 use App\Models\StoreUser;
 use App\Models\Upload;
@@ -17,7 +18,7 @@ use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 
 /**
- * The store API changes asked for in BR-20261103-A/B/C, BR-20261102-B/D and
+ * The store API changes asked for in BR-20261105-A, BR-20261103-A/B/C, BR-20261102-B/D and
  * BR-20261101-A: who owns a rep's order, the delivery date rules, the order
  * idempotency key, the account object, state changes without GET, the cart
  * note, the paged customer list and the resized thumbnails.
@@ -756,4 +757,313 @@ test('the summary of an empty cart has the same types as a filled one', function
     // grand_total_value is a JSON number in both; a whole amount is written without its .0 either way.
     expect(array_map(get_debug_type(...), Arr::except($filled, 'grand_total_value')))->toEqual(array_map(get_debug_type(...), Arr::except($empty, 'grand_total_value')))
         ->and($filled['grand_total_value'])->toBeNumeric();
+});
+
+// ---- BR-20261105-A.2: the stars sort and filter -------------------------------------------------
+
+/**
+ * A category, a brand and five products of that brand in that category, graded
+ * (stars) 5, 5, 3, none and 0, so that two share a grade, one has no collection
+ * at all and one is graded 0 explicitly. Names run against the grades.
+ *
+ * @return array{category: int, brand: int, products: array<string, Product>}
+ */
+function starGradedProducts(): array
+{
+    orderingStore();
+    $category = DB::table('categories')->insertGetId(['name' => 'Snacks', 'slug' => 'snacks', 'level' => 0, 'parent_id' => 0, 'digital' => 0]);
+    $brand = DB::table('brands')->insertGetId(['name' => 'Acme', 'slug' => 'acme', 'top' => 1]);
+    $products = [];
+
+    foreach (['Beta' => 5, 'Alpha' => 5, 'Gamma' => 3, 'Delta' => null, 'Epsilon' => 0] as $name => $stars) {
+        $collection = $stars === null ? null : ProductCollection::create(['name' => "Grade $stars", 'serial' => "G$name", 'amount' => $stars])->id;
+        $products[$name] = createStoreProduct(['name' => $name, 'category_id' => $category, 'brand_id' => $brand, 'collection_id' => $collection, 'published' => 1, 'approved' => 1, 'featured' => 1, 'isNewProduct' => 1]);
+    }
+
+    return ['category' => $category, 'brand' => $brand, 'products' => $products];
+}
+
+/** @return list<string> the names a product list answered, in order */
+function listedNames(TestResponse $response): array
+{
+    return $response->assertOk()->collect('data')->pluck('name')->all();
+}
+
+test('sort_key=stars_high_to_low lists the highest store grade first, ties by name, on search, category and brand', function () {
+    $store = starGradedProducts();
+    $query = '?sort_key=stars_high_to_low';
+
+    $search = $this->getJson("/api/v1/store/products/search?categories={$store['category']}&brands={$store['brand']}&sort_key=stars_high_to_low")->assertOk();
+    expect(listedNames($search))->toBe(['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'])
+        ->and($search->collect('data')->pluck('stars')->all())->toBe([5, 5, 3, 0, 0]);
+
+    expect(listedNames($this->getJson("/api/v1/store/products/category/{$store['category']}$query")))->toBe(['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'])
+        ->and(listedNames($this->getJson("/api/v1/store/products/sub-category/{$store['category']}$query")))->toBe(['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'])
+        ->and(listedNames($this->getJson("/api/v1/store/products/brand/{$store['brand']}$query")))->toBe(['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon']);
+});
+
+test('sort_key=top_rated still sorts by the customers\' review rating, not by stars', function () {
+    $store = starGradedProducts();
+    $store['products']['Delta']->forceFill(['rating' => 4.5])->save();
+    $store['products']['Gamma']->forceFill(['rating' => 2])->save();
+
+    $names = listedNames($this->getJson("/api/v1/store/products/search?categories={$store['category']}&sort_key=top_rated"));
+
+    expect(array_slice($names, 0, 2))->toBe(['Delta', 'Gamma']);
+});
+
+test('min_stars keeps the products graded at least that high, and ignores a value that is not a number', function (string $minimum, array $expected) {
+    $store = starGradedProducts();
+
+    expect(listedNames($this->getJson("/api/v1/store/products/search?categories={$store['category']}&sort_key=stars_high_to_low&min_stars=$minimum")))->toBe($expected)
+        ->and(listedNames($this->getJson("/api/v1/store/products/category/{$store['category']}?sort_key=stars_high_to_low&min_stars=$minimum")))->toBe($expected)
+        ->and(listedNames($this->getJson("/api/v1/store/products/brand/{$store['brand']}?sort_key=stars_high_to_low&min_stars=$minimum")))->toBe($expected);
+})->with([
+    'four' => ['4', ['Alpha', 'Beta']],
+    'three' => ['3', ['Alpha', 'Beta', 'Gamma']],
+    'six, which nothing reaches' => ['6', []],
+    'zero keeps all' => ['0', ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon']],
+    'not a number' => ['many', ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon']],
+]);
+
+test('without a sort_key the lists are ordered as before', function () {
+    $store = starGradedProducts();
+
+    // The search sorts by name, as it always did.
+    expect(listedNames($this->getJson("/api/v1/store/products/search?categories={$store['category']}")))->toBe(['Alpha', 'Beta', 'Delta', 'Epsilon', 'Gamma'])
+        ->and(listedNames($this->getJson("/api/v1/store/products/search?categories={$store['category']}&sort_key=nonsense")))->toBe(['Alpha', 'Beta', 'Delta', 'Epsilon', 'Gamma']);
+
+    // A category list puts the graded products first by the collection's amount, as it always did.
+    $category = listedNames($this->getJson("/api/v1/store/products/category/{$store['category']}"));
+    expect(array_slice($category, 0, 3))->toContain('Alpha', 'Beta')->and($category[2])->toBe('Gamma');
+});
+
+// ---- BR-20261105-A.3: a brand's categories ------------------------------------------------------
+
+test('every brand row names the categories where the brand has products a shopper can see', function () {
+    orderingStore();
+    [$snacks, $drinks, $dairy] = array_map(fn (string $name) => DB::table('categories')->insertGetId(['name' => $name, 'slug' => strtolower($name), 'level' => 0, 'parent_id' => 0, 'digital' => 0]), ['Snacks', 'Drinks', 'Dairy']);
+    [$acme, $zed, $empty] = array_map(fn (string $name) => DB::table('brands')->insertGetId(['name' => $name, 'slug' => strtolower($name), 'top' => 1]), ['Acme', 'Zed', 'Empty']);
+    $visible = fn (int $brand, int $category, array $extra = []) => createStoreProduct(['brand_id' => $brand, 'category_id' => $category, 'published' => 1, 'approved' => 1, ...$extra]);
+
+    $visible($acme, $drinks);
+    $visible($acme, $snacks);
+    $visible($acme, $snacks); // two products in one category: the category is named once
+    $visible($zed, $drinks);
+    // None of these is a product the app can list, so none of them counts.
+    $visible($acme, $dairy, ['published' => 0]);
+    $visible($zed, $dairy, ['approved' => 0]);
+    $visible($zed, $dairy, ['digital' => 1]);
+    $visible($zed, $dairy, ['added_by' => 'seller']);
+    Product::factory()->create(['brand_id' => $zed, 'category_id' => $dairy, 'published' => 1, 'approved' => 1]); // no stock row
+
+    foreach (['brands', 'brands/top', 'filter/brands'] as $path) {
+        $rows = $this->getJson("/api/v1/store/$path")->assertOk()->collect('data')->keyBy('id');
+
+        expect($rows[$acme]['category_ids'])->toBe([$snacks, $drinks])
+            ->and($rows[$zed]['category_ids'])->toBe([$drinks])
+            ->and($rows[$empty]['category_ids'])->toBe([]);
+    }
+
+    // The ids are the ones the app used to find by asking category by category.
+    foreach ([[$acme, $snacks, 2], [$acme, $drinks, 1], [$acme, $dairy, 0], [$zed, $drinks, 1], [$zed, $dairy, 0], [$zed, $snacks, 0]] as [$brand, $category, $count]) {
+        $search = $this->getJson("/api/v1/store/products/search?categories=$category&brands=$brand")->assertOk();
+        expect($search->collect('data'))->toHaveCount($count);
+    }
+});
+
+test('a paged brand list names the categories of the brands on that page only', function () {
+    orderingStore();
+    $category = DB::table('categories')->insertGetId(['name' => 'Snacks', 'slug' => 'snacks', 'level' => 0, 'parent_id' => 0, 'digital' => 0]);
+    $brands = array_map(fn (string $name) => DB::table('brands')->insertGetId(['name' => $name, 'slug' => strtolower($name), 'top' => 0]), ['Acme', 'Zed']);
+    createStoreProduct(['brand_id' => $brands[1], 'category_id' => $category, 'published' => 1, 'approved' => 1]);
+
+    $page = $this->getJson('/api/v1/store/brands?per_page=1&page=2')->assertOk();
+
+    expect($page->json('data.0.id'))->toBe($brands[1])
+        ->and($page->json('data.0.category_ids'))->toBe([$category])
+        ->and($page->json('meta.per_page'))->toBe(1);
+});
+
+// ---- BR-20261105-A.5: smaller performance points ------------------------------------------------
+
+test('the lists that rarely change carry an ETag and answer 304 to a repeat', function (string $path, bool $signedIn) {
+    orderingStore();
+    DB::table('categories')->insert(['name' => 'Snacks', 'slug' => 'snacks', 'level' => 0, 'parent_id' => 0, 'featured' => 1, 'digital' => 0]);
+    DB::table('brands')->insert(['name' => 'Acme', 'slug' => 'acme', 'top' => 1]);
+    storeSetting('home_categories', '[]');
+    if ($signedIn) {
+        $this->withToken(storeApiToken(createStoreUser('customer')));
+    }
+
+    $first = $this->getJson("/api/v1/store/$path")->assertOk();
+    $etag = $first->headers->get('ETag');
+
+    expect($etag)->not->toBeNull()->and($first->headers->get('Cache-Control'))->toContain('private');
+
+    $this->getJson("/api/v1/store/$path", ['If-None-Match' => $etag])->assertNotModified();
+})->with([
+    'categories' => ['categories', false],
+    'featured categories' => ['categories/featured', false],
+    'home categories' => ['categories/home', false],
+    'top categories' => ['categories/top', false],
+    'sub-categories' => ['sub-categories/1', false],
+    'brands' => ['brands', false],
+    'top brands' => ['brands/top', false],
+    'sliders' => ['sliders', false],
+    'banners one' => ['banners-one', false],
+    'banners two' => ['banners-two', false],
+    'banners three' => ['banners-three', false],
+    'payment types' => ['payment-types', true],
+]);
+
+test('a changed list gets a new ETag, so the stale one is answered with the new list and not a 304', function () {
+    orderingStore();
+    DB::table('brands')->insert(['name' => 'Acme', 'slug' => 'acme', 'top' => 1]);
+    $etag = $this->getJson('/api/v1/store/brands')->assertOk()->headers->get('ETag');
+
+    DB::table('brands')->insert(['name' => 'Zed', 'slug' => 'zed', 'top' => 1]);
+    $changed = $this->getJson('/api/v1/store/brands', ['If-None-Match' => $etag])->assertOk();
+
+    expect($changed->headers->get('ETag'))->not->toBe($etag)->and($changed->json('data'))->toHaveCount(2);
+});
+
+test('a product list takes an optional per_page of 1 to 50, and answers 10 rows as before without one', function (string $path) {
+    $store = starGradedProducts();
+    foreach (range(1, 7) as $n) {
+        createStoreProduct(['name' => "Extra $n", 'category_id' => $store['category'], 'brand_id' => $store['brand'], 'published' => 1, 'approved' => 1, 'featured' => 1, 'isNewProduct' => 1]);
+    }
+    $path = str_replace(['{category}', '{brand}'], [(string) $store['category'], (string) $store['brand']], $path);
+    $glue = str_contains($path, '?') ? '&' : '?';
+    $page = fn (string $query) => $this->getJson($path.$glue.$query)->assertOk();
+
+    // 12 products in all.
+    expect($page('page=1')->collect('data'))->toHaveCount(10)
+        ->and($page('page=1')->json('meta.per_page'))->toBe(10)
+        ->and($page('per_page=5')->collect('data'))->toHaveCount(5)
+        ->and($page('per_page=5')->json('meta.last_page'))->toBe(3)
+        ->and($page('per_page=5&page=3')->collect('data'))->toHaveCount(2)
+        ->and($page('per_page=1')->collect('data'))->toHaveCount(1)
+        ->and($page('per_page=500')->json('meta.per_page'))->toBe(50)
+        ->and($page('per_page=500')->collect('data'))->toHaveCount(12);
+
+    foreach (['0', '-3', 'many', '2.5', ''] as $unusable) {
+        expect($page('per_page='.$unusable)->json('meta.per_page'))->toBe(10);
+    }
+})->with([
+    'all products' => ['/api/v1/store/products'],
+    'search' => ['/api/v1/store/products/search?categories={category}'],
+    'category' => ['/api/v1/store/products/category/{category}'],
+    'brand' => ['/api/v1/store/products/brand/{brand}'],
+    'in-house' => ['/api/v1/store/products/inhouse'],
+    'new products' => ['/api/v1/store/products/new_products'],
+    'featured' => ['/api/v1/store/products/featured'],
+]);
+
+test('the brand list takes per_page too', function () {
+    orderingStore();
+    foreach (range(1, 12) as $n) {
+        DB::table('brands')->insert(['name' => "Brand $n", 'slug' => "brand-$n", 'top' => 0]);
+    }
+
+    expect($this->getJson('/api/v1/store/brands')->assertOk()->collect('data'))->toHaveCount(10)
+        ->and($this->getJson('/api/v1/store/brands?per_page=4')->assertOk()->collect('data'))->toHaveCount(4)
+        ->and($this->getJson('/api/v1/store/brands?per_page=100')->assertOk()->collect('data'))->toHaveCount(12);
+});
+
+test('a cart change answers the cart and its summary only when asked with with_cart, and as the two routes would', function () {
+    orderingStore();
+    $customer = createStoreUser('customer');
+    $product = createStoreProduct(['unit_price' => 10]);
+    $other = createStoreProduct(['unit_price' => 4]);
+    $token = storeApiToken($customer);
+    $add = fn (array $body) => $this->withToken($token)->postJson('/api/v1/store/carts/add', ['variant' => '', ...$body]);
+
+    // Without the parameter, the answer is what it was.
+    $plain = $add(['id' => $product->id, 'quantity' => 1])->assertOk();
+    expect($plain->json())->toEqual(['result' => true, 'message' => __('api.cart.added'), 'offer_message' => null]);
+
+    app('auth')->forgetGuards();
+    $asked = $add(['id' => $other->id, 'quantity' => 2, 'with_cart' => 1])->assertOk();
+    expect($asked->json('result'))->toBeTrue();
+
+    app('auth')->forgetGuards();
+    $cart = $this->withToken($token)->postJson('/api/v1/store/carts')->assertOk()->json();
+    app('auth')->forgetGuards();
+    $summary = $this->withToken($token)->getJson('/api/v1/store/cart-summary')->assertOk()->json();
+
+    expect($asked->json('cart'))->toEqual($cart)
+        ->and($asked->json('summary'))->toEqual($summary)
+        ->and(collect($asked->json('cart.0.cart_items'))->pluck('quantity', 'product_id')->all())->toEqual([$product->id => 1, $other->id => 2])
+        ->and($asked->json('summary.sub_total'))->toBe(format_price(18))
+        ->and($asked->json('message'))->toBe(__('api.cart.added'));
+});
+
+test('change-quantity and removal carry the cart on request, and a refusal carries none', function () {
+    orderingStore();
+    $customer = createStoreUser('customer');
+    $kept = customerCartWithOneLine($customer);
+    $dropped = customerCartWithOneLine($customer);
+    $token = storeApiToken($customer);
+
+    $changed = $this->withToken($token)->postJson('/api/v1/store/carts/change-quantity', ['id' => $kept->id, 'quantity' => 4, 'with_cart' => true])->assertOk();
+    expect(collect($changed->json('cart.0.cart_items'))->firstWhere('id', $kept->id)['quantity'])->toBe(4)
+        ->and($changed->json('summary.sub_total'))->toBe(format_price(4 * 2.5 + 2.5));
+
+    // Over the stock: refused, and the answer is exactly the refusal.
+    app('auth')->forgetGuards();
+    $this->withToken($token)->postJson('/api/v1/store/carts/change-quantity', ['id' => $kept->id, 'quantity' => 100000, 'with_cart' => true])
+        ->assertOk()->assertExactJson(['result' => false, 'message' => __('api.cart.maximum_available')]);
+
+    app('auth')->forgetGuards();
+    $removed = $this->withToken($token)->deleteJson("/api/v1/store/carts/{$dropped->id}?with_cart=1")->assertOk();
+    expect($removed->json('message'))->toBe(__('api.cart.removed'))
+        ->and(collect($removed->json('cart.0.cart_items'))->pluck('id')->all())->toBe([$kept->id])
+        ->and($removed->json('summary.sub_total'))->toBe(format_price(10));
+
+    // A line that is not the caller's is a 404 with no cart in it, and a removal without the parameter is unchanged.
+    app('auth')->forgetGuards();
+    $this->withToken($token)->deleteJson('/api/v1/store/carts/999999?with_cart=1')->assertNotFound()->assertExactJson(['result' => false, 'message' => __('api.cart.item_not_found')]);
+    app('auth')->forgetGuards();
+    $this->withToken($token)->deleteJson("/api/v1/store/carts/{$kept->id}")->assertOk()->assertExactJson(['result' => true, 'message' => __('api.cart.removed')]);
+});
+
+test('the cart a change carries is empty when the change emptied it', function () {
+    orderingStore();
+    $customer = createStoreUser('customer');
+    $line = customerCartWithOneLine($customer);
+
+    $removed = $this->withToken(storeApiToken($customer))->deleteJson("/api/v1/store/carts/{$line->id}?with_cart=1")->assertOk();
+
+    expect($removed->json('cart'))->toBe([])
+        ->and($removed->json('summary.sub_total'))->toBe(format_price(0))
+        ->and($removed->json('summary.grand_total_value'))->toEqual(0);
+});
+
+test('a customer who may not see prices gets the cart of a change with the prices blanked, as the cart routes give it', function () {
+    orderingStore();
+    $customer = createStoreUser('customer', verified: false);
+    $product = createStoreProduct(['unit_price' => 10]);
+
+    $response = $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/carts/add', ['id' => $product->id, 'variant' => '', 'quantity' => 1, 'with_cart' => 1])->assertOk();
+
+    expect($response->headers->get('X-Prices-Hidden'))->toBe('1')
+        ->and($response->json('cart.0.cart_items.0.price'))->toBeNull()
+        ->and($response->json('cart.0.cart_items.0.quantity'))->toBe(1)
+        ->and($response->json('summary.sub_total'))->toBeNull()
+        ->and($response->json('summary.grand_total'))->toBeNull()
+        ->and($response->json('summary.price_hidden'))->toBeTrue();
+});
+
+test('a representative\'s own price on a line carries the cart on request', function () {
+    orderingStore();
+    $rep = createStoreUser('customer');
+    $rep->forceFill(['is_rep' => true, 'rep_discount_percentage' => 20])->save();
+    $line = customerCartWithOneLine($rep);
+
+    $changed = $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/cart/update_item_price', ['id' => $line->id, 'rep_price' => 2.2, 'with_cart' => 1])->assertOk();
+
+    expect($changed->json('message'))->toBe(__('api.cart.price_updated'))
+        ->and($changed->json('cart.0.cart_items.0.rep_price'))->toEqual(2.2)
+        ->and($changed->json('summary.sub_total'))->toBe(format_price(2.2));
 });

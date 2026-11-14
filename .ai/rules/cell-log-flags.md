@@ -18,6 +18,13 @@ boundary. Pallet logs originate in `PalletActionService::logCellStatus()`;
 rule evaluation. There are no manually
 created flags or historical backfill command, by design.
 
+Bulk record corrections (`PalletCorrectionService`: the bulk note and the
+product change, entries with a `batch_id`) are inserted in one statement and
+never reach the observer, so they are never flagged; `isRapidActions()`
+counts only logs with a null `batch_id`, so a bulk of 500 entries does not
+flag the admin's next shelf action either. See
+[pallet corrections](pallet-corrections.md).
+
 The `flagged` attribute prefers a `flags_count` alias, then an already-loaded
 `flags` relation, then an `exists()` query (the `RowResource.has_pallets` pattern).
 Admin listings load flag details for reason labels; do not replace those details

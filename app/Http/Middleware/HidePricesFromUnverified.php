@@ -69,6 +69,18 @@ class HidePricesFromUnverified
     }
 
     /**
+     * The money fields of a cart or catalogue answer set to null, for an
+     * answer built outside the middleware (a cart change that carries the cart).
+     *
+     * @param  array<mixed>  $data
+     * @return array<mixed>
+     */
+    public static function blankPrices(array $data, string $answer): array
+    {
+        return self::blank($data, self::KEYS[$answer]);
+    }
+
+    /**
      * @param  array<mixed>  $data
      * @param  list<string>  $keys
      * @return array<mixed>

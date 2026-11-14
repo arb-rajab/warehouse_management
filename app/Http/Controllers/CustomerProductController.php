@@ -255,7 +255,7 @@ class CustomerProductController extends Controller implements HasMiddleware
     public function customer_product($slug)
     {
         if(get_setting('classified_product') != 1){
-            return redirect('/');
+            return redirect()->route('home');
         }
         $customer_product  = CustomerProduct::where('slug', $slug)->first();
         if($customer_product!=null){
@@ -267,7 +267,7 @@ class CustomerProductController extends Controller implements HasMiddleware
     public function search(Request $request)
     {
         if(get_setting('classified_product') != 1){
-            return redirect('/');
+            return redirect()->route('home');
         }
 
         $brand_id = (Brand::where('slug', $request->brand)->first() != null) ? Brand::where('slug', $request->brand)->first()->id : null;

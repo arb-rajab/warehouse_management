@@ -60,8 +60,8 @@ describe('CellSlot', () => {
         expect(opened.classes()).toContain('border-orange-500');
 
         const empty = mountSlot({ cell: cell({ state: 'empty' }) });
-        expect(empty.classes()).toContain('bg-gray-100');
-        expect(empty.classes()).toContain('border-gray-400');
+        expect(empty.classes()).toContain('bg-cell-empty');
+        expect(empty.classes()).toContain('border-cell-empty-line');
     });
 
     it('shows a distinct icon per cell state', () => {
@@ -183,7 +183,7 @@ describe('CellSlot', () => {
                 },
             }),
         });
-        expect(expired.classes()).not.toContain('border-red-500');
+        expect(expired.classes()).not.toContain('border-danger');
         expect(expired.find('[data-testid="expiry-badge"]').exists()).toBe(
             false,
         );
@@ -191,10 +191,10 @@ describe('CellSlot', () => {
 
     it('draws a highlight ring only when told to', () => {
         expect(mountSlot({ highlighted: false }).classes()).not.toContain(
-            'ring-blue-500',
+            'ring-info',
         );
         expect(mountSlot({ highlighted: true }).classes()).toContain(
-            'ring-blue-500',
+            'ring-info',
         );
     });
 
@@ -242,14 +242,14 @@ describe('CellSlot', () => {
         const inactiveFull = mountSlot({
             cell: cell({ state: 'full', is_active: false }),
         });
-        expect(inactiveFull.classes()).toContain('border-red-500');
+        expect(inactiveFull.classes()).toContain('border-danger');
         expect(inactiveFull.classes()).toContain('opacity-60');
         expect(
             inactiveFull.find(`[title="${t('cells.inactiveBadge')}"]`).exists(),
         ).toBe(true);
 
         const active = mountSlot({ cell: cell({ state: 'full' }) });
-        expect(active.classes()).not.toContain('border-red-500');
+        expect(active.classes()).not.toContain('border-danger');
         expect(active.classes()).not.toContain('opacity-60');
         expect(
             active.find(`[title="${t('cells.inactiveBadge')}"]`).exists(),
@@ -358,10 +358,10 @@ describe('CellSlot', () => {
 
     it('draws a pulsing ring only when told to', () => {
         expect(mountSlot({ pulsing: false }).classes()).not.toContain(
-            'ring-emerald-500',
+            'ring-success',
         );
         expect(mountSlot({ pulsing: true }).classes()).toContain(
-            'ring-emerald-500',
+            'ring-success',
         );
     });
 

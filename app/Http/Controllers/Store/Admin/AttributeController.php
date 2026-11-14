@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditAttributeRequest;
 use App\Http\Requests\Store\Admin\FilterAttributesRequest;
 use App\Http\Requests\Store\Admin\StoreAttributeRequest;
@@ -22,6 +23,8 @@ use Inertia\Response;
 
 class AttributeController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -52,6 +55,7 @@ class AttributeController extends Controller implements HasMiddleware
             $attribute = Attribute::create(['name' => $request->validated('name')]);
             AttributeTranslation::create(['attribute_id' => $attribute->id, 'lang' => config('app.default_language'), 'name' => $request->validated('name')]);
         });
+        $this->flashSuccess('attribute_has_been_created_successfully');
 
         return redirect()->route('attributes.index');
     }
@@ -78,6 +82,7 @@ class AttributeController extends Controller implements HasMiddleware
             }
             AttributeTranslation::query()->updateOrCreate(['attribute_id' => $attribute->id, 'lang' => $lang], ['name' => $request->validated('name')]);
         });
+        $this->flashSuccess('attribute_has_been_updated_successfully');
 
         return redirect()->route('attributes.index');
     }
@@ -88,6 +93,7 @@ class AttributeController extends Controller implements HasMiddleware
             AttributeTranslation::query()->where('attribute_id', $attribute->id)->delete();
             $attribute->delete();
         });
+        $this->flashSuccess('attribute_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('attributes.index', $request);
     }

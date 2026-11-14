@@ -39,7 +39,8 @@ test('attributes paginate and validate the page size', function () {
 
 test('attributes create the default translation and reject invalid names', function () {
     actingAsStoreUser(createStoreStaff('edit_product_attribute'));
-    $this->post('/temp/admin/attributes', ['name' => 'Size'])->assertRedirect(route('attributes.index'));
+    $this->post('/temp/admin/attributes', ['name' => 'Size'])->assertRedirect(route('attributes.index'))
+        ->assertInertiaFlash('success', 'Attribute has been created successfully');
     $attribute = Attribute::query()->firstOrFail();
     $this->assertDatabaseHas('attribute_translations', ['attribute_id' => $attribute->id, 'lang' => 'en', 'name' => 'Size']);
     foreach (['', str_repeat('x', 51), ['invalid']] as $name) {
@@ -85,7 +86,8 @@ test('attribute deletion removes only its translations and preserves pagination'
         AttributeTranslation::create(['attribute_id' => $record->id, 'lang' => 'en', 'name' => $record->name]);
     }
     actingAsStoreUser(createStoreStaff('delete_product_attribute'));
-    $this->delete("/temp/admin/attributes/destroy/{$attribute->id}?page=2&per_page=10")->assertRedirect(route('attributes.index', ['page' => 2, 'per_page' => 10]));
+    $this->delete("/temp/admin/attributes/destroy/{$attribute->id}?page=2&per_page=10")->assertRedirect(route('attributes.index', ['page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Attribute has been deleted successfully');
     $this->assertDatabaseMissing('attributes', ['id' => $attribute->id]);
     $this->assertDatabaseMissing('attribute_translations', ['attribute_id' => $attribute->id]);
     $this->assertDatabaseHas('attribute_translations', ['attribute_id' => $other->id]);

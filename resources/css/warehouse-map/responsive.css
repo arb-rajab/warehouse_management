@@ -1,4 +1,29 @@
-@media (max-width: 860px) {
+/*
+ * Width breakpoints are container queries on `.wms` (base.css): the map sits
+ * beside the back-office sidebar, so its own width, not the viewport's,
+ * decides how much of the HUD fits. Height breakpoints stay media queries.
+ */
+@container wms (max-width: 1240px) {
+    /* beside an open sidebar on a laptop: the brand keeps only its logo */
+    .wms-brand__sub,
+    .wms-brand__title {
+        display: none;
+    }
+
+    .wms-brand {
+        padding-inline: 12px;
+    }
+
+    .wms-brand.has-warehouses {
+        padding-inline-end: 6px;
+    }
+
+    .wms-brand__sep {
+        display: none;
+    }
+}
+
+@container wms (max-width: 860px) {
     .wms-brand__sub {
         display: none;
     }
@@ -13,7 +38,7 @@
     }
 }
 
-@media (max-width: 720px) {
+@container wms (max-width: 720px) {
     /* on a phone the top bar never wraps over the content: the search folds behind a button */
     .wms-topbar {
         inset-inline: 8px;
@@ -31,6 +56,46 @@
 
     .wms-brand {
         padding-inline-end: 8px;
+    }
+
+    /* no room for a name: the switcher's own icon replaces the logo and opens the menu across the bar */
+    .wms-brand.has-warehouses {
+        gap: 0;
+        padding-inline: 4px;
+    }
+
+    .wms-brand.has-warehouses .wms-brand__logo,
+    .wms-brand.has-warehouses .wms-brand__text {
+        display: none;
+    }
+
+    .wms-warehouses {
+        position: static;
+    }
+
+    .wms-warehouses__trigger {
+        height: 40px;
+        border-radius: 20px;
+        gap: 4px;
+        padding-inline: 10px 8px;
+    }
+
+    .wms-warehouses__icon {
+        display: block;
+    }
+
+    .wms-warehouses__label {
+        display: none;
+    }
+
+    .wms-warehouses__panel {
+        inset-inline: 0;
+        top: calc(100% + 8px);
+        width: auto;
+    }
+
+    .wms-warehouses__option {
+        min-height: 48px;
     }
 
     .wms-search-toggle {
@@ -204,13 +269,13 @@
     }
 }
 
-@media (min-width: 721px) {
+@container wms (min-width: 721px) {
     .wms-camera-bar {
         max-width: calc(100% - 270px);
     }
 }
 
-@media (max-width: 1250px) {
+@container wms (max-width: 1250px) {
     .wms-welcome__grid {
         grid-template-columns: auto auto;
     }
@@ -220,7 +285,7 @@
     }
 }
 
-@media (max-width: 1100px) {
+@container wms (max-width: 1100px) {
     .wms-stack {
         max-width: calc(100% - 32px);
     }

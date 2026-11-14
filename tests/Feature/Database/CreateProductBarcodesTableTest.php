@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Product;
-use App\Models\StoreProductBarcode;
+use App\Models\ProductBarcode;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -26,13 +26,15 @@ test('the migration leaves an existing product_barcodes table alone', function (
     expect(Schema::hasColumn('product_barcodes', 'barcode'))->toBeFalse();
 });
 
-test('the migration creates the expected columns', function () {
-    expect(Schema::hasColumns('product_barcodes', ['id', 'product_id', 'barcode', 'created_at', 'updated_at']))->toBeTrue();
+test('the migration creates the expected columns, which the one barcode model reads', function () {
+    expect(Schema::hasColumns('product_barcodes', ['id', 'product_id', 'barcode', 'created_at', 'updated_at']))->toBeTrue()
+        ->and((new Product)->barcodes()->getRelated()->getTable())->toBe('product_barcodes');
 });
 
-test('deleting a product with barcodes is restricted, and the product survives', function () {
+test('deleting a product with barcodes is restricted by the database, and the product survives', function () {
+    // The schema fact; every delete path removes the barcodes first.
     $product = Product::create(['name' => 'Widget', 'ar_name' => 'ويدجت']);
-    StoreProductBarcode::create(['product_id' => $product->id, 'barcode' => '1234567890']);
+    ProductBarcode::create(['product_id' => $product->id, 'barcode' => '1234567890']);
 
     expect(fn () => $product->delete())->toThrow(QueryException::class);
     expect(Product::query()->whereKey($product->id)->exists())->toBeTrue();

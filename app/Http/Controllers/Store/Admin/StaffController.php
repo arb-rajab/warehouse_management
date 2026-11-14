@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterStaffRequest;
 use App\Http\Requests\Store\Admin\StoreStaffRequest;
 use App\Http\Requests\Store\Admin\UpdateStaffRequest;
@@ -31,6 +32,8 @@ use Inertia\Response;
  */
 class StaffController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /**
      * @return array<int, Middleware>
      */
@@ -89,6 +92,7 @@ class StaffController extends Controller implements HasMiddleware
 
             $user->assignRole($role);
         });
+        $this->flashSuccess('staff_has_been_created_successfully');
 
         return redirect()->route('staffs.index');
     }
@@ -100,7 +104,7 @@ class StaffController extends Controller implements HasMiddleware
 
         return Inertia::render('Store/Admin/Staff/Staffs/Edit', [
             'staffMember' => new StaffResource($staff),
-            'roles' => RoleResource::collection($this->assignableRoles($request)),
+            'roles' => RoleResource::collection($this->assignableRoles($request, $staff)),
         ]);
     }
 
@@ -128,6 +132,7 @@ class StaffController extends Controller implements HasMiddleware
 
             $user->syncRoles([$role]);
         });
+        $this->flashSuccess('staff_has_been_updated_successfully');
 
         return redirect()->route('staffs.index');
     }
@@ -140,6 +145,7 @@ class StaffController extends Controller implements HasMiddleware
             StoreUser::destroy($staff->user_id);
             $staff->delete();
         });
+        $this->flashSuccess('staff_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('staffs.index', $request);
     }
@@ -161,13 +167,26 @@ class StaffController extends Controller implements HasMiddleware
 
     /**
      * The roles the signed-in staff member can give: every store role but
-     * Super Admin that grants nothing beyond their own permissions.
+     * Super Admin that grants nothing beyond what they may hand on. On the edit
+     * form the account's own role is kept in the list even when the editor
+     * could not give it (a role with a sensitive permission, for anyone but a
+     * Super Admin), so saving the other fields keeps it; UpdateStaffRequest
+     * accepts it for the same reason.
      *
      * @return Collection<int, Role>
      */
-    private function assignableRoles(Request $request): Collection
+    private function assignableRoles(Request $request, ?Staff $staff = null): Collection
     {
-        return $this->privileges($request)->assignableRoles();
+        $roles = $this->privileges($request)->assignableRoles();
+
+        if ($staff?->role_id !== null && ! $roles->contains('id', $staff->role_id)) {
+            $current = Role::query()->excludingSuperAdmin()->select(['id', 'name'])->withSensitiveFlag()->find($staff->role_id);
+            if ($current !== null) {
+                $roles->prepend($current);
+            }
+        }
+
+        return $roles;
     }
 
     private function privileges(Request $request): StaffPrivileges

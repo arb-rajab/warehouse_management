@@ -67,9 +67,7 @@ const tableColumns = computed(() => [
             :empty-message="t('store.subscribers.index.empty')"
         >
             <template #row="{ row: subscriber }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ subscriber.email }}
                 </td>
                 <td v-if="shown.date" class="px-4 py-2">

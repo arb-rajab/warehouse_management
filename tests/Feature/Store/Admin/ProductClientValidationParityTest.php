@@ -49,7 +49,8 @@ function productServerOnlyRules(): array
         'variants.*.image' => [['exists'], 'upload ownership'],
         'product_types' => [['list'], 'request shape, not a user mistake'],
         'product_barcodes' => [['list'], 'request shape, not a user mistake'],
-        'product_barcodes.*' => [['unique'], 'other products\' barcodes'],
+        'product_barcodes.*' => [['new_product_barcode'], 'every product\'s barcodes and the product ids'],
+        'product_barcodes_seen' => [['list'], 'request shape: the hidden list of the values the edit form loaded'],
         'colors' => [['list'], 'request shape, not a user mistake'],
         'colors.*' => [['exists'], 'a colour row'],
         'choice_options' => [['list'], 'request shape, not a user mistake'],
@@ -277,7 +278,8 @@ test('the browser messages repeat the server wording', function (string $locale)
         expect($line)->toBe(Lang::get("validation.{$key}", [], $locale), "validation.{$key} ({$locale})");
     }
 
-    $attributes = Lang::get('validation.attributes', [], $locale) + Lang::get('validation.attributes', [], 'en');
+    // The server nests some attributes (`gateways.<gateway>.<field>`); the validator and the browser mirror look them up by their dotted key.
+    $attributes = Arr::dot(Lang::get('validation.attributes', [], $locale)) + Arr::dot(Lang::get('validation.attributes', [], 'en'));
     foreach ($mirror['attributes'] as $field => $line) {
         expect($line)->toBe($attributes[$field] ?? null, "validation.attributes.{$field} ({$locale})");
     }

@@ -13,4 +13,5 @@ enum CellLogAction: string
     case Deactivated = 'deactivated';
     case Reactivated = 'reactivated';
     case ProductChanged = 'product_changed';
+    case NoteChanged = 'note_changed';
 }

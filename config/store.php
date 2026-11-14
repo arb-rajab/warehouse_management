@@ -66,11 +66,12 @@ return [
     | (EnsurePaymentGatewayEnabled). Cash on delivery and the manual payment
     | methods are not gateways.
     |
-    | Enabling one is not enough on its own. Most of these still read their
-    | credentials with env(), which is null once config is cached (only PayHere
-    | has been moved to config/services.php), and each callback has to verify
-    | the gateway's signature before it marks anything paid. See
-    | .ai/rules/legacy-albaraka-holland.md, section 0.3.
+    | This is the fallback: once staff choose the enabled gateways on the
+    | Payment methods page, that list wins (App\Support\StorePaymentGateways::enabled()).
+    | Every gateway reads its credentials through that class (saved in the
+    | admin, else config/services.php and config/nagad.php), and every callback
+    | verifies the payment with the gateway's own server before it marks
+    | anything paid. See .ai/rules/legacy-albaraka-holland.md, section 0.3.
     |
     */
 
@@ -96,6 +97,20 @@ return [
         'sslcommerz' => [SslcommerzController::class, ApiSslCommerzController::class],
         'voguepay' => [VoguepayController::class],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gateway Return Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | How long, in minutes, a storefront SSLCommerz, AamarPay or iyzico payment
+    | can come back after it was started. Its pending row in wms_gateway_payments
+    | (App\Services\GatewayReturn) is refused after that, and pruned 90 days
+    | later. See .ai/rules/payment-gateway-returns.md.
+    |
+    */
+
+    'gateway_return_ttl_minutes' => 180,
 
     /*
     |--------------------------------------------------------------------------

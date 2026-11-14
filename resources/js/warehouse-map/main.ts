@@ -11,7 +11,9 @@ import { browserStorage } from './data/Storage';
 import type { StorageLike } from './data/Storage';
 import type { WarehouseRepository } from './data/WarehouseRepository';
 import type { HashTarget } from './domain/SlotCode';
-import type { Locale, Slot } from './domain/types';
+import type { Locale, Slot, WarehouseOption } from './domain/types';
+import { warehouseSelectionLabel } from './domain/warehouseSelection';
+import type { WarehouseSelection } from './domain/warehouseSelection';
 import { I18n } from './i18n/I18n';
 import type { Messages } from './i18n/I18n';
 import { GamepadAdapter } from './input/GamepadAdapter';
@@ -24,6 +26,8 @@ import { LazySceneView } from './scene3d/LazySceneView';
 import { SceneView } from './scene3d/SceneView';
 import type { SceneHost } from './scene3d/SceneView';
 import { createActions } from './state/actions';
+import { carryOf, keepsCamera } from './state/carry';
+import type { MapCarry } from './state/carry';
 import {
     createMatchSelector,
     createProductOptionsSelector,
@@ -62,6 +66,7 @@ import { StateChips } from './ui/StateChips';
 import { Toolbar } from './ui/Toolbar';
 import { TouchControls } from './ui/TouchControls';
 import { WalkBar } from './ui/WalkBar';
+import { WarehouseSwitcher } from './ui/WarehouseSwitcher';
 import { WelcomeCard } from './ui/WelcomeCard';
 import { ZoomControls } from './ui/ZoomControls';
 import { copyText } from './utils/clipboard';
@@ -79,14 +84,79 @@ export interface WarehouseMapOptions {
     fallbackMessages?: Messages;
     /** Changes the panel's language (it reloads the page). */
     switchLocale(locale: Locale): void;
+    /**
+     * Asks the host to transfer the pallet on an occupied shelf (the rack
+     * dialog's "Transfer…" button, shown only when this is given). The host
+     * owns the destination picker and the request; the map stays read-only.
+     */
+    transferPallet?(request: PalletTransferRequest): void;
+    /**
+     * Every warehouse and the ones the rows were asked for. With more than
+     * one warehouse the toolbar shows a switcher; a choice goes to `select`,
+     * and the host (which owns the URL) answers with `showWarehouses()`.
+     */
+    warehouses?: WarehouseSwitchOptions;
+    /**
+     * What the map held before the host mounted it again (its `snapshot()`),
+     * e.g. after Back to another set of warehouses: kept where the new rows
+     * still hold it.
+     */
+    carry?: MapCarry | null;
     repository?: WarehouseRepository;
+    /** Builds the repository for a rows URL (the HTTP one by default). */
+    createRepository?(rowsUrl: string): WarehouseRepository;
     storage?: StorageLike;
+}
+
+export interface WarehouseSwitchOptions {
+    options: readonly WarehouseOption[];
+    selectedIds: WarehouseSelection;
+    select(ids: WarehouseSelection): void;
+}
+
+export type { MapCarry, WarehouseOption, WarehouseSelection };
+
+/** The pallet a rack dialog's "Transfer…" button hands to the host. */
+export interface PalletTransferRequest {
+    palletId: number;
+    rowLetter: string;
+    cellNumber: number;
+    flatNumber: number;
+    /** The pallet's current warehouse, when the rows payload names it. */
+    warehouseId: number | null;
+    productName: string;
+    productArName: string;
+}
+
+/** The transfer request for an occupied slot. */
+export function transferRequestOf(slot: Slot): PalletTransferRequest | null {
+    if (!slot.pallet) {
+        return null;
+    }
+
+    return {
+        palletId: slot.pallet.id,
+        rowLetter: slot.row,
+        cellNumber: slot.col,
+        flatNumber: slot.level,
+        warehouseId: slot.warehouseId ?? null,
+        productName: slot.pallet.productName,
+        productArName: slot.pallet.productArName,
+    };
 }
 
 export interface WarehouseMapHandle {
     dispose(): void;
     /** Revalidates the warehouse now. */
     refresh(): Promise<void>;
+    /**
+     * Shows the rows of other warehouses in place: the view, the search,
+     * the chips, the floor, the target, the selection, the open rack and the
+     * camera stay where the new rows still hold them.
+     */
+    showWarehouses(ids: WarehouseSelection, rowsUrl: string): Promise<void>;
+    /** What a later mount can carry over (see `WarehouseMapOptions.carry`). */
+    snapshot(): MapCarry;
 }
 
 const EMPTY = {} as const;
@@ -148,6 +218,7 @@ export function mountWarehouseMap(
     const store = new Store<MapState>(
         initialState({
             locale: options.locale,
+            warehouseIds: options.warehouses?.selectedIds ?? null,
             theme: savedTheme ?? systemTheme(),
             folded: settingsStore.loadFolded(),
             settings: { ...DEFAULT_SETTINGS, ...settingsStore.loadSettings() },
@@ -169,8 +240,11 @@ export function mountWarehouseMap(
     const layout = track(new MapLayout(host));
     const frames = new FrameLoop();
     const hud = track(new HudStack(layout.root));
-    const repository =
-        options.repository ?? new HttpWarehouseRepository(options.rowsUrl);
+    const repositoryFor =
+        options.createRepository ??
+        ((url: string) => new HttpWarehouseRepository(url));
+    let repository = options.repository ?? repositoryFor(options.rowsUrl);
+    let pendingCarry = options.carry ?? null;
     let userChoseTheme = savedTheme !== null;
     let keysPanel: KeysPanel | null = null;
     let km: KeyboardMouseAdapter | null = null;
@@ -416,6 +490,21 @@ export function mountWarehouseMap(
             () => actions.setFolded(!store.get().folded),
         ),
     );
+    const warehouseOptions = options.warehouses?.options ?? [];
+    const switcher =
+        options.warehouses && warehouseOptions.length > 1
+            ? new WarehouseSwitcher(
+                  slice((s) => ({
+                      options: warehouseOptions,
+                      selected: s.warehouseIds,
+                  })),
+                  i18n,
+                  { apply: (ids) => options.warehouses?.select(ids) },
+              )
+            : undefined;
+    const selectionLabel = (ids: WarehouseSelection) =>
+        warehouseSelectionLabel(warehouseOptions, ids, t);
+
     track(
         new Toolbar(
             layout.root,
@@ -444,6 +533,7 @@ export function mountWarehouseMap(
             chips,
             products,
             options.helpUrl,
+            switcher,
         ),
     );
 
@@ -649,6 +739,15 @@ export function mountWarehouseMap(
                 copyLink: (slot) => void copyLink(slot),
                 showIn3d: (slot) => navigator_.showIn3d(slot),
                 showInPlan: (slot) => navigator_.showInPlan(slot),
+                transferPallet: options.transferPallet
+                    ? (slot) => {
+                          const request = transferRequestOf(slot);
+
+                          if (request) {
+                              options.transferPallet?.(request);
+                          }
+                      }
+                    : undefined,
             },
         ),
     );
@@ -699,7 +798,8 @@ export function mountWarehouseMap(
         new LoadStatus(
             layout.root,
             slice((s) => ({
-                loaded: s.warehouse !== null,
+                // a failed switch of warehouses covers the old rows with the retry
+                loaded: s.warehouse !== null && !s.loadFailed,
                 failed: s.loadFailed,
             })),
             i18n,
@@ -805,9 +905,11 @@ export function mountWarehouseMap(
         new Refetcher(
             document,
             async () => {
-                const snapshot = await repository.load();
+                const source = repository;
+                const snapshot = await source.load();
 
-                if (snapshot.changed) {
+                // a switch of warehouses while this was on its way wins
+                if (snapshot.changed && source === repository) {
                     actions.setWarehouse(snapshot.warehouse);
                 }
             },
@@ -819,11 +921,30 @@ export function mountWarehouseMap(
     async function load(): Promise<void> {
         actions.setLoadFailed(false);
 
+        const source = repository;
+
         try {
-            const snapshot = await repository.load();
+            const snapshot = await source.load();
+
+            if (source !== repository) {
+                return;
+            }
 
             refetcher.markFresh();
-            actions.setWarehouse(snapshot.warehouse);
+
+            if (pendingCarry) {
+                const carry = pendingCarry;
+
+                pendingCarry = null;
+                actions.showRows(snapshot.warehouse, carry);
+                revealTargetInPlan();
+                announceSwitch(carry.warehouseIds);
+            } else if (store.get().warehouse) {
+                // a retry after a failed switch: carry over as the switch would have
+                actions.showRows(snapshot.warehouse);
+            } else {
+                actions.setWarehouse(snapshot.warehouse);
+            }
 
             const target = hash.applyCurrent();
 
@@ -834,7 +955,83 @@ export function mountWarehouseMap(
                 );
             }
         } catch {
-            actions.setLoadFailed(true);
+            if (source === repository) {
+                actions.setLoadFailed(true);
+            }
+        }
+    }
+
+    /** Tells which warehouses are now on the map, after a change of them. */
+    function announceSwitch(before: WarehouseSelection): void {
+        const now = store.get().warehouseIds;
+
+        if (switcher && JSON.stringify(before) !== JSON.stringify(now)) {
+            actions.showHint(
+                t('warehouseShowing', { name: selectionLabel(now) }),
+                3200,
+            );
+        }
+    }
+
+    /** The 2D plan refits on new rows; a target that is still there is brought back into view. */
+    function revealTargetInPlan(): void {
+        const s = store.get();
+        const target = selectTarget(s);
+
+        if (s.view === '2d' && target) {
+            requestAnimationFrame(() => plan.reveal(target));
+        }
+    }
+
+    let switchSeq = 0;
+
+    async function showWarehouses(
+        ids: WarehouseSelection,
+        rowsUrl: string,
+    ): Promise<void> {
+        const seq = ++switchSeq;
+        const before = store.get();
+
+        actions.setWarehouseIds(ids);
+        repository = repositoryFor(rowsUrl);
+        actions.setLoadFailed(false);
+
+        try {
+            const snapshot = await repository.load();
+
+            if (seq !== switchSeq) {
+                return;
+            }
+
+            refetcher.markFresh();
+
+            if (!store.get().warehouse) {
+                // the first load is still on its way or failed: start from these rows
+                actions.showRows(snapshot.warehouse, pendingCarry ?? undefined);
+                pendingCarry = null;
+                announceSwitch(before.warehouseIds);
+
+                return;
+            }
+
+            const shown = store.get();
+
+            actions.showRows(snapshot.warehouse);
+
+            if (
+                shown.view === '3d' &&
+                scene.isBuilt &&
+                !keepsCamera(shown, store.get())
+            ) {
+                scene.goOverview();
+            }
+
+            revealTargetInPlan();
+            announceSwitch(before.warehouseIds);
+        } catch {
+            if (seq === switchSeq) {
+                actions.setLoadFailed(true);
+            }
         }
     }
 
@@ -843,6 +1040,8 @@ export function mountWarehouseMap(
 
     return {
         refresh: () => refetcher.maybeRefresh(),
+        showWarehouses,
+        snapshot: () => carryOf(store.get()),
         dispose(): void {
             clearTimeout(awayTimer.id);
             cleanups.splice(0).forEach((fn) => fn());

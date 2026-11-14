@@ -19,11 +19,20 @@ use Illuminate\Validation\ValidationException;
  * and no one manages an account that holds more than they do. The Super Admin
  * holds everything, so it is never limited. The permissions a staff member
  * holds are the direct ones and those of their roles.
+ *
+ * The sensitive permissions (StorePermissions::SENSITIVE: `smtp_settings`,
+ * `payment_methods_configurations`)
+ * only a Super Admin grants, even to someone who holds them: anyone else can
+ * neither tick them onto a role, nor take them off one, nor give a role that
+ * carries one. Existing grants are never revoked.
  */
 final class StaffPrivileges
 {
     /** @var array<int, int>|null */
     private ?array $held = null;
+
+    /** @var array<int, int>|null */
+    private ?array $sensitive = null;
 
     public function __construct(private readonly StoreUser $actor) {}
 
@@ -43,6 +52,30 @@ final class StaffPrivileges
     }
 
     /**
+     * The permissions the actor may hand on: those they hold, without the
+     * sensitive ones unless they are a Super Admin.
+     *
+     * @return array<int, int>
+     */
+    public function grantablePermissionIds(): array
+    {
+        return $this->isSuperAdmin()
+            ? $this->heldPermissionIds()
+            : array_values(array_diff($this->heldPermissionIds(), $this->sensitivePermissionIds()));
+    }
+
+    /**
+     * The ids of the sensitive store permissions (StorePermissions::SENSITIVE).
+     *
+     * @return array<int, int>
+     */
+    public function sensitivePermissionIds(): array
+    {
+        return $this->sensitive ??= Permission::query()->whereIn('name', StorePermissions::SENSITIVE)
+            ->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    /**
      * @param  array<int, int>  $permissionIds
      */
     public function holdsAll(array $permissionIds): bool
@@ -52,11 +85,11 @@ final class StaffPrivileges
 
     /**
      * Whether `$role` could be given to someone: it grants nothing beyond what
-     * the actor holds.
+     * the actor may hand on (a role with a sensitive permission: Super Admin only).
      */
     public function canAssign(Role $role): bool
     {
-        return $this->isSuperAdmin() || $this->holdsAll($this->roleIds($role));
+        return $this->isSuperAdmin() || array_diff($this->roleIds($role), $this->grantablePermissionIds()) === [];
     }
 
     /**
@@ -81,21 +114,21 @@ final class StaffPrivileges
      */
     public function assignableRoles(): Collection
     {
-        return Role::query()->excludingSuperAdmin()->select(['id', 'name'])->orderByDesc('id')->get()
+        return Role::query()->excludingSuperAdmin()->select(['id', 'name'])->withSensitiveFlag()->orderByDesc('id')->get()
             ->filter(fn (Role $role): bool => $this->canAssign($role))->values();
     }
 
     /**
      * The permissions a new role gets: those checked, all of which the actor
-     * must hold.
+     * must hold, and none of them sensitive unless the actor is a Super Admin.
      *
      * @param  array<int, int>  $submitted
      * @return array<int, int>
      */
     public function permissionsForNewRole(array $submitted): array
     {
-        if (! $this->isSuperAdmin() && ! $this->holdsAll($submitted)) {
-            throw ValidationException::withMessages(['permissions' => __('messages.role_permission_not_held')]);
+        if (! $this->isSuperAdmin()) {
+            $this->refuseUngrantable(array_diff($submitted, $this->grantablePermissionIds()));
         }
 
         return $submitted;
@@ -103,7 +136,8 @@ final class StaffPrivileges
 
     /**
      * The permissions an edited role ends with. The actor can add or remove
-     * only permissions they hold: a permission the role has and they lack stays
+     * only permissions they may hand on: a permission the role has and they
+     * lack, or a sensitive one when they are not a Super Admin, stays as it was
      * (the form never offers it), and ticking one the role lacks is refused.
      *
      * @param  array<int, int>  $submitted
@@ -116,12 +150,24 @@ final class StaffPrivileges
             return $submitted;
         }
 
-        $held = $this->heldPermissionIds();
-        if (array_diff($submitted, $held, $current) !== []) {
-            throw ValidationException::withMessages(['permissions' => __('messages.role_permission_not_held')]);
+        $grantable = $this->grantablePermissionIds();
+        $this->refuseUngrantable(array_diff($submitted, $grantable, $current));
+
+        return array_values(array_unique([...array_intersect($submitted, $grantable), ...array_diff($current, $grantable)]));
+    }
+
+    /**
+     * @param  array<int, int>  $ungrantable  submitted permissions the actor may not hand on
+     */
+    private function refuseUngrantable(array $ungrantable): void
+    {
+        if ($ungrantable === []) {
+            return;
         }
 
-        return array_values(array_unique([...array_intersect($submitted, $held), ...array_diff($current, $held)]));
+        throw ValidationException::withMessages(['permissions' => array_intersect($ungrantable, $this->sensitivePermissionIds()) !== []
+            ? __('messages.role_permission_super_admin_only')
+            : __('messages.role_permission_not_held')]);
     }
 
     /**

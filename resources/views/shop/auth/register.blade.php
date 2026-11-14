@@ -162,7 +162,7 @@
                                                 <!-- Recaptcha -->
                                                 @if(get_setting('google_recaptcha') == 1)
                                                     <div class="form-group">
-                                                        <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                                                        <div class="g-recaptcha" data-sitekey="{{ app(\App\Support\StoreRecaptchaSettings::class)->siteKey() }}"></div>
                                                         @error('g-recaptcha-response')
                                                             <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                                                         @enderror
@@ -178,8 +178,8 @@
                                                             <div class="modal-header d-block py-4">
                                                                 <div class="d-flex justify-content-center">
                                                                 </div>
-                                                                <h4 class="modal-title text-center fw-700" id="personalInfo_enterPassword_modalModalLabel" style="color: #ff0000;">{{ __('storefront.common.terms_conditions')}}</h4>
-                                                                <p class="fs-16 fw-600 text-center" style="color: #8d8d8d;">{{ __('storefront.auth.please_read_and_agree_to_terms_and_conditions_to_create_an_account')}}</p>
+                                                                <h4 class="modal-title text-center fw-700 text-danger" id="personalInfo_enterPassword_modalModalLabel">{{ __('storefront.common.terms_conditions')}}</h4>
+                                                                <p class="fs-16 fw-600 text-center text-secondary">{{ __('storefront.auth.please_read_and_agree_to_terms_and_conditions_to_create_an_account')}}</p>
                                                             </div>
 
                                                             <div class="modal-body">
@@ -310,17 +310,20 @@
             }
         }
 
-        intlTelInput(input, {
-            separateDialCode: true,
-            utilsScript: "{{ static_asset('assets/js/intlTelutils.js') }}?1590403638580",
-            onlyCountries: @php echo json_encode(\App\Models\Country::where('status', 1)->pluck('code')->toArray()) @endphp,
-            customPlaceholder: function(selectedCountryPlaceholder, selectedCountryData) {
-                if(selectedCountryData.iso2 == 'bd'){
-                    return "01xxxxxxxxx";
+        // #phone-code only exists when the otp_system addon renders it.
+        if (input) {
+            intlTelInput(input, {
+                separateDialCode: true,
+                utilsScript: "{{ static_asset('assets/js/intlTelutils.js') }}?1590403638580",
+                onlyCountries: @php echo json_encode(\App\Models\Country::where('status', 1)->pluck('code')->toArray()) @endphp,
+                customPlaceholder: function(selectedCountryPlaceholder, selectedCountryData) {
+                    if(selectedCountryData.iso2 == 'bd'){
+                        return "01xxxxxxxxx";
+                    }
+                    return selectedCountryPlaceholder;
                 }
-                return selectedCountryPlaceholder;
-            }
-        });
+            });
+        }
 
         function toggleEmailPhone(el){
             if(isPhoneShown){

@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Support\ApiResourceResponse;
+use App\Support\MergeRepeatedResponseAttributes;
+use App\Support\StoreDefaultLanguage;
+use App\Support\StoreMailSettings;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -19,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +68,12 @@ class AppServiceProvider extends ServiceProvider
             autoOrientation: false,
             decodeAnimation: false,
         ));
+
+        // One per process: it remembers the `.env` mail values it overrides.
+        $this->app->singleton(StoreMailSettings::class);
+
+        // One per process: it remembers the `.env` default language it overrides.
+        $this->app->singleton(StoreDefaultLanguage::class);
     }
 
     /**
@@ -73,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureApiDocumentation();
+        $this->applyStoreMailSettings();
+        $this->applyStoreDefaultLanguage();
 
         // Merged from the legacy store's AppServiceProvider (see
         // .ai/rules/legacy-albaraka-holland.md section 2). Its migrations
@@ -144,6 +156,23 @@ class AppServiceProvider extends ServiceProvider
         // cache (two simultaneous requests both read the same count) and
         // was keyed on IP and path with a hand-rolled 429 body. Same budget, 5
         // sign-ups per IP per 15 minutes, on the framework's atomic limiter.
+        // SSLCommerz, AamarPay and iyzico's returns (routes/shop-gateway-returns.php): 30 a
+        // minute from one address, and 10 a minute for one reference, which caps how often a
+        // reference can make the store ask the gateway's server. A customer's browser returns
+        // once or twice; the gateways do not retry these from their servers.
+        RateLimiter::for('gateway-returns', function (Request $request): array {
+            $reference = collect([$request->input('tran_id'), $request->input('mer_txnid'), $request->input('token')])
+                ->first(fn (mixed $value): bool => is_scalar($value) && (string) $value !== '');
+
+            $limits = [Limit::perMinute(30)->by('gateway-returns-ip|'.$request->ip())];
+
+            if ($reference !== null) {
+                $limits[] = Limit::perMinute(10)->by('gateway-returns|'.$request->segment(2).'|'.sha1((string) $reference));
+            }
+
+            return $limits;
+        });
+
         RateLimiter::for('store-signup', fn (Request $request): Limit => Limit::perMinutes(15, 5)->by('store-signup|'.$request->ip()));
 
         // `user('sanctum')`, never a bare `user()`: with no guard argument the
@@ -167,12 +196,50 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('wms', fn (Request $request): Limit => Limit::perMinute(120)->by('wms|'.$request->ip()));
     }
 
+    /**
+     * The SMTP settings saved in the store admin win over MAIL_* (StoreMailSettings,
+     * .ai/rules/admin-env-overrides.md). Applied on web requests and before each
+     * queued job, so a running worker picks up a save; never for other console
+     * commands, since `config:cache` and `optimize` boot this provider and would
+     * write the decrypted SMTP password into bootstrap/cache/config.php.
+     */
+    private function applyStoreMailSettings(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            $this->app->make(StoreMailSettings::class)->apply();
+        }
+
+        Event::listen(JobProcessing::class, function (): void {
+            $this->app->make(StoreMailSettings::class)->apply();
+        });
+    }
+
+    /**
+     * The default content language saved on the Languages page wins over
+     * DEFAULT_LANGUAGE (StoreDefaultLanguage, .ai/rules/admin-env-overrides.md).
+     * Applied on web requests and before each queued job; never for other
+     * console commands, so `config:cache` and `optimize` cannot write it into
+     * bootstrap/cache/config.php.
+     */
+    private function applyStoreDefaultLanguage(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            $this->app->make(StoreDefaultLanguage::class)->apply();
+        }
+
+        Event::listen(JobProcessing::class, function (): void {
+            $this->app->make(StoreDefaultLanguage::class)->apply();
+        });
+    }
+
     private function configureApiDocumentation(): void
     {
         Scramble::registerExtension(ApiResourceResponse::class);
 
         Scramble::configure()
             ->routes(fn (Route $route): bool => str_starts_with($route->uri(), 'api/') && ! $route->isFallback)
+            // Appended after Scramble's ResponseExtension, which keeps only the last #[Response] per status.
+            ->withOperationTransformers(MergeRepeatedResponseAttributes::class)
             ->withDocumentTransformers(function (OpenApi $openApi): void {
                 $openApi->components->addSecurityScheme('privateToken', SecurityScheme::apiKey('header', 'private-token'));
                 $openApi->tags = array_map(fn (string $name): Tag => new Tag($name), array_values(self::API_DOCUMENTATION_TAGS));

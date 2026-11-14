@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Pencil, Trash2 } from '@lucide/vue';
+import { Pencil, Trash2, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import {
     create,
@@ -59,10 +59,20 @@ function onPerPageChange(perPage: number): void {
             :empty-message="t('store.roles.index.empty')"
         >
             <template #row="{ row: role }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ role.name }}
+                    <span
+                        v-if="role.sensitive"
+                        class="ms-2 inline-flex items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger-strong"
+                        :title="t('store.roles.index.sensitiveBadgeHint')"
+                        data-badge="sensitive"
+                    >
+                        <TriangleAlert class="h-3.5 w-3.5" aria-hidden="true" />
+                        {{ t('store.roles.index.sensitiveBadge') }}
+                        <span class="sr-only">{{
+                            t('store.roles.index.sensitiveBadgeHint')
+                        }}</span>
+                    </span>
                 </td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">

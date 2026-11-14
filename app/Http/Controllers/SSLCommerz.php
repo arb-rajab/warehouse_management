@@ -1,8 +1,8 @@
 <?php
 namespace App\Http\Controllers;
 use App\Models\BusinessSetting;
+use App\Support\StorePaymentGateways;
 use Illuminate\Support\Facades\Http;
-use Session;
 
 # IF BROWSE FROM LOCAL HOST, KEEP true
 if(!defined("SSLCZ_IS_LOCAL_HOST")){
@@ -22,14 +22,14 @@ class SSLCommerz
 
     public function __construct()
     {
-        if(Session::has('payment_type')){
-            # IF SANDBOX TRUE, THEN IT WILL CONNECT WITH SSLCOMMERZ SANDBOX (TEST) SYSTEM
-            # (a property, not a define(): a constant cannot be defined twice, so a
-            # second instance in one process threw)
-            $this->setSSLCommerzMode(BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1 ? 1 : 0);
-            $this->store_id = env('SSLCZ_STORE_ID');
-            $this->store_pass = env('SSLCZ_STORE_PASSWD');
-        }
+        # IF SANDBOX TRUE, THEN IT WILL CONNECT WITH SSLCOMMERZ SANDBOX (TEST) SYSTEM
+        # (a property, not a define(): a constant cannot be defined twice, so a
+        # second instance in one process threw). Always, not only when the session
+        # holds a payment: the return arrives with no session (GatewayReturn), and
+        # without the store password its signature check failed.
+        $this->setSSLCommerzMode(BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1 ? 1 : 0);
+        $this->store_id = StorePaymentGateways::get('sslcommerz', 'store_id');
+        $this->store_pass = StorePaymentGateways::get('sslcommerz', 'store_password');
         $this->sslc_submit_url = "https://" . $this->sslc_mode . ".sslcommerz.com/gwprocess/v3/api.php";
         $this->sslc_validation_url = "https://" . $this->sslc_mode . ".sslcommerz.com/validator/api/validationserverAPI.php";
     }

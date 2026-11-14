@@ -4,6 +4,7 @@ use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Store\Admin\GoogleMapController;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -34,7 +35,10 @@ test('the Google Maps page exposes exactly its stored settings', function (strin
             ->has('settings', fn (Assert $settings) => $settings
                 ->where('google_map', $enabled === '1')
                 ->where('google_map_latitude', '33.513')
-                ->where('google_map_longtitude', '36.291'))
+                ->where('google_map_longtitude', '36.291')
+                ->where('google_map_api_key_set', false)
+                ->where('google_map_api_key_mask', '')
+                ->where('google_map_api_key_from_env', false))
     );
 })->with(['enabled' => '1', 'disabled' => '0']);
 
@@ -48,7 +52,10 @@ test('missing Google Maps settings render empty coordinates with the storefront 
             ->has('settings', fn (Assert $settings) => $settings
                 ->where('google_map', false)
                 ->where('google_map_latitude', '')
-                ->where('google_map_longtitude', ''))
+                ->where('google_map_longtitude', '')
+                ->where('google_map_api_key_set', false)
+                ->where('google_map_api_key_mask', '')
+                ->where('google_map_api_key_from_env', false))
     );
 });
 
@@ -73,14 +80,15 @@ test('the Google Maps configuration refuses unauthorized callers', function (str
 
 test('the Google Maps endpoint changes only allowlisted settings and invalidates their cache', function () {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
-    Cache::put('business_settings', 'old cache', 60);
+    Cache::put('business_settings', collect(), 60);
     Cache::put('unrelated cache', 'preserved', 60);
 
     $this->post('/temp/admin/google-map', [
         'google_map' => '0',
         'google_map_longtitude' => 0,
         'google_map_latitude' => 0,
-    ])->assertRedirect(route('google-map.index'));
+    ])->assertRedirect(route('google-map.index'))
+        ->assertInertiaFlash('success', 'Google map settings have been updated successfully');
 
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map', 'value' => '0']);
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map_longtitude', 'value' => '0']);
@@ -110,6 +118,7 @@ test('saving the toggle preserves coordinates and saving coordinates preserves t
 
 test('missing settings can be created without a prior business settings row', function () {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
+    config(['services.google_maps.key' => 'ENVKEY-from-environment']);
     DB::table('business_settings')->where('type', 'google_map')->delete();
 
     $this->post('/temp/admin/google-map', ['google_map' => true])
@@ -203,4 +212,136 @@ test('Google Maps coordinates accept their positive boundaries', function () {
         ->assertRedirect(route('google-map.index'));
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map_latitude', 'value' => '90']);
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map_longtitude', 'value' => '180']);
+});
+
+// the Google Maps API key
+
+function googleMapKeyRow(): ?string
+{
+    return DB::table('business_settings')->where('type', 'google_map_api_key')->whereNull('lang')->value('value');
+}
+
+beforeEach(function () {
+    config(['services.google_maps.key' => null]);
+});
+
+test('staff save the API key as a business setting, with the success flash', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    Cache::put('business_settings', collect(), 60);
+
+    $this->post(route('google-map.update'), ['google_map' => true, 'google_map_api_key' => '  AIzaSyTestKey_123-abc  '])
+        ->assertRedirect(route('google-map.index'))
+        ->assertInertiaFlash('success', 'Google map settings have been updated successfully');
+
+    expect(googleMapKeyRow())->toBe('AIzaSyTestKey_123-abc')
+        ->and(Cache::has('business_settings'))->toBeFalse();
+});
+
+test('the page never receives the saved key, only a mask and whether one is set', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    storeSetting('google_map_api_key', 'AIzaSyTestKey_123-abc');
+    config(['services.google_maps.key' => 'ENVKEY-from-environment']);
+    Cache::forget('business_settings');
+
+    $response = $this->get(route('google-map.index'))->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('settings', fn (Assert $settings) => $settings
+            ->where('google_map_api_key_set', true)
+            ->where('google_map_api_key_mask', '••••••••-abc')
+            ->where('google_map_api_key_from_env', true)
+            ->etc())
+    );
+
+    expect($response->getContent())->not->toContain('AIzaSyTestKey_123-abc')->not->toContain('ENVKEY-from-environment');
+});
+
+test('a saved key shorter than twelve characters is masked with bullets only', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    storeSetting('google_map_api_key', 'short-key');
+    Cache::forget('business_settings');
+
+    $this->get(route('google-map.index'))->assertInertia(
+        fn (Assert $page) => $page->where('settings.google_map_api_key_mask', '••••••••')
+    );
+});
+
+test('a blank key keeps the saved key and a new key replaces it', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    storeSetting('google_map_api_key', 'AIzaSyOldKey');
+
+    $this->post(route('google-map.update'), ['google_map' => true, 'google_map_api_key' => ''])
+        ->assertRedirect(route('google-map.index'));
+    expect(googleMapKeyRow())->toBe('AIzaSyOldKey');
+
+    $this->post(route('google-map.update'), ['google_map' => true])->assertRedirect(route('google-map.index'));
+    expect(googleMapKeyRow())->toBe('AIzaSyOldKey');
+
+    $this->post(route('google-map.update'), ['google_map' => true, 'google_map_api_key' => 'AIzaSyNewKey'])
+        ->assertRedirect(route('google-map.index'));
+    expect(googleMapKeyRow())->toBe('AIzaSyNewKey')
+        ->and(DB::table('business_settings')->where('type', 'google_map_api_key')->count())->toBe(1);
+});
+
+test('the key is required only while the map is on and neither a saved key nor MAP_API_KEY supplies one', function (bool $enabled, ?string $stored, ?string $env, bool $required) {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    if ($stored !== null) {
+        storeSetting('google_map_api_key', $stored);
+    }
+    config(['services.google_maps.key' => $env]);
+    Cache::forget('business_settings');
+
+    $response = $this->postJson(route('google-map.update'), ['google_map' => $enabled]);
+
+    if ($required) {
+        $response->assertUnprocessable()->assertJsonValidationErrors(['google_map_api_key'])
+            ->assertJsonPath('errors.google_map_api_key.0', 'The Google Maps API key field is required.');
+    } else {
+        $response->assertRedirect(route('google-map.index'));
+    }
+})->with([
+    'on, nothing set' => [true, null, null, true],
+    'on, saved key' => [true, 'AIzaSyOldKey', null, false],
+    'on, env key' => [true, null, 'ENVKEY', false],
+    'off, nothing set' => [false, null, null, false],
+]);
+
+test('an invalid key is refused and nothing is written', function (string $key) {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    $before = DB::table('business_settings')->orderBy('id')->get()->toArray();
+
+    $this->postJson(route('google-map.update'), ['google_map' => true, 'google_map_api_key' => $key])
+        ->assertUnprocessable()->assertJsonValidationErrors(['google_map_api_key']);
+
+    expect(DB::table('business_settings')->orderBy('id')->get()->toArray())->toEqual($before);
+})->with([
+    'spaces inside' => ['AIza bad key'],
+    'slash' => ['AIza/bad/key'],
+    'too long' => [str_repeat('a', 256)],
+]);
+
+test('the key is refused for callers without the permission and is never written', function (string $caller) {
+    actingAsRefusedStoreCaller($caller);
+
+    assertStoreCallerRefused($this->post('/temp/admin/google-map', ['google_map' => true, 'google_map_api_key' => 'AIzaSyTestKey']), $caller);
+
+    expect(googleMapKeyRow())->toBeNull();
+})->with('refused store admin callers');
+
+test('the key is never logged', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    Log::spy();
+
+    $this->post(route('google-map.update'), ['google_map' => true, 'google_map_api_key' => 'AIzaSyTestKey_secret'])
+        ->assertRedirect(route('google-map.index'));
+
+    Log::shouldNotHaveReceived('info');
+    Log::shouldNotHaveReceived('debug');
+});
+
+test('the public business settings API does not expose the saved key', function () {
+    storeSetting('google_map_api_key', 'AIzaSyTestKey_secret');
+    storeSetting('site_name', 'Al Baraka');
+
+    $response = $this->getJson('/api/v1/store/business-settings')->assertOk();
+
+    expect($response->getContent())->not->toContain('AIzaSyTestKey_secret');
 });

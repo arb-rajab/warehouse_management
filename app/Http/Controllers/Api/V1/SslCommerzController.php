@@ -7,10 +7,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Services\ApiGatewayPayment;
 use App\Models\BusinessSetting;
 use App\Models\GatewayPayment;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 # IF BROWSE FROM LOCAL HOST, KEEP true
 if (!defined("SSLCZ_IS_LOCAL_HOST")) {
@@ -27,8 +30,8 @@ class SslCommerzController extends Controller
 
     public function __construct()
     {
-        $this->store_id = env('SSLCZ_STORE_ID');
-        $this->store_pass = env('SSLCZ_STORE_PASSWD');
+        $this->store_id = StorePaymentGateways::get('sslcommerz', 'store_id');
+        $this->store_pass = StorePaymentGateways::get('sslcommerz', 'store_password');
     }
 
     /**
@@ -59,9 +62,20 @@ class SslCommerzController extends Controller
             return response()->json(['result' => false, 'url' => '', 'message' => __('api.payment.nothing_due')]);
         }
 
+        // The amount is in the store's currency; SSLCommerz is charged in its own. Converted before
+        // anything is recorded, so a refused payment leaves no pending record behind.
+        $currency = GatewayCurrency::sslcommerz();
+        $amountAtGateway = $currency->fromStore((float) $payment['amount']);
+
+        if ($amountAtGateway === null) {
+            Log::error('SSLCommerz refused: the store has no active rate for the gateway currency.', ['currency' => $currency->code]);
+
+            return response()->json(['result' => false, 'url' => '', 'message' => __('storefront.checkout.payment_failed')]);
+        }
+
         $post_data = [];
-        $post_data['total_amount'] = $payment['amount']; # You cant not pay less than 10
-        $post_data['currency'] = "BDT";
+        $post_data['total_amount'] = $amountAtGateway; # You cant not pay less than 10
+        $post_data['currency'] = $currency->code;
         $post_data['tran_id'] = 'AIZ-' . Str::random(20); // tran_id must be unique
 
         app(GatewayPaymentService::class)->begin('sslcommerz', $post_data['tran_id'], $payment['user_id'], $payment['payment_type'], $payment['combined_order_id'], $payment['package_id'], $payment['amount']);
@@ -81,9 +95,10 @@ class SslCommerzController extends Controller
         $post_data['cus_email'] = "some@mail.com";
 
 
-        $post_data['success_url'] = url("api/v1/sslcommerz/success");
-        $post_data['fail_url'] = url("api/v1/sslcommerz/fail");
-        $post_data['cancel_url'] = url("api/v1/sslcommerz/cancel");
+        // route(), not a hand-written path: the store API is mounted at /api/v1/store.
+        $post_data['success_url'] = route('api.sslcommerz.success');
+        $post_data['fail_url'] = route('api.sslcommerz.fail');
+        $post_data['cancel_url'] = route('api.sslcommerz.cancel');
 
         return $this->initiate($post_data);
     }
@@ -100,11 +115,16 @@ class SslCommerzController extends Controller
         $tran_id = (string) $request->input('tran_id');
         $pending = GatewayPayment::query()->where('gateway', 'sslcommerz')->where('reference', $tran_id)->whereNull('completed_at')->first();
 
-        if ($tran_id === '' || $pending === null || $this->sslcommerz_validate($tran_id, (float) $pending->amount, 'BDT', $request->all()) !== true) {
+        $currency = GatewayCurrency::sslcommerz();
+        $amountDueAtGateway = $pending === null ? null : $currency->fromStore((float) $pending->amount);
+
+        if ($tran_id === '' || $pending === null || $amountDueAtGateway === null
+            || $this->sslcommerz_validate($tran_id, $amountDueAtGateway, $currency->code, $request->all()) !== true) {
             return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
         }
 
-        $verified = new VerifiedPayment('sslcommerz', $tran_id, (float) ($this->sslc_data->amount ?? 0), json_encode($this->sslc_data));
+        $paid = $currency->paidInStoreCurrency((float) ($this->sslc_data->amount ?? 0), (float) $pending->amount);
+        $verified = new VerifiedPayment('sslcommerz', $tran_id, $paid, json_encode($this->sslc_data));
         if (! app(GatewayPaymentService::class)->completePending($verified)) {
             return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
         }

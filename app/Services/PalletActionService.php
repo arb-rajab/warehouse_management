@@ -16,7 +16,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The cell/pallet occupancy state machine (store/open/remove-boxes/empty/transfer),
+ * The cell/pallet occupancy state machine (store/place/open/remove-boxes/empty/transfer),
  * shared by Api\V1\PalletController (mobile app), Admin\PalletController (admin web
  * UI), and CellVerificationService when accepting reported corrections.
  * Mutating actions open transactions and lock the affected cells/pallets. Lifecycle
@@ -102,12 +102,16 @@ class PalletActionService
      * compared with the pallet's ETag as read under these locks, so no write can
      * slip in between the check and the action.
      *
+     * An unplaced pallet (received, no cell yet) is refused with
+     * `pallet_not_placed` before anything is locked: every action here works on
+     * a cell, and placing it (place()) comes first.
+     *
      * @param  list<string>|null  $ifMatchEtags
      * @return array{0: Cell, 1: Pallet}
      */
     private function lockPalletInCell(Pallet $pallet, ?array $ifMatchEtags = null): array
     {
-        $cell = $this->lockCellRow($pallet->cell_id);
+        $cell = $this->lockCellRow($this->placedCellId($pallet));
         $lockedPallet = $this->lockPallet($pallet->id);
 
         $this->assertPalletStillInCell($lockedPallet, $cell);
@@ -118,9 +122,20 @@ class PalletActionService
     }
 
     /**
+     * The cell a pallet sits in, or `pallet_not_placed` for an unplaced one.
+     */
+    private function placedCellId(Pallet $pallet): int
+    {
+        return $pallet->cell_id ?? throw new InvalidSlotStateException('pallet_not_placed', __('messages.pallet_not_placed'));
+    }
+
+    /**
+     * `$cell` is the cell locked for the pallet, null for an unplaced pallet
+     * (whose ETag reads no cell).
+     *
      * @param  list<string>|null  $ifMatchEtags
      */
-    private function assertIfMatch(Pallet $lockedPallet, Cell $cell, ?array $ifMatchEtags): void
+    private function assertIfMatch(Pallet $lockedPallet, ?Cell $cell, ?array $ifMatchEtags): void
     {
         if ($ifMatchEtags !== null && ! in_array($lockedPallet->setRelation('cell', $cell)->etag(), $ifMatchEtags, true)) {
             throw new PreconditionFailedException;
@@ -249,7 +264,9 @@ class PalletActionService
     }
 
     /**
-     * Write a pallet-action audit row; from/to states may be identical.
+     * Write a pallet-action audit row; from/to states may be identical. Logs
+     * are written against a cell, so an unplaced pallet has none until place()
+     * logs its arrival as `stored`.
      */
     private function logCellStatus(
         Cell $cell,
@@ -262,6 +279,7 @@ class PalletActionService
         ?string $note,
         ?int $relatedCellId = null,
         ?int $boxesCount = null,
+        ?int $oldProductId = null,
     ): void {
         CellStatusLog::create([
             'cell_id' => $cell->id,
@@ -270,6 +288,7 @@ class PalletActionService
             'from_state' => $fromState,
             'to_state' => $toState,
             'product_id' => $productId,
+            'old_product_id' => $oldProductId,
             'pallet_id' => $palletId,
             'boxes_count' => $boxesCount,
             'user_id' => $userId,
@@ -280,12 +299,10 @@ class PalletActionService
     /**
      * Store a new pallet into an Empty cell, transitioning it to Full — or straight to
      * Opened when first-level opening is allowed (see targetStateForCell()).
-     *
-     * @param  array{image_review_status: string, image_source: ?string, image_review_note?: ?string}|null  $imageReview
      */
-    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note, ?array $imageReview = null): Pallet
+    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note): Pallet
     {
-        return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note, $imageReview) {
+        return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note) {
             $cell = $this->lockCell($cellId);
 
             if ($cell->state !== CellState::Empty) {
@@ -298,10 +315,6 @@ class PalletActionService
                 ->select(['id'])
                 ->with('setting:product_id,boxes_count')
                 ->findOrFail($productId);
-
-            if ($imageReview !== null) {
-                app(ProductImageReviewService::class)->record($productId, $userId, $imageReview);
-            }
 
             $pallet = Pallet::create([
                 'product_id' => $product->id,
@@ -328,6 +341,67 @@ class PalletActionService
 
             return $pallet;
         });
+    }
+
+    /**
+     * Place a received but unplaced pallet (no cell yet) into an Empty cell of
+     * its own warehouse, transitioning the cell to Full — or straight to Opened
+     * on the first level (see targetStateForCell()) — exactly as store() does
+     * for a new pallet, and logging it as `stored` so the cell's history and
+     * the pallet's `cell_entered_at` read it as the pallet's arrival there.
+     *
+     * The cell is locked first and the pallet second, like every other action.
+     * Under those locks: an already placed pallet is refused
+     * (`pallet_already_placed`), then the `If-Match` precondition, then a cell
+     * in another warehouse (`pallet_warehouse_mismatch`: moving a received
+     * pallet to another warehouse is a transfer after placing it), then the
+     * cell guards of lockCell() and an occupied cell (`slot_not_empty`).
+     *
+     * @param  list<string>|null  $ifMatchEtags  The client's `If-Match` ETags (null: no precondition); a mismatch under the row locks throws PreconditionFailedException.
+     */
+    public function place(Pallet $pallet, int $cellId, int $userId, ?string $note, ?array $ifMatchEtags = null): Pallet
+    {
+        DB::transaction(function () use ($pallet, $cellId, $userId, $note, $ifMatchEtags) {
+            $cell = $this->lockCellRow($cellId);
+            $lockedPallet = $this->lockPallet($pallet->id);
+
+            if ($lockedPallet->cell_id !== null) {
+                throw new InvalidSlotStateException('pallet_already_placed', __('messages.pallet_already_placed'));
+            }
+
+            $this->assertIfMatch($lockedPallet, null, $ifMatchEtags);
+
+            $palletWarehouseId = $lockedPallet->load('receipt:id,warehouse_id')->receipt?->warehouse_id;
+
+            if ($palletWarehouseId !== $cell->load('row:id,warehouse_id')->row->warehouse_id) {
+                throw new InvalidSlotStateException('pallet_warehouse_mismatch', __('messages.pallet_warehouse_mismatch'));
+            }
+
+            $this->assertCellAcceptsPalletActions($cell);
+
+            if ($cell->state !== CellState::Empty) {
+                throw new InvalidSlotStateException('slot_not_empty', __('messages.slot_not_empty'));
+            }
+
+            $toState = $this->targetStateForCell($cell, CellState::Full);
+
+            $cell->update(['state' => $toState]);
+            $lockedPallet->update(['cell_id' => $cell->id]);
+
+            $this->logCellStatus(
+                $cell,
+                CellLogAction::Stored,
+                CellState::Empty,
+                $toState,
+                $lockedPallet->product_id,
+                $lockedPallet->id,
+                $userId,
+                $note,
+                boxesCount: $lockedPallet->remaining_boxes,
+            );
+        });
+
+        return $pallet->refresh();
     }
 
     /**
@@ -454,7 +528,8 @@ class PalletActionService
     public function transfer(Pallet $pallet, int $destinationCellId, int $userId, ?string $note, ?array $ifMatchEtags = null): Pallet
     {
         DB::transaction(function () use ($pallet, $destinationCellId, $userId, $note, $ifMatchEtags) {
-            $cellIds = array_unique([$pallet->cell_id, $destinationCellId]);
+            $sourceCellId = $this->placedCellId($pallet);
+            $cellIds = array_unique([$sourceCellId, $destinationCellId]);
             sort($cellIds);
 
             $lockedCells = [];
@@ -463,7 +538,7 @@ class PalletActionService
                 $lockedCells[$cellId] = $this->lockCellRow($cellId);
             }
 
-            $sourceCell = $lockedCells[$pallet->cell_id];
+            $sourceCell = $lockedCells[$sourceCellId];
             $lockedPallet = $this->lockPallet($pallet->id);
 
             $this->assertPalletStillInCell($lockedPallet, $sourceCell);
@@ -528,9 +603,10 @@ class PalletActionService
      * dashboard stats cache.
      *
      * A product change is logged as a `product_changed` CellStatusLog row
-     * carrying the new product, so the cell's history shows when (and by whom)
-     * the pallet stopped being what it was stored as — the previous product is
-     * on the pallet's earlier log rows. An expiration date or a positive
+     * carrying the new product and the previous one (`old_product_id`), so
+     * the cell's history shows when (and by whom) the pallet stopped being
+     * what it was stored as. The bulk product change of any pallet, placed or
+     * not, is PalletCorrectionService::changeProduct(). An expiration date or a positive
      * remaining_boxes correction on its own still writes no log row. The
      * product is looked up here too, like store() does, rather than trusting
      * the caller's validation to have run against the same database state.
@@ -558,6 +634,7 @@ class PalletActionService
             }
 
             $product = Product::query()->select(['id'])->findOrFail($productId);
+            $oldProductId = $lockedPallet->product_id;
 
             $lockedPallet->update([
                 'product_id' => $product->id,
@@ -576,6 +653,7 @@ class PalletActionService
                     $userId,
                     $note,
                     boxesCount: $lockedPallet->remaining_boxes,
+                    oldProductId: $oldProductId,
                 );
             }
         });

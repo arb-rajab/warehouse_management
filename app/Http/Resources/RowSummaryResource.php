@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -12,8 +13,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * every caller (see .ai/rules/resources.md) and says nothing about, e.g., a
  * round's coverage or which rows are frozen.
  *
+ * `warehouse` is present only when the caller loaded it (`GET /api/v1/rows/frozen`
+ * does): a letter alone names one row per warehouse.
+ *
  * @property-read int $id
  * @property-read string $letter
+ * @property-read Warehouse $warehouse
  */
 class RowSummaryResource extends JsonResource
 {
@@ -27,6 +32,7 @@ class RowSummaryResource extends JsonResource
         return [
             'id' => $this->id,
             'letter' => $this->letter,
+            'warehouse' => $this->whenLoaded('warehouse', fn () => new WarehouseSummaryResource($this->warehouse)),
         ];
     }
 }

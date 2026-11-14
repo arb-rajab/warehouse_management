@@ -2,7 +2,7 @@ import type { Locator } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import { loginAsAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
-import { openAccountMenu, switchLocale } from './support/nav';
+import { switchLocale } from './support/nav';
 
 async function badgeContrast(badge: Locator): Promise<number> {
     const { foreground, background } = await badge.evaluate((el) => {
@@ -47,7 +47,6 @@ for (const locale of ['en', 'ar']) {
             await loginAsAdmin(page);
 
             if (locale === 'ar') {
-                await openAccountMenu(page);
                 await switchLocale(page, 'Arabic');
             }
 

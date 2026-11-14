@@ -64,7 +64,7 @@ Route::group(['namespace' => 'App\Http\Controllers\Seller', 'prefix' => 'seller'
     });
 
     //Order
-    Route::resource('orders', OrderController::class);
+    Route::resource('orders', OrderController::class)->only(['index', 'show']);
     Route::controller(OrderController::class)->group(function () {
         Route::post('/orders/update_delivery_status', 'update_delivery_status')->name('orders.update_delivery_status');
         Route::post('/orders/update_payment_status', 'update_payment_status')->name('orders.update_payment_status');
@@ -89,7 +89,7 @@ Route::group(['namespace' => 'App\Http\Controllers\Seller', 'prefix' => 'seller'
     });
 
     //Payments
-    Route::resource('payments', PaymentController::class);
+    Route::resource('payments', PaymentController::class)->only('index');
 
     // Profile Settings
     Route::controller(ProfileController::class)->group(function () {
@@ -98,7 +98,7 @@ Route::group(['namespace' => 'App\Http\Controllers\Seller', 'prefix' => 'seller'
     });
 
     // Address
-    Route::resource('addresses', AddressController::class);
+    Route::resource('addresses', AddressController::class)->only(['store', 'edit', 'update', 'destroy']);
     Route::controller(AddressController::class)->group(function () {
         Route::post('/get-states', 'getStates')->name('get-state');
         Route::post('/get-cities', 'getCities')->name('get-city');

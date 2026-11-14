@@ -1,7 +1,7 @@
 
 
     <form style="display: none" method="POST" action="{{ \App\Utility\PayhereUtility::get_action_url() }}" id="payhere-wallet-form">
-        <input type="hidden" name="merchant_id" value="{{ config('services.payhere.merchant_id') }}">
+        <input type="hidden" name="merchant_id" value="{{ \App\Support\StorePaymentGateways::get('payhere', 'merchant_id') }}">
         <!-- Replace your Merchant ID -->
         <input type="hidden" name="return_url" value="{{ route('payhere.wallet.return') }}">
         <input type="hidden" name="cancel_url" value="{{ route('payhere.wallet.cancel') }}">
@@ -12,8 +12,8 @@
         <br><br>{{ __('storefront.checkout.item_details') }}<br>
         <input type="text" name="order_id" value="{{ $order_id }}">
         <input type="text" name="items" value="{{ __('storefront.checkout.wallet_payment')  }}"><br>
-        <input type="text" name="currency" value="{{ config('services.payhere.currency') }}">
-        <input type="text" name="amount" value="{{ $amount }}">
+        <input type="text" name="currency" value="{{ $currency }}">
+        <input type="text" name="amount" value="{{ \App\Services\GatewayCurrency::format((float) $amount) }}">
         <br><br>{{ __('storefront.checkout.customer_details') }}<br>
         <input type="text" name="first_name" value="{{ $first_name }}">
         <input type="text" name="last_name" value="{{ $last_name }}"><br>

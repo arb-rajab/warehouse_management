@@ -97,4 +97,20 @@ describe('FormField', () => {
         expect(classes).toContain('uppercase');
         expect(classes).toContain('w-full');
     });
+
+    it('shows the Direction A focus ring', () => {
+        const classes = mount(FormField, {
+            props: { id: 'letter', label: 'Letter' },
+        })
+            .get('input')
+            .classes();
+
+        expect(classes).toEqual(
+            expect.arrayContaining([
+                'focus:border-focus',
+                'focus:ring-2',
+                'focus:ring-focus-ring',
+            ]),
+        );
+    });
 });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterUsersRequest;
 use App\Http\Requests\Admin\ShowUserRequest;
@@ -13,6 +14,7 @@ use App\Http\Resources\UserResource;
 use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,8 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    use FlashesAdminSuccess;
+
     public function index(FilterUsersRequest $request): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
@@ -51,7 +55,7 @@ class UserController extends Controller
 
         $logs = CellStatusLog::query()
             ->forListing()
-            ->with(CellStatusLog::WITH_FLAG_DETAILS)
+            ->with([...CellStatusLog::WITH_FLAG_DETAILS, ...CellStatusLog::WITH_WAREHOUSES])
             ->where('user_id', $user->id)
             ->sorted($request)
             ->paginate($perPage)
@@ -61,7 +65,7 @@ class UserController extends Controller
 
         $reports = CellVerificationReport::query()
             ->select(CellVerificationReport::SELECT_COLUMNS)
-            ->with(CellVerificationReport::WITH_DETAILS)
+            ->with([...CellVerificationReport::WITH_DETAILS, ...CellVerificationReport::WITH_WAREHOUSE])
             ->where('user_id', $user->id)
             ->sorted($request)
             ->paginate($reportsPerPage, ['*'], 'reports_page')
@@ -71,6 +75,7 @@ class UserController extends Controller
             'user' => new UserResource($user->loadMissing('roles:id,name')),
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
             'reports' => $this->paginated(CellVerificationReportResource::collection($reports)),
+            'multipleWarehouses' => Warehouse::hasMultiple(),
             'filters' => ['per_page' => $perPage, 'reports_per_page' => $reportsPerPage],
         ]);
     }
@@ -82,6 +87,7 @@ class UserController extends Controller
         $user->save();
 
         $user->syncRoles($request->boolean('is_admin') ? ['admin'] : []);
+        $this->flashAdminSuccess('user_has_been_created_successfully');
 
         return redirect()->route('admin.users.index');
     }
@@ -119,6 +125,7 @@ class UserController extends Controller
             $user->save();
 
             $user->syncRoles($isAdmin ? ['admin'] : []);
+            $this->flashAdminSuccess('user_has_been_updated_successfully');
 
             return redirect()->route('admin.users.index');
         });
@@ -139,6 +146,7 @@ class UserController extends Controller
             // phone's old login.
             $user->tokens()->delete();
             $user->delete();
+            $this->flashAdminSuccess('user_has_been_deleted_successfully');
 
             return $this->redirectPreservingQuery('admin.users.index', $request);
         });

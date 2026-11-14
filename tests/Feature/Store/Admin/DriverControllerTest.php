@@ -63,7 +63,8 @@ describe('driver create and store', function () {
 
     test('creating a driver fixes the account type and verifies the email', function () {
         actingAsStoreUser(createStoreStaff('add_driver'));
-        $this->post(route('drivers.store'), storeDriverForm(['user_type' => 'admin', 'rep_id' => 99]))->assertRedirect(route('drivers.index'));
+        $this->post(route('drivers.store'), storeDriverForm(['user_type' => 'admin', 'rep_id' => 99]))->assertRedirect(route('drivers.index'))
+            ->assertInertiaFlash('success', 'Driver has been created successfully');
         $driver = StoreUser::where('email', 'new-driver@example.com')->firstOrFail();
         expect($driver->only(['name', 'phone', 'country', 'user_type', 'registration_completed']))->toEqual(['name' => 'New Driver', 'phone' => '0612345678', 'country' => 'Netherlands', 'user_type' => 'driver', 'registration_completed' => 1])
             ->and(Hash::check('new-password', $driver->password))->toBeTrue()->and($driver->email_verified_at)->not->toBeNull()->and($driver->rep_id)->toBeNull();
@@ -105,7 +106,8 @@ describe('driver edit and update', function () {
         $driver = createStoreUser('driver');
         $noise = createStoreUser('driver');
         $before = $driver->only(['email', 'user_type', 'password']);
-        $this->put(route('drivers.update', $driver), storeDriverForm(['password' => '', 'email' => 'hijacked@example.com', 'user_type' => 'admin', 'id' => $noise->id]))->assertRedirect(route('drivers.index'));
+        $this->put(route('drivers.update', $driver), storeDriverForm(['password' => '', 'email' => 'hijacked@example.com', 'user_type' => 'admin', 'id' => $noise->id]))->assertRedirect(route('drivers.index'))
+            ->assertInertiaFlash('success', 'Driver has been updated successfully');
         expect($driver->fresh()->name)->toBe('New Driver')->and($driver->fresh()->only(['email', 'user_type', 'password']))->toEqual($before)->and($noise->fresh()->name)->toBe($noise->name);
         $this->put(route('drivers.update', $driver), storeDriverForm())->assertRedirect(route('drivers.index'));
         expect(Hash::check('new-password', $driver->fresh()->password))->toBeTrue();

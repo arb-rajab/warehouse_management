@@ -10,6 +10,7 @@ import type {
     Row,
     Setting,
     User,
+    Warehouse,
 } from '@/types/admin';
 import type {
     StoreSeller,
@@ -46,6 +47,8 @@ import type {
     StoreFlashDeal,
     StoreCampaignProduct,
     AdminLanguage,
+    StoreDefaultLanguageSetting,
+    StoreDeliverySettings,
     StoreTranslation,
     StoreCountry,
     StoreState,
@@ -132,6 +135,17 @@ export function paginated<T>(
     };
 }
 
+export function warehouse(overrides: Partial<Warehouse> = {}): Warehouse {
+    return {
+        id: 1,
+        name: 'Main',
+        code: 'MAIN',
+        address: '1 Dock Road',
+        rows_count: 2,
+        ...overrides,
+    };
+}
+
 export function row(overrides: Partial<Row> = {}): Row {
     return {
         id: 1,
@@ -139,6 +153,7 @@ export function row(overrides: Partial<Row> = {}): Row {
         cells_count: 5,
         flats_count: 7,
         has_pallets: false,
+        warehouse: { id: 1, name: 'Main' },
         ...overrides,
     };
 }
@@ -261,6 +276,7 @@ export function matchingPallet(
 ): MatchingPallet {
     return {
         id: 1,
+        placed: true,
         state: 'full',
         expiration_date: '2026-09-01',
         added_at: '2026-08-01T10:00:00Z',
@@ -275,8 +291,25 @@ export function matchingPallet(
         },
         location: { row_letter: 'A', cell_number: 3, flat_number: 2 },
         cell_active: true,
+        receipt_id: null,
+        warehouse: null,
         ...overrides,
     };
+}
+
+/** A received pallet with no cell yet, waiting on its receipt's warehouse. */
+export function unplacedMatchingPallet(
+    overrides: Partial<MatchingPallet> = {},
+): MatchingPallet {
+    return matchingPallet({
+        placed: false,
+        state: null,
+        location: null,
+        cell_active: null,
+        receipt_id: 12,
+        warehouse: { id: 3, name: 'North' },
+        ...overrides,
+    });
 }
 
 export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
@@ -285,6 +318,12 @@ export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
         action: 'stored',
         from_state: 'empty',
         to_state: 'full',
+        batch_id: null,
+        reason: null,
+        old_note: null,
+        new_note: null,
+        old_product: null,
+        new_product: null,
         note: 'Handle with care',
         boxes_count: null,
         cell: { row_letter: 'A', cell_number: 3, flat_number: 2 },
@@ -1581,8 +1620,7 @@ export function storeDashboardProps(): StoreDashboardProps {
             stock: { labels: ['Oils'], values: [45] },
             visits: { labels: ['SY'], values: [25] },
         },
-        showSmtpAlert: true,
-        setupAlerts: [],
+        setupChecklist: { items: [], done: 0, total: 0 },
         topProducts: [
             {
                 id: 1,
@@ -1736,4 +1774,39 @@ export function storeSellerVerificationFields(): StoreSellerVerificationField[] 
         { type: 'text', label: 'Company' },
         { type: 'select', label: 'Country', options: ['NL', 'Syria'] },
     ];
+}
+
+export function defaultLanguageSetting(
+    overrides: Partial<StoreDefaultLanguageSetting> = {},
+): StoreDefaultLanguageSetting {
+    return {
+        saved: null,
+        effective: { value: 'en', source: 'env' },
+        environment: 'en',
+        state: 'ok',
+        options: [
+            { code: 'ar', name: 'Arabic', active: true },
+            { code: 'en', name: 'English', active: true },
+        ],
+        ...overrides,
+    };
+}
+
+export function deliverySettings(
+    overrides: Partial<StoreDeliverySettings> = {},
+): StoreDeliverySettings {
+    return {
+        saved: { delivery_lead_days: null, delivery_timezone: null },
+        effective: {
+            delivery_lead_days: { value: 2, source: 'env' },
+            delivery_timezone: { value: 'Europe/Amsterdam', source: 'env' },
+        },
+        environment: {
+            delivery_lead_days: 2,
+            delivery_timezone: 'Europe/Amsterdam',
+        },
+        timezones: ['Europe/Amsterdam', 'Europe/London', 'UTC'],
+        bounds: { min: 0, max: 30 },
+        ...overrides,
+    };
 }

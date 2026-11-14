@@ -11,6 +11,7 @@ The application [README](../README.md) covers warehouse setup, APIs and deployme
 | Warehouse feature constraints | [Rule index](rules/index.md) |
 | Integrated store architecture, constraints, decisions and operations | [Store back-office guide](rules/store-backoffice-migration.md) |
 | Product ownership, sync and table-name constraints | [Database ownership](rules/shared-database.md) |
+| Product barcodes: the one table, own-id rows, deletion, labels, the Store form's seen list | [Product barcodes](rules/product-barcodes.md) |
 | Required-field convention, scanner and ratchet | [Form rules](rules/form-required-fields.md) |
 | Newest committed required-fields audit and earlier report pairs | [Audit index](required-fields-audits.md) |
 | Launch operations and external confirmations | [Go-live checklist](go-live-checklist-20261021.md) |
@@ -42,6 +43,10 @@ The application [README](../README.md) covers warehouse setup, APIs and deployme
 - The [store list order audit](store-list-order-audit-20261105.md) records, per list, the
   default order before and after newest-first and the exceptions with reasons; the
   standing rule is [store-list-default-order](rules/store-list-default-order.md).
+- The [barcode single-source runbook](barcode-single-source-runbook-20261108.md) is the
+  dated deploy record for merging the WMS and store barcode tables: migration order,
+  the read-only checks, the conflicts report, the rollback and the follow-up drop of
+  `wms_product_barcodes`; the standing rule is [product-barcodes](rules/product-barcodes.md).
 - The [store search select rule](rules/store-search-select.md) is the standing rule for
   every store back office select that searches another table: the shared component, its
   endpoint contract and the result row content per entity.

@@ -31,6 +31,16 @@ describe('LogoutLink', () => {
         expect(t('nav.logout')).toBe('Log out');
     });
 
+    it('keeps the label for screen readers when given a label class', () => {
+        const wrapper = mount(LogoutLink, {
+            props: { labelClass: 'lg:sr-only' },
+        });
+
+        expect(wrapper.get('span').text()).toBe(t('nav.logout'));
+        expect(wrapper.get('span').classes()).toContain('lg:sr-only');
+        expect(wrapper.get('svg').attributes('aria-hidden')).toBe('true');
+    });
+
     it('applies a class attribute to the root element via fallthrough', () => {
         const wrapper = mount(LogoutLink, {
             attrs: { class: 'my-custom-class' },

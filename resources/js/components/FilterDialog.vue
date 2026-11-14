@@ -100,13 +100,13 @@ onBeforeUnmount(() => {
         v-show="open"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
-        <div class="fixed inset-0 bg-black/50" @click="open = false"></div>
+        <div class="fixed inset-0 bg-scrim" @click="open = false"></div>
         <div
             ref="dialogRef"
             role="dialog"
             aria-modal="true"
             :aria-label="title"
-            class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl dark:bg-neutral-900"
+            class="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-surface shadow-pop"
         >
             <div class="flex shrink-0 items-center justify-between p-6 pb-4">
                 <h2 class="text-lg font-semibold">{{ title }}</h2>
@@ -114,7 +114,7 @@ onBeforeUnmount(() => {
                     ref="closeButtonRef"
                     type="button"
                     :aria-label="closeLabel"
-                    class="cursor-pointer rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+                    class="cursor-pointer rounded-md p-1 text-muted hover:bg-subtle hover:text-ink"
                     @click="open = false"
                 >
                     <X class="h-5 w-5" />

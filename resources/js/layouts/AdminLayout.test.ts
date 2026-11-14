@@ -1,17 +1,28 @@
 import { Link } from '@inertiajs/vue3';
-import { CircleUser, Warehouse } from '@lucide/vue';
+import { Truck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import {
+    index as receiptsIndex,
+    show as receiptShow,
+} from '@/actions/App/Http/Controllers/Admin/ReceiptController';
 import {
     index as rowsIndex,
     edit as rowEdit,
 } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { index as warehousesIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseController';
 import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
+import BackofficeShell from '@/components/BackofficeShell.vue';
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
+import SidebarNavLink from '@/components/SidebarNavLink.vue';
+import SuccessBanner from '@/components/SuccessBanner.vue';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import AdminLayout from './AdminLayout.vue';
@@ -31,249 +42,385 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function mountLayout(url: string, props: { fullBleed?: boolean } = {}) {
+const MENU_URLS = [
+    '/admin',
+    warehousesIndex.url(),
+    rowsIndex.url(),
+    palletsIndex.url(),
+    receiptsIndex.url(),
+    warehouseMapIndex.url(),
+    productsIndex.url(),
+    cellLogsIndex.url(),
+    cellVerificationRoundsIndex.url(),
+    usersIndex.url(),
+    settingsEdit.url(),
+    helpIndex.url(),
+];
+
+function mountLayout(
+    url: string,
+    props: { fullBleed?: boolean } = {},
+    flash: { success?: string } = {},
+) {
     usePageMock.mockReturnValue({
         url,
-        props: defaultAuthProps(),
+        props: defaultAuthProps({
+            brandName: 'Store name',
+            auth: {
+                user: { id: 7, name: 'Jane Doe', email: 'jane@example.com' },
+            },
+        }),
+        flash,
     });
 
     return mount(AdminLayout, {
         props,
         slots: { default: '<p>Page content</p>' },
+        attachTo: document.body,
     });
+}
+
+function menu(wrapper: ReturnType<typeof mountLayout>) {
+    return wrapper.get(`nav[aria-label="${t('nav.menuLabel')}"]`);
+}
+
+function menuLink(wrapper: ReturnType<typeof mountLayout>, href: string) {
+    return menu(wrapper)
+        .findAll('a')
+        .find((link) => link.attributes('href') === href);
 }
 
 describe('AdminLayout', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerPostMock });
+        window.localStorage.clear();
+        document.body.innerHTML = '';
     });
 
-    it('renders a nav link for every top-level section', () => {
+    it('draws the page through the shared back-office shell, with its own sidebar id', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+        const shell = wrapper.getComponent(BackofficeShell);
+
+        expect(shell.props('sidebarId')).toBe('admin-sidebar');
+        expect(shell.props('area')).toBe(t('nav.brand'));
+        expect(wrapper.find('aside#admin-sidebar').exists()).toBe(true);
+    });
+
+    it('shows the brand name and, under it, the Warehouse Admin title', () => {
         const wrapper = mountLayout(rowsIndex.url());
 
-        const links = wrapper.findAll('nav a');
-        expect(links.map((link) => link.attributes('href'))).toEqual([
-            '/admin',
-            rowsIndex.url(),
-            warehouseMapIndex.url(),
-            cellLogsIndex.url(),
-            cellVerificationRoundsIndex.url(),
-            productsIndex.url(),
-            usersIndex.url(),
+        expect(wrapper.get('[data-testid="sidebar-brand"]').text()).toBe(
+            'Store name',
+        );
+        expect(wrapper.get('[data-testid="sidebar-area"]').text()).toBe(
+            t('nav.brand'),
+        );
+        expect(wrapper.get('aside img').attributes('src')).toBe(
+            '/assets/img/33logoqr.png',
+        );
+    });
+
+    it('lists every destination in the sidebar menu in its fixed order', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+
+        expect(
+            menu(wrapper)
+                .findAll('a')
+                .map((link) => link.attributes('href')),
+        ).toEqual(MENU_URLS);
+    });
+
+    it('groups the menu under Inventory, Activity and Administration', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+
+        expect(
+            menu(wrapper)
+                .findAll('p')
+                .map((heading) => heading.text()),
+        ).toEqual([
+            t('nav.groupInventory'),
+            t('nav.groupActivity'),
+            t('nav.groupAdmin'),
         ]);
     });
 
-    it('links to the warehouse map with its own icon and label, and marks it active on its page', () => {
-        const wrapper = mountLayout(warehouseMapIndex.url());
-
-        const link = wrapper
-            .findAll('nav a')
-            .find((a) => a.attributes('href') === warehouseMapIndex.url());
-
-        expect(link?.text()).toBe(t('nav.warehouseMap'));
-        expect(link?.attributes('aria-current')).toBe('page');
-    });
-
-    it('keeps the page in a padded, width-limited column by default', () => {
+    it('lists Receipts in the Inventory group right after Pallets, with the receipts index url and the Truck icon', () => {
         const wrapper = mountLayout(rowsIndex.url());
+        const hrefs = menu(wrapper)
+            .findAll('a')
+            .map((link) => link.attributes('href'));
+        const link = menuLink(wrapper, receiptsIndex.url());
+        const nav = wrapper
+            .findAllComponents(SidebarNavLink)
+            .find((item) => item.text() === t('nav.receipts'));
 
-        expect(wrapper.get('main').classes()).toContain('max-w-6xl');
-        expect(wrapper.get('main').classes()).not.toContain('flex-1');
-    });
-
-    it('scrolls wide page content inside the column instead of stretching the page sideways', () => {
-        const wrapper = mountLayout(rowsIndex.url());
-
-        expect(wrapper.get('main').classes()).toEqual(
-            expect.arrayContaining(['min-w-0', 'overflow-x-auto']),
+        expect(link?.text()).toBe(t('nav.receipts'));
+        expect(hrefs.indexOf(receiptsIndex.url())).toBe(
+            hrefs.indexOf(palletsIndex.url()) + 1,
         );
-    });
-
-    it('hands the whole area under the app bar to a full-bleed page', () => {
-        const wrapper = mountLayout(warehouseMapIndex.url(), {
-            fullBleed: true,
+        expect(hrefs.indexOf(receiptsIndex.url())).toBeLessThan(
+            hrefs.indexOf(cellLogsIndex.url()),
+        );
+        expect(nav?.props('href')).toEqual({
+            url: receiptsIndex.url(),
+            method: 'get',
         });
-
-        expect(wrapper.get('main').classes()).toEqual(
-            expect.arrayContaining(['relative', 'flex-1']),
-        );
-        expect(wrapper.get('main').classes()).not.toContain('max-w-6xl');
-        expect(wrapper.classes()).toEqual(
-            expect.arrayContaining(['flex', 'h-dvh', 'flex-col']),
-        );
-        expect(wrapper.get('nav').classes()).toContain('shrink-0');
+        expect(nav?.props('icon')).toBe(Truck);
     });
 
-    it('gives every nav link a Wayfinder route object, not a bare url string', () => {
+    it('lights the Receipts link up on a receipt page and nowhere else', () => {
+        const wrapper = mountLayout(receiptShow.url({ receipt: 9 }));
+        const active = menu(wrapper).findAll('[aria-current="page"]');
+
+        expect(active).toHaveLength(1);
+        expect(active[0].attributes('href')).toBe(receiptsIndex.url());
+        expect(
+            menuLink(wrapper, '/admin')?.attributes('aria-current'),
+        ).toBeUndefined();
+    });
+
+    it('gives every menu link an icon and a Wayfinder route object, not a bare url string', () => {
         const wrapper = mountLayout(rowsIndex.url());
-
-        const navLinks = wrapper
-            .findAllComponents(Link)
+        const links = wrapper
+            .findAllComponents(SidebarNavLink)
             .filter((link) => link.element.closest('nav') !== null);
-        expect(navLinks).toHaveLength(7);
 
-        for (const link of navLinks) {
+        expect(links).toHaveLength(MENU_URLS.length);
+
+        for (const link of links) {
+            expect(link.props('icon')).toBeTruthy();
             expect(link.props('href')).toMatchObject({ method: 'get' });
         }
 
-        expect(navLinks[1].props('href')).toEqual({
+        expect(links[2].props('href')).toEqual({
             url: rowsIndex.url(),
             method: 'get',
         });
     });
 
-    it('marks the exact current section as active', () => {
+    it('marks the exact current section as active with the brand-soft fill', () => {
         const wrapper = mountLayout(rowsIndex.url());
-
-        const links = wrapper.findAll('nav a');
-        const rowsLink = links.find(
-            (link) => link.attributes('href') === rowsIndex.url(),
-        );
-        const usersLink = links.find(
-            (link) => link.attributes('href') === usersIndex.url(),
-        );
+        const rowsLink = menuLink(wrapper, rowsIndex.url());
+        const usersLink = menuLink(wrapper, usersIndex.url());
 
         expect(rowsLink?.attributes('aria-current')).toBe('page');
-        expect(rowsLink?.classes()).toContain('border-gray-900');
+        expect(rowsLink?.classes()).toContain('bg-sidebar-active');
         expect(usersLink?.attributes('aria-current')).toBeUndefined();
-        expect(usersLink?.classes()).not.toContain('border-gray-900');
+        expect(usersLink?.classes()).not.toContain('bg-sidebar-active');
+        expect(menu(wrapper).findAll('[aria-current="page"]')).toHaveLength(1);
     });
 
-    it('uses a logical border-inline-start utility on the mobile nav link so RTL locales flip the active indicator', async () => {
+    it('uses a logical inline-start indicator so right-to-left flips it', () => {
         const wrapper = mountLayout(rowsIndex.url());
-        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
-        await toggle.trigger('click');
 
-        const rowsLink = wrapper
-            .get('#admin-mobile-menu')
-            .findAll('a')
-            .find((link) => link.attributes('href') === rowsIndex.url());
+        expect(menuLink(wrapper, rowsIndex.url())?.classes()).toContain(
+            'before:-start-2.5',
+        );
+    });
 
-        expect(rowsLink?.classes()).toContain('border-s-4');
+    it('names the current section in the header crumb', () => {
+        const wrapper = mountLayout(rowEdit.url({ row: 'A' }));
+        const crumb = wrapper.get(`nav[aria-label="${t('nav.breadcrumb')}"]`);
+
+        expect(crumb.text()).toContain(t('nav.brand'));
+        expect(crumb.text()).toContain(t('nav.rows'));
     });
 
     it('marks the dashboard link active on its own URL, not on other sections', () => {
         const wrapper = mountLayout('/admin');
 
-        const links = wrapper.findAll('nav a');
-        const dashboardLink = links.find(
-            (link) => link.attributes('href') === '/admin',
+        expect(menuLink(wrapper, '/admin')?.attributes('aria-current')).toBe(
+            'page',
         );
-        const rowsLink = links.find(
-            (link) => link.attributes('href') === rowsIndex.url(),
-        );
-
-        expect(dashboardLink?.attributes('aria-current')).toBe('page');
-        expect(rowsLink?.attributes('aria-current')).toBeUndefined();
+        expect(
+            menuLink(wrapper, rowsIndex.url())?.attributes('aria-current'),
+        ).toBeUndefined();
     });
 
     it('does not mark the dashboard link active while a more specific section is open', () => {
         const wrapper = mountLayout(rowsIndex.url());
 
-        const dashboardLink = wrapper
-            .findAll('nav a')
-            .find((link) => link.attributes('href') === '/admin');
-
-        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
+        expect(
+            menuLink(wrapper, '/admin')?.attributes('aria-current'),
+        ).toBeUndefined();
     });
 
     it('marks a nested section path as active too', () => {
         const wrapper = mountLayout(rowEdit.url({ row: 'A' }));
 
-        const rowsLink = wrapper
-            .findAll('nav a')
-            .find((link) => link.attributes('href') === rowsIndex.url());
+        expect(
+            menuLink(wrapper, rowsIndex.url())?.attributes('aria-current'),
+        ).toBe('page');
+    });
 
-        expect(rowsLink?.attributes('aria-current')).toBe('page');
+    it('marks the warehouses link active on its subpages', () => {
+        const wrapper = mountLayout(warehousesIndex.url() + '/3/edit');
+        const link = menuLink(wrapper, warehousesIndex.url());
+
+        expect(link?.text()).toBe(t('nav.warehouses'));
+        expect(link?.attributes('aria-current')).toBe('page');
+    });
+
+    it('marks the pallets, receipts, settings and help destinations active on their pages', () => {
+        for (const url of [
+            palletsIndex.url({ query: { state: 'empty' } }),
+            receiptsIndex.url({ query: { status: 'draft' } }),
+            settingsEdit.url(),
+            helpIndex.url() + '/rows',
+        ]) {
+            const wrapper = mountLayout(url);
+            const active = menu(wrapper).findAll('[aria-current="page"]');
+
+            expect(active).toHaveLength(1);
+            expect(url.startsWith(active[0].attributes('href') ?? '-')).toBe(
+                true,
+            );
+            wrapper.unmount();
+        }
     });
 
     it('does not treat a section as active from a mere string prefix match', () => {
         const wrapper = mountLayout('/admin/rows-archive');
 
-        const rowsLink = wrapper
-            .findAll('nav a')
-            .find((link) => link.attributes('href') === rowsIndex.url());
-
-        expect(rowsLink?.attributes('aria-current')).toBeUndefined();
+        expect(
+            menuLink(wrapper, rowsIndex.url())?.attributes('aria-current'),
+        ).toBeUndefined();
     });
 
-    it('marks the cell log section active when navigated to with a filter query string', () => {
-        const wrapper = mountLayout(
+    it('marks the cell log and products sections active with a filter query string', () => {
+        let wrapper = mountLayout(
             cellLogsIndex.url({ query: { action: 'inbound' } }),
         );
+        expect(
+            menuLink(wrapper, cellLogsIndex.url())?.attributes('aria-current'),
+        ).toBe('page');
+        expect(
+            menuLink(wrapper, '/admin')?.attributes('aria-current'),
+        ).toBeUndefined();
+        wrapper.unmount();
 
-        const links = wrapper.findAll('nav a');
-        const cellLogLink = links.find(
-            (link) => link.attributes('href') === cellLogsIndex.url(),
-        );
-        const dashboardLink = links.find(
-            (link) => link.attributes('href') === '/admin',
-        );
-
-        expect(cellLogLink?.attributes('aria-current')).toBe('page');
-        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
+        wrapper = mountLayout(productsIndex.url({ query: { row_id: '1' } }));
+        expect(
+            menuLink(wrapper, productsIndex.url())?.attributes('aria-current'),
+        ).toBe('page');
     });
 
-    it('marks the products section active when navigated to with a filter query string', () => {
-        const wrapper = mountLayout(
-            productsIndex.url({ query: { row_id: '1' } }),
-        );
+    it('keeps the page in a padded column as wide as the control panel by default', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+        const main = wrapper.get('main');
 
-        const links = wrapper.findAll('nav a');
-        const productsLink = links.find(
-            (link) => link.attributes('href') === productsIndex.url(),
+        expect(main.classes()).toEqual(
+            expect.arrayContaining(['min-w-0', 'overflow-x-auto', 'px-4']),
         );
-        const dashboardLink = links.find(
-            (link) => link.attributes('href') === '/admin',
-        );
-
-        expect(productsLink?.attributes('aria-current')).toBe('page');
-        expect(dashboardLink?.attributes('aria-current')).toBeUndefined();
+        expect(main.find('.max-w-screen-2xl').exists()).toBe(true);
+        expect(main.find('.max-w-6xl').exists()).toBe(false);
     });
 
-    it("renders the signed-in user's name with a user icon", () => {
+    it('hands the whole area beside the sidebar to a full-bleed page and folds the sidebar', () => {
+        const wrapper = mountLayout(warehouseMapIndex.url(), {
+            fullBleed: true,
+        });
+
+        expect(wrapper.get('main').classes()).toEqual(
+            expect.arrayContaining(['relative', 'min-h-0', 'flex-1']),
+        );
+        expect(wrapper.find('main .max-w-screen-2xl').exists()).toBe(false);
+        expect(wrapper.classes()).toEqual(
+            expect.arrayContaining(['flex', 'h-dvh', 'flex-col']),
+        );
+        expect(wrapper.get('#admin-sidebar').attributes('data-collapsed')).toBe(
+            'true',
+        );
+        expect(wrapper.getComponent(BackofficeShell).props()).toMatchObject({
+            collapseScope: 'map',
+            defaultCollapsed: true,
+        });
+    });
+
+    it('keeps the sidebar open on ordinary pages', () => {
         const wrapper = mountLayout(rowsIndex.url());
 
-        expect(wrapper.text()).toContain('Jane Doe');
-        expect(wrapper.findComponent(CircleUser).exists()).toBe(true);
+        expect(wrapper.get('#admin-sidebar').attributes('data-collapsed')).toBe(
+            'false',
+        );
+        expect(wrapper.getComponent(BackofficeShell).props()).toMatchObject({
+            collapseScope: 'page',
+            defaultCollapsed: false,
+        });
     });
 
-    it('renders a brand icon next to the app name', () => {
+    it('opens the sidebar drawer from the header menu button', async () => {
         const wrapper = mountLayout(rowsIndex.url());
+        const toggle = wrapper.get('button[aria-controls="admin-sidebar"]');
 
-        expect(wrapper.findComponent(Warehouse).exists()).toBe(true);
-    });
-
-    it('links the logout action to the /logout route from the account menu', async () => {
-        const wrapper = mountLayout(rowsIndex.url());
-        await wrapper.get('button[aria-label="Account"]').trigger('click');
-
-        const logoutLink = wrapper
-            .findAll('a,button')
-            .find((el) => el.attributes('href') === '/logout');
-
-        expect(logoutLink).toBeTruthy();
-    });
-
-    it('hides the account menu panel by default and expands it via the toggle button', async () => {
-        const wrapper = mountLayout(rowsIndex.url());
-        const toggle = wrapper.get('button[aria-label="Account"]');
-
-        expect(wrapper.find('#account-menu-panel').exists()).toBe(false);
+        expect(toggle.attributes('aria-label')).toBe(t('nav.openMenu'));
         expect(toggle.attributes('aria-expanded')).toBe('false');
 
         await toggle.trigger('click');
 
-        expect(wrapper.find('#account-menu-panel').exists()).toBe(true);
         expect(toggle.attributes('aria-expanded')).toBe('true');
+        expect(wrapper.get('#admin-sidebar').classes()).toContain('flex');
     });
 
-    it('renders the language switcher inside the account menu', async () => {
+    it('closes the drawer when a menu link is clicked', async () => {
         const wrapper = mountLayout(rowsIndex.url());
-        await wrapper.get('button[aria-label="Account"]').trigger('click');
+        const toggle = wrapper.get('button[aria-controls="admin-sidebar"]');
+        await toggle.trigger('click');
 
-        expect(wrapper.text()).toContain('English');
-        expect(wrapper.text()).toContain('Arabic');
+        await menuLink(wrapper, usersIndex.url())?.trigger('click');
+
+        expect(toggle.attributes('aria-expanded')).toBe('false');
+        expect(wrapper.get('#admin-sidebar').classes()).toContain('hidden');
+    });
+
+    it("shows the signed-in user's initials, name and e-mail in the sidebar footer", () => {
+        const wrapper = mountLayout(rowsIndex.url());
+        const footer = wrapper.get('#admin-sidebar');
+
+        expect(footer.get('[data-testid="sidebar-avatar"]').text()).toBe('JD');
+        expect(footer.text()).toContain('Jane Doe');
+        expect(footer.text()).toContain('jane@example.com');
+    });
+
+    it('links the logout action to the /logout route from the sidebar footer', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+        const logout = wrapper
+            .get('#admin-sidebar')
+            .findAll('a,button')
+            .find((el) => el.attributes('href') === '/logout');
+
+        expect(logout).toBeTruthy();
+        expect(logout?.text()).toBe(t('nav.logout'));
+    });
+
+    it('puts the language switcher and the help link in the header', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+        const header = wrapper.get('header');
+
+        expect(header.findComponent(LanguageSwitcher).exists()).toBe(true);
+        expect(header.text()).toContain('English');
+        expect(header.text()).toContain('Arabic');
+
+        const help = header
+            .findAllComponents(Link)
+            .find(
+                (link: { props: (key: string) => unknown }) =>
+                    (link.props('href') as { url: string }).url ===
+                    helpIndex.url(),
+            );
+        expect(help?.attributes('aria-label')).toBe(t('nav.help'));
+    });
+
+    it('keeps a language switcher in the sidebar footer for phones', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+        const switcher = wrapper
+            .get('#admin-sidebar')
+            .findComponent(LanguageSwitcher);
+
+        expect(switcher.exists()).toBe(true);
+        expect(switcher.element.parentElement?.className).toContain(
+            'sm:hidden',
+        );
     });
 
     it('renders a skip link that targets the main landmark', () => {
@@ -290,96 +437,35 @@ describe('AdminLayout', () => {
         expect(wrapper.get('main').text()).toContain('Page content');
     });
 
-    it('hides the mobile menu panel by default and expands it via the toggle button', async () => {
-        const wrapper = mountLayout(rowsIndex.url());
-        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
-
-        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
-        expect(toggle.attributes('aria-expanded')).toBe('false');
-
-        await toggle.trigger('click');
-
-        const panel = wrapper.get('#admin-mobile-menu');
-        expect(toggle.attributes('aria-expanded')).toBe('true');
-        expect(
-            panel
-                .findAll('a')
-                .map((link) => link.attributes('href'))
-                .slice(0, 7),
-        ).toEqual([
-            '/admin',
+    it('shows a flashed success message at the top of the page content', () => {
+        const wrapper = mountLayout(
             rowsIndex.url(),
-            warehouseMapIndex.url(),
-            cellLogsIndex.url(),
-            cellVerificationRoundsIndex.url(),
-            productsIndex.url(),
-            usersIndex.url(),
-        ]);
+            {},
+            { success: 'Row saved' },
+        );
+
+        const banner = wrapper.getComponent(SuccessBanner);
+        expect(banner.attributes('role')).toBe('status');
+        expect(banner.text()).toBe('Row saved');
         expect(
-            panel.findAll('a').map((link) => link.attributes('href')),
-        ).toContain(settingsEdit.url());
-
-        await toggle.trigger('click');
-
-        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
-        expect(toggle.attributes('aria-expanded')).toBe('false');
+            wrapper.get('main').element.firstElementChild?.firstElementChild,
+        ).toBe(banner.element);
     });
 
-    it('keeps every mobile nav link active/icon behavior in sync with the desktop nav', async () => {
+    it('shows no success banner without a flashed message', () => {
         const wrapper = mountLayout(rowsIndex.url());
-        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
-        await toggle.trigger('click');
 
-        const panel = wrapper.get('#admin-mobile-menu');
-        const rowsLink = panel
-            .findAll('a')
-            .find((link) => link.attributes('href') === rowsIndex.url());
-        const usersLink = panel
-            .findAll('a')
-            .find((link) => link.attributes('href') === usersIndex.url());
-
-        expect(rowsLink?.attributes('aria-current')).toBe('page');
-        expect(rowsLink?.classes()).toContain('border-gray-900');
-        expect(usersLink?.attributes('aria-current')).toBeUndefined();
-        expect(usersLink?.classes()).not.toContain('border-gray-900');
+        expect(wrapper.find('[role="status"]').exists()).toBe(false);
     });
 
-    it('closes the mobile menu when a nav link is clicked', async () => {
-        const wrapper = mountLayout(rowsIndex.url());
-        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
-        await toggle.trigger('click');
+    it('leaves the success banner out of a full-bleed page', () => {
+        const wrapper = mountLayout(
+            warehouseMapIndex.url(),
+            { fullBleed: true },
+            { success: 'Pallet stored' },
+        );
 
-        const rowsLink = wrapper
-            .get('#admin-mobile-menu')
-            .findAll('a')
-            .find((link) => link.attributes('href') === rowsIndex.url());
-        await rowsLink?.trigger('click');
-
-        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
-    });
-
-    it('closes the mobile menu when logout is clicked', async () => {
-        const wrapper = mountLayout(rowsIndex.url());
-        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
-        await toggle.trigger('click');
-
-        const logoutLink = wrapper
-            .get('#admin-mobile-menu')
-            .findAll('a,button')
-            .find((el) => el.attributes('href') === '/logout');
-        await logoutLink?.trigger('click');
-
-        expect(wrapper.find('#admin-mobile-menu').exists()).toBe(false);
-    });
-
-    it('renders the language switcher and signed-in user inside the mobile menu', async () => {
-        const wrapper = mountLayout(rowsIndex.url());
-        const toggle = wrapper.get('button[aria-controls="admin-mobile-menu"]');
-        await toggle.trigger('click');
-
-        const panel = wrapper.get('#admin-mobile-menu');
-        expect(panel.text()).toContain('Jane Doe');
-        expect(panel.text()).toContain('English');
-        expect(panel.text()).toContain('Arabic');
+        expect(wrapper.findComponent(SuccessBanner).exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Pallet stored');
     });
 });

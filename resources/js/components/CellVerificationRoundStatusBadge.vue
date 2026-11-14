@@ -16,13 +16,13 @@ defineProps<{
 <template>
     <span
         v-if="completedAt"
-        class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300"
+        class="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success-strong"
     >
         <slot>{{ t('cellVerificationRound.status.completed') }}</slot>
     </span>
     <span
         v-else
-        class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+        class="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning-strong"
     >
         {{ t('cellVerificationRound.status.inProgress') }}
     </span>

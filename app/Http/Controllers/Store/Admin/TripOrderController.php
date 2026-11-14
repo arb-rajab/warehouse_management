@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\BulkUpdateTripOrdersRequest;
 use App\Http\Requests\Store\Admin\FilterTripOrdersRequest;
 use App\Http\Requests\Store\Admin\MarkTripOrderDeliveredRequest;
@@ -35,6 +36,8 @@ use Inertia\Response;
  */
 class TripOrderController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** The delivery statuses the list never shows, as the Blade list hid them. */
     public const array HIDDEN_STATUSES = ['pending', 'cancelled'];
 
@@ -126,6 +129,7 @@ class TripOrderController extends Controller implements HasMiddleware
                 $order->save();
             }
         });
+        $this->flashSuccess('trip_orders_delivery_status_has_been_updated_successfully');
 
         return $this->redirectToList($request);
     }
@@ -142,6 +146,7 @@ class TripOrderController extends Controller implements HasMiddleware
             $order->delivery_status = 'on_delivery';
             $order->save();
         });
+        $this->flashSuccess('order_invoice_number_has_been_updated_successfully');
 
         return $this->redirectToList($request);
     }
@@ -160,6 +165,7 @@ class TripOrderController extends Controller implements HasMiddleware
             $order->delivery_status = 'delivered';
             $order->save();
         });
+        $this->flashSuccess('order_has_been_marked_as_delivered_successfully');
 
         if ($request->validated('return_to') === 'map') {
             return redirect()->route('trips.create-from-map');

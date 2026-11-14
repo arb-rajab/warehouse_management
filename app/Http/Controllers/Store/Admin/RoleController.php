@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditRoleRequest;
 use App\Http\Requests\Store\Admin\FilterRolesRequest;
 use App\Http\Requests\Store\Admin\StoreRoleRequest;
@@ -34,6 +35,8 @@ use Inertia\Response;
  */
 class RoleController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /**
      * Permission sections of the ActiveITzone addons this store no longer
      * carries (.ai/rules/legacy-albaraka-holland.md §6.4): no route checks
@@ -78,6 +81,7 @@ class RoleController extends Controller implements HasMiddleware
                 Role::query()
                     ->excludingSuperAdmin()
                     ->select(['id', 'name'])
+                    ->withSensitiveFlag()
                     ->tap(NewestFirst::apply(...))
                     ->paginate($perPage)
                     ->withQueryString()
@@ -107,6 +111,7 @@ class RoleController extends Controller implements HasMiddleware
                 'name' => $request->validated('name'),
             ]);
         });
+        $this->flashSuccess('role_has_been_created_successfully');
 
         return redirect()->route('roles.index');
     }
@@ -146,6 +151,7 @@ class RoleController extends Controller implements HasMiddleware
                 ['name' => $request->validated('name')],
             );
         });
+        $this->flashSuccess('role_has_been_updated_successfully');
 
         return redirect()->route('roles.index');
     }
@@ -158,6 +164,7 @@ class RoleController extends Controller implements HasMiddleware
             RoleTranslation::query()->where('role_id', $role->id)->delete();
             $role->delete();
         });
+        $this->flashSuccess('role_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('roles.index', $request);
     }
@@ -167,8 +174,10 @@ class RoleController extends Controller implements HasMiddleware
      * using file labels for application identifiers and content translations
      * for custom permission records. Stored identifiers remain unchanged.
      *
-     * Only the permissions the signed-in staff member holds are offered: no one
-     * can grant what they lack (App\Support\StaffPrivileges).
+     * Only the permissions the signed-in staff member may hand on are offered:
+     * no one can grant what they lack, and only a Super Admin sees the
+     * sensitive ones (App\Support\StaffPrivileges); those carry `sensitive`
+     * so the form warns.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -176,7 +185,7 @@ class RoleController extends Controller implements HasMiddleware
     {
         return Permission::query()
             ->select(['id', 'name', 'section'])
-            ->when(! $privileges->isSuperAdmin(), fn ($query) => $query->whereIn('id', $privileges->heldPermissionIds()))
+            ->when(! $privileges->isSuperAdmin(), fn ($query) => $query->whereIn('id', $privileges->grantablePermissionIds()))
             ->where(fn ($query) => $query->whereNull('section')->orWhereNotIn('section', self::REMOVED_ADDON_SECTIONS))
             ->orderBy('id')
             ->get()
@@ -185,7 +194,11 @@ class RoleController extends Controller implements HasMiddleware
                 'section' => $section,
                 'label' => StorePermissions::displaySection($section),
                 'permissions' => $permissions
-                    ->map(fn (Permission $permission) => ['id' => $permission->id, 'label' => StorePermissions::displayName($permission->name)])
+                    ->map(fn (Permission $permission) => [
+                        'id' => $permission->id,
+                        'label' => StorePermissions::displayName($permission->name),
+                        'sensitive' => StorePermissions::isSensitive($permission->name),
+                    ])
                     ->values()
                     ->all(),
             ])

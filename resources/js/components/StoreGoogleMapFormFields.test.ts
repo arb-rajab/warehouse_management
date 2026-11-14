@@ -48,13 +48,24 @@ const { slotMock, map, pin, leaflet, events, pinEvents } = vi.hoisted(() => {
 });
 vi.mock('leaflet', () => leaflet);
 const mounted: ReturnType<typeof mount>[] = [];
-function page(enabled = true, latitude = '33.513', longitude = '36.291') {
+function page(
+    enabled = true,
+    latitude = '33.513',
+    longitude = '36.291',
+    key: { set?: boolean; mask?: string; env?: boolean } = {
+        set: true,
+        mask: '••••••••wXyZ',
+    },
+) {
     const wrapper = mount(Index, {
         props: {
             settings: {
                 google_map: enabled,
                 google_map_latitude: latitude,
                 google_map_longtitude: longitude,
+                google_map_api_key_set: key.set ?? false,
+                google_map_api_key_mask: key.mask ?? '',
+                google_map_api_key_from_env: key.env ?? false,
             },
             errors: slotMock().errors,
         },
@@ -99,7 +110,7 @@ it.each(['en', 'ar'] as const)(
         const base = wrapper.getComponent(StoreLeafletMap);
         expect(base.props('label')).toBe(t('store.googleMap.mapLabel'));
         expect(base.attributes('dir')).toBe('ltr');
-        expect(wrapper.findAllComponents(FormField)).toHaveLength(2);
+        expect(wrapper.findAllComponents(FormField)).toHaveLength(3);
 
         for (const [id, min, max, value] of [
             ['google_map_latitude', '-90', '90', '33.513'],
@@ -216,4 +227,119 @@ it('matches required_without_all and both required_with conditions as coordinate
     expect(wrapper.find('#google_map_longtitude').exists()).toBe(false);
     await wrapper.get('#google_map').setValue('1');
     check('google_map', false);
+});
+
+const keyNone = { set: false, mask: '', env: false };
+const keyHelpText = (wrapper: ReturnType<typeof page>) =>
+    wrapper.get('#google_map_api_key_help').text();
+
+it.each(['en', 'ar'] as const)(
+    'shows the API key field under the switch with its label, help and a masked placeholder in %s',
+    (locale) => {
+        i18n.global.locale.value = locale;
+        const wrapper = page();
+        const input = wrapper.get<HTMLInputElement>('#google_map_api_key');
+        expect(input.attributes()).toMatchObject({
+            name: 'google_map_api_key',
+            type: 'text',
+            autocomplete: 'off',
+            spellcheck: 'false',
+            maxlength: '255',
+            dir: 'ltr',
+            placeholder: '••••••••wXyZ',
+            'aria-describedby': 'google_map_api_key_help',
+        });
+        expect(input.element.value).toBe('');
+        expect(wrapper.get('label[for=google_map_api_key]').text()).toContain(
+            t('store.googleMap.apiKey'),
+        );
+        expect(keyHelpText(wrapper)).toContain(
+            t('store.googleMap.apiKeyStatusSaved'),
+        );
+        expect(keyHelpText(wrapper)).toContain(t('store.googleMap.apiKeyHelp'));
+        // After the switch, before the default location.
+        const html = wrapper.html();
+        expect(html.indexOf('id="google_map"')).toBeLessThan(
+            html.indexOf('id="google_map_api_key"'),
+        );
+        expect(html.indexOf('id="google_map_api_key"')).toBeLessThan(
+            html.indexOf('id="google_map_latitude"'),
+        );
+    },
+);
+it('has every API key string in both locales', () => {
+    for (const locale of ['en', 'ar'] as const) {
+        i18n.global.locale.value = locale;
+
+        for (const key of [
+            'apiKey',
+            'apiKeyPlaceholder',
+            'apiKeyHelp',
+            'apiKeyStatusSaved',
+            'apiKeyStatusEnv',
+            'apiKeyStatusNone',
+            'apiKeyRequiredHint',
+        ]) {
+            expect(t(`store.googleMap.${key}`)).not.toBe(
+                `store.googleMap.${key}`,
+            );
+        }
+    }
+});
+it('falls back to the generic placeholder and the "none" status when no key exists', () => {
+    const wrapper = page(true, '', '', keyNone);
+    expect(wrapper.get('#google_map_api_key').attributes('placeholder')).toBe(
+        t('store.googleMap.apiKeyPlaceholder'),
+    );
+    expect(keyHelpText(wrapper)).toContain(
+        t('store.googleMap.apiKeyStatusNone'),
+    );
+});
+it('says MAP_API_KEY is in use when only the environment supplies a key', () => {
+    const wrapper = page(true, '', '', { set: false, mask: '', env: true });
+    expect(keyHelpText(wrapper)).toContain(
+        t('store.googleMap.apiKeyStatusEnv'),
+    );
+    expect(keyHelpText(wrapper)).toContain('MAP_API_KEY');
+});
+it('marks the key required only while the map is on and no key is saved or in the environment', async () => {
+    const wrapper = page(true, '', '', keyNone);
+    const state = () => ({
+        required:
+            wrapper.get('#google_map_api_key').attributes('required') !==
+            undefined,
+        mark: wrapper
+            .get('label[for=google_map_api_key]')
+            .findComponent(RequiredMark)
+            .exists(),
+        hint: keyHelpText(wrapper).includes(
+            t('store.googleMap.apiKeyRequiredHint'),
+        ),
+    });
+    expect(state()).toEqual({ required: true, mark: true, hint: true });
+    await wrapper.get('#google_map').setValue('0');
+    expect(state()).toEqual({ required: false, mark: false, hint: false });
+    await wrapper.get('#google_map').setValue('1');
+    expect(state()).toEqual({ required: true, mark: true, hint: true });
+});
+it.each([
+    ['a saved key', { set: true, mask: '••••••••wXyZ', env: false }],
+    ['a MAP_API_KEY key', { set: false, mask: '', env: true }],
+])('does not require the key when %s exists', (_name, key) => {
+    const wrapper = page(true, '', '', key);
+    const input = wrapper.get('#google_map_api_key');
+    expect(input.attributes('required')).toBeUndefined();
+    expect(
+        wrapper
+            .get('label[for=google_map_api_key]')
+            .findComponent(RequiredMark)
+            .exists(),
+    ).toBe(false);
+});
+it('shows the server error for the key', () => {
+    slotMock.mockReturnValue({
+        errors: { google_map_api_key: 'Key error' },
+        processing: false,
+    });
+    expect(page().text()).toContain('Key error');
 });

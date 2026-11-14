@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\SearchNewsletterRecipientsRequest;
 use App\Http\Requests\Store\Admin\SendNewsletterRequest;
@@ -10,6 +11,7 @@ use App\Mail\EmailManager;
 use App\Models\StoreUser;
 use App\Models\Subscriber;
 use App\Support\SearchOption;
+use App\Support\StoreMailSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -21,6 +23,7 @@ use Inertia\Response;
 
 class NewsletterController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use SearchesOptions;
 
     /** @return array<int, Middleware> */
@@ -37,7 +40,7 @@ class NewsletterController extends Controller implements HasMiddleware
     public function index(): Response
     {
         return Inertia::render('Store/Admin/Marketing/Newsletters/Index', [
-            'smtpConfigured' => filled(config('mail.mailers.smtp.username')),
+            'smtpConfigured' => filled(app(StoreMailSettings::class)->effective()['username']['value']),
         ]);
     }
 
@@ -67,7 +70,7 @@ class NewsletterController extends Controller implements HasMiddleware
 
     public function send(SendNewsletterRequest $request): RedirectResponse
     {
-        if (blank(config('mail.mailers.smtp.username'))) {
+        if (blank(app(StoreMailSettings::class)->effective()['username']['value'])) {
             throw ValidationException::withMessages(['smtp' => __('store_admin.please_configure_smtp_first')]);
         }
 
@@ -84,6 +87,7 @@ class NewsletterController extends Controller implements HasMiddleware
         foreach ($recipients as $email) {
             Mail::to($email)->queue(new EmailManager($message));
         }
+        $this->flashSuccess('newsletter_has_been_sent_successfully');
 
         return redirect()->route('shop.admin.dashboard');
     }

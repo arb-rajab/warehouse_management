@@ -59,7 +59,7 @@ const validation = physicalProductValidation({
                 type="submit"
                 name="button"
                 value="unpublish"
-                class="cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                class="cursor-pointer rounded-md border border-line-strong px-3 py-2 text-sm font-medium hover:bg-subtle"
             >
                 {{ t('store.products.form.saveUnpublish') }}
             </button>

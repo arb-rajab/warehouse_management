@@ -46,7 +46,10 @@ and fails loudly when it cannot.
 says the branch needs, unscoped and in full, *including* the ones the modes
 above leave to CI: the migration tests on a local MySQL (install_mysql.sh),
 Playwright on the preinstalled Chromium, the composer/npm audits and the
-deploy-script test. When all of them pass it amends the unpushed head commit with
+deploy-script test. The audits run on every attested change, not only when a
+lockfile changes: an advisory published since the last dependency change would
+otherwise first fail at deploy time (deploy-remote.sh audits every release).
+When all of them pass it amends the unpushed head commit with
 
     CI-Verified: tree=<head tree sha> groups=<the groups that ran and passed>
 
@@ -75,6 +78,7 @@ Exits non-zero, and stops at the first failing step, if any check fails.
 import argparse
 import concurrent.futures
 import importlib.util
+import json
 import os
 import shutil
 import signal
@@ -138,6 +142,19 @@ MYSQL_TESTS = [
 # group that needs the Vite manifest.
 ATTEST_ORDER = ('js', 'php', 'mysql', 'e2e', 'audit', 'deploy-script')
 
+
+def attest_groups(needed: dict[str, bool]) -> list[str]:
+    """The groups --attest runs: the planned ones, plus the dependency audit
+    whenever anything runs at all. The audit reads only the lockfiles and takes
+    seconds, and the deploy audits every release against the advisories known
+    on that day, so a new advisory against an unchanged lockfile is caught here,
+    before the push, rather than by a failed deploy. CI ignores an attested
+    group it did not plan, so the extra group never weakens the gate."""
+    if not any(needed.values()):
+        return []
+
+    return [group for group in ATTEST_ORDER if needed.get(group) or group == 'audit']
+
 ESLINT_SUFFIXES = ('.js', '.mjs', '.cjs', '.ts', '.tsx', '.vue')
 
 _spec = importlib.util.spec_from_file_location('ci_plan', ROOT / '.github' / 'scripts' / 'ci_plan.py')
@@ -162,6 +179,21 @@ def run_step(label: str, command: list[str], *, env: dict[str, str] | None = Non
 def php_tools_installed() -> bool:
     """Whether the dev tools the PHP steps need are present."""
     return (ROOT / 'vendor' / 'bin' / 'pint').exists()
+
+
+def pint_checkable(paths: list[str]) -> list[str]:
+    """Drop the files pint.json excludes (`notPath`) from the ones handed to Pint.
+
+    Pint checks every file it is given by name, exclusions or not, so only a run
+    over the whole tree (CI's `composer lint:check`) honours `notPath`. Without
+    this a change touching one excluded legacy file always failed here.
+    """
+    try:
+        excluded = set(json.loads((ROOT / 'pint.json').read_text()).get('notPath', []))
+    except (OSError, ValueError):
+        return paths
+
+    return [path for path in paths if path not in excluded]
 
 
 def git_lines(*args: str) -> list[str] | None:
@@ -243,9 +275,10 @@ def scoped_steps(files: list[str]) -> list[Step]:
 
     if needed['php'] and php_tools_installed():
         php_files = [path for path in existing if path.endswith('.php')]
+        pint_files = pint_checkable(php_files)
 
-        if php_files:
-            steps.append(('Pint', ['vendor/bin/pint', '--test', *php_files], PHP_ENV))
+        if pint_files:
+            steps.append(('Pint', ['vendor/bin/pint', '--test', *pint_files], PHP_ENV))
 
         steps += php_suite_steps()
 
@@ -593,8 +626,12 @@ def attest(base: str, *, serial: bool = False) -> int:
         return 2
 
     needed = ci_plan.plan(files)
-    wanted = [group for group in ATTEST_ORDER if needed.get(group)]
-    print(f'\n{len(files)} changed file(s) since {base}; CI groups needed: {", ".join(wanted) or "none"}.')
+    wanted = attest_groups(needed)
+    print(f'\n{len(files)} changed file(s) since {base}; CI groups needed: '
+          f'{", ".join(group for group in ATTEST_ORDER if needed.get(group)) or "none"}.')
+
+    if wanted and not needed.get('audit'):
+        print('The dependency audit runs too: the deploy audits every release against the current advisories.')
 
     if not wanted:
         print('Nothing to attest: no CI check reads the changed files.')

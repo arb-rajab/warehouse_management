@@ -162,7 +162,8 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language', 'strict.s
         Route::get('wallet/balance', 'App\Http\Controllers\Api\V1\WalletController@balance')->middleware('auth:store_api');
 
 
-        Route::get('payment-types', 'App\Http\Controllers\Api\V1\PaymentTypesController@getList')->middleware('auth:store_api');
+        // The answer depends on the caller's cart, but the ETag is made from the answer itself, so a 304 is sent only for an identical one.
+        Route::get('payment-types', 'App\Http\Controllers\Api\V1\PaymentTypesController@getList')->middleware(['auth:store_api', 'cache.headers:private;etag']);
 
 
         Route::controller(CustomerPackageController::class)->group(function () {
@@ -185,16 +186,17 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language', 'strict.s
 
     Route::apiResource('banners', 'App\Http\Controllers\Api\V1\BannerController')->only('index')->middleware('cache.headers:private;etag');
 
-    Route::get('brands/top', 'App\Http\Controllers\Api\V1\BrandController@top');
-    Route::apiResource('brands', 'App\Http\Controllers\Api\V1\BrandController')->only('index');
+    Route::get('brands/top', 'App\Http\Controllers\Api\V1\BrandController@top')->middleware('cache.headers:private;etag');
+    Route::apiResource('brands', 'App\Http\Controllers\Api\V1\BrandController')->only('index')->middleware('cache.headers:private;etag');
 
     Route::apiResource('business-settings', 'App\Http\Controllers\Api\V1\BusinessSettingController')->only('index')->middleware('cache.headers:private;etag');
 
-    Route::get('categories/featured', 'App\Http\Controllers\Api\V1\CategoryController@featured');
-    Route::get('categories/home', 'App\Http\Controllers\Api\V1\CategoryController@home');
-    Route::get('categories/top', 'App\Http\Controllers\Api\V1\CategoryController@top');
-    Route::apiResource('categories', 'App\Http\Controllers\Api\V1\CategoryController')->only('index');
-    Route::get('sub-categories/{id}', 'App\Http\Controllers\Api\V1\SubCategoryController@index')->name('subCategories.index');
+    // These lists rarely change: an ETag lets the app ask "has it changed?" and get an empty 304.
+    Route::get('categories/featured', 'App\Http\Controllers\Api\V1\CategoryController@featured')->middleware('cache.headers:private;etag');
+    Route::get('categories/home', 'App\Http\Controllers\Api\V1\CategoryController@home')->middleware('cache.headers:private;etag');
+    Route::get('categories/top', 'App\Http\Controllers\Api\V1\CategoryController@top')->middleware('cache.headers:private;etag');
+    Route::apiResource('categories', 'App\Http\Controllers\Api\V1\CategoryController')->only('index')->middleware('cache.headers:private;etag');
+    Route::get('sub-categories/{id}', 'App\Http\Controllers\Api\V1\SubCategoryController@index')->name('subCategories.index')->middleware('cache.headers:private;etag');
 
     Route::apiResource('colors', 'App\Http\Controllers\Api\V1\ColorController')->only('index')->middleware('cache.headers:private;etag');
 
@@ -271,10 +273,10 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language', 'strict.s
     Route::get('shops/brands/{id}', 'App\Http\Controllers\Api\V1\ShopController@brands')->name('shops.brands');
     Route::apiResource('shops', 'App\Http\Controllers\Api\V1\ShopController')->only('index');
 
-    Route::get('sliders', 'App\Http\Controllers\Api\V1\SliderController@sliders');
-    Route::get('banners-one', 'App\Http\Controllers\Api\V1\SliderController@bannerOne');
-    Route::get('banners-two', 'App\Http\Controllers\Api\V1\SliderController@bannerTwo');
-    Route::get('banners-three', 'App\Http\Controllers\Api\V1\SliderController@bannerThree');
+    Route::get('sliders', 'App\Http\Controllers\Api\V1\SliderController@sliders')->middleware('cache.headers:private;etag');
+    Route::get('banners-one', 'App\Http\Controllers\Api\V1\SliderController@bannerOne')->middleware('cache.headers:private;etag');
+    Route::get('banners-two', 'App\Http\Controllers\Api\V1\SliderController@bannerTwo')->middleware('cache.headers:private;etag');
+    Route::get('banners-three', 'App\Http\Controllers\Api\V1\SliderController@bannerThree')->middleware('cache.headers:private;etag');
 
 
 
@@ -318,9 +320,9 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language', 'strict.s
     Route::any('nagad/verify/{payment_type}', 'App\Http\Controllers\Api\V1\NagadController@verify')->name('app.nagad.callback_url');
 
     Route::get('sslcommerz/begin', 'App\Http\Controllers\Api\V1\SslCommerzController@begin')->middleware('auth:store_api');
-    Route::any('sslcommerz/success', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_success');
-    Route::any('sslcommerz/fail', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_fail');
-    Route::any('sslcommerz/cancel', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_cancel');
+    Route::any('sslcommerz/success', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_success')->name('api.sslcommerz.success');
+    Route::any('sslcommerz/fail', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_fail')->name('api.sslcommerz.fail');
+    Route::any('sslcommerz/cancel', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_cancel')->name('api.sslcommerz.cancel');
 
 
 

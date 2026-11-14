@@ -5,6 +5,7 @@ use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -330,6 +331,7 @@ test('an admin can create a mobile user', function () {
     ]);
 
     $response->assertRedirect(route('admin.users.index'));
+    $response->assertInertiaFlash('success', 'User has been created successfully');
 
     $user = User::query()->where('email', 'jane@example.com')->first();
     expect($user)->not->toBeNull();
@@ -558,6 +560,7 @@ test('an admin can update another users name and email', function () {
     ]);
 
     $response->assertRedirect(route('admin.users.index'));
+    $response->assertInertiaFlash('success', 'User has been updated successfully');
     expect($target->fresh()->name)->toBe('New Name');
     expect($target->fresh()->email)->toBe('new@example.com');
 });
@@ -838,6 +841,7 @@ test('an admin can delete another user', function () {
     $response = $this->delete("/admin/users/{$target->id}");
 
     $response->assertRedirect(route('admin.users.index'));
+    $response->assertInertiaFlash('success', 'User has been deleted successfully');
     $this->assertSoftDeleted('wms_users', ['id' => $target->id]);
     expect(User::find($target->id))->toBeNull();
 });
@@ -1064,4 +1068,20 @@ test('deleting a non-existent user returns a 404', function () {
     $response = $this->delete('/admin/users/999999');
 
     $response->assertNotFound();
+});
+
+test('a users action history flags whether the system has several warehouses', function () {
+    actingAsAdmin();
+    $target = User::factory()->mobileUser()->create();
+    CellStatusLog::factory()->create(['user_id' => $target->id]);
+
+    $this->get("/admin/users/{$target->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('multipleWarehouses', false)
+    );
+
+    Warehouse::factory()->count(2)->create();
+
+    $this->get("/admin/users/{$target->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('multipleWarehouses', true)
+    );
 });

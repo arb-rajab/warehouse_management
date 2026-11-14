@@ -94,13 +94,13 @@ function inputValue(event: Event) {
             #default="{ errors }"
         >
             <FieldError :message="errors.fields" />
-            <p v-if="!rows.length" class="text-gray-700 dark:text-neutral-200">
+            <p v-if="!rows.length" class="text-ink">
                 {{ t('store.sellers.emptyForm') }}
             </p>
             <fieldset
                 v-for="(field, index) in rows"
                 :key="field.id"
-                class="space-y-3 rounded-md border border-gray-300 p-4 dark:border-neutral-700"
+                class="space-y-3 rounded-md border border-line-strong p-4"
                 data-verification-field
             >
                 <legend class="px-1 font-semibold">

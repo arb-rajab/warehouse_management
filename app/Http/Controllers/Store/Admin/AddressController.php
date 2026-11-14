@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\ChecksCustomerAccount;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\FilterAddressOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreCustomerAddressRequest;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 class AddressController extends Controller implements HasMiddleware
 {
     use ChecksCustomerAccount;
+    use FlashesSuccess;
     use SearchesOptions;
 
     /** @return array<int, Middleware> */
@@ -40,6 +42,7 @@ class AddressController extends Controller implements HasMiddleware
             $address->set_default = $customer->addresses()->exists() ? 0 : 1;
             $address->save();
         });
+        $this->flashSuccess('address_has_been_created_successfully');
 
         return redirect()->route('customers.edit', $customer);
     }
@@ -49,6 +52,7 @@ class AddressController extends Controller implements HasMiddleware
         $this->assertOwnedAddress($customer, $address);
         $address->fill($request->validated());
         $address->save();
+        $this->flashSuccess('address_has_been_updated_successfully');
 
         return redirect()->route('customers.edit', $customer);
     }
@@ -62,6 +66,7 @@ class AddressController extends Controller implements HasMiddleware
             abort_if((bool) $currentAddress->set_default, 403);
             $currentAddress->delete();
         });
+        $this->flashSuccess('address_has_been_deleted_successfully');
 
         return redirect()->route('customers.edit', $customer);
     }
@@ -76,6 +81,7 @@ class AddressController extends Controller implements HasMiddleware
             $currentAddress->set_default = 1;
             $currentAddress->save();
         });
+        $this->flashSuccess('default_address_has_been_updated_successfully');
 
         return redirect()->route('customers.edit', $customer);
     }

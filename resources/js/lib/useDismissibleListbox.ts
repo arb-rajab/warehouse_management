@@ -8,8 +8,9 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
  * getter rather than a fixed number since FilterProductSelect's option
  * count changes as search results load in; it defaults to `() => 0` for a
  * caller that only wants the dismiss (open/click-outside/Escape) behavior
- * and has no option list to navigate — AccountMenu.vue is one such
- * degenerate caller, using just `open`/`containerRef`.
+ * and has no option list to navigate — StoreAdminLayout.vue's
+ * notifications popover is one such degenerate caller, using just
+ * `open`/`containerRef`.
  *
  * The caller owns opening the listbox (a plain `open.value = !open.value`,
  * or something more involved like FilterProductSelect's fetch-on-open) and

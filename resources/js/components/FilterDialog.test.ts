@@ -44,7 +44,7 @@ describe('FilterDialog', () => {
     it('emits update:open false when the backdrop is clicked', async () => {
         const wrapper = mountDialog(true);
 
-        await wrapper.get('.fixed.inset-0.bg-black\\/50').trigger('click');
+        await wrapper.get('.fixed.inset-0.bg-scrim').trigger('click');
 
         expect(wrapper.emitted('update:open')).toEqual([[false]]);
     });

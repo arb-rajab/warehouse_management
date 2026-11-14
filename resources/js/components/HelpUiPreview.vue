@@ -9,7 +9,7 @@
 
 <template>
     <span
-        class="pointer-events-none mt-1 inline-flex items-center gap-2 rounded-md border border-dashed border-gray-300 bg-gray-50 px-2 py-1.5 align-middle dark:border-neutral-700 dark:bg-neutral-900/50"
+        class="pointer-events-none mt-1 inline-flex items-center gap-2 rounded-md border border-dashed border-line-strong bg-subtle px-2 py-1.5 align-middle"
         aria-hidden="true"
     >
         <slot />

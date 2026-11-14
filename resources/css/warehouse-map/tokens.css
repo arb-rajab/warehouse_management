@@ -1,8 +1,10 @@
 /* Colours come from the app's palette: change a token here, not in a component. The 3D scene reads the brand ones from here too. */
 .wms {
     /* brand + status */
-    --wms-primary: #2563eb;
-    --wms-primary-dark: #1e3a8a;
+    /* the HUD accent is the back office brand (brand/tokens.css), not its own blue */
+    --wms-primary: var(--brand);
+    --wms-primary-dark: var(--brand-strong);
+    --wms-primary-link: #ff8a80;
     --wms-success: #10b981;
     --wms-success-bright: #34d399;
     --wms-warning: #f59e0b;

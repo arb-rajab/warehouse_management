@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterSubscribersRequest;
 use App\Http\Resources\Store\SubscriberResource;
 use App\Models\Subscriber;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class SubscriberController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -41,6 +44,7 @@ class SubscriberController extends Controller implements HasMiddleware
     public function destroy(Request $request, Subscriber $subscriber): RedirectResponse
     {
         $subscriber->delete();
+        $this->flashSuccess('subscriber_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('admin.subscribers.index', $request);
     }

@@ -58,7 +58,8 @@ test('customer packages expose the complete narrow record and paginate without o
 
 test('customer package creation preserves free and paid pricing and upload boundaries', function (string $amount, int $uploads) {
     actingAsStoreUser(createStoreStaff('edit_classified_package'));
-    $this->post('/temp/admin/customer_packages', [...$this->payload, 'amount' => $amount, 'product_upload' => $uploads, 'lang' => 'ar'])->assertRedirect(route('customer_packages.index'));
+    $this->post('/temp/admin/customer_packages', [...$this->payload, 'amount' => $amount, 'product_upload' => $uploads, 'lang' => 'ar'])->assertRedirect(route('customer_packages.index'))
+        ->assertInertiaFlash('success', 'Customer package has been created successfully');
     $package = CustomerPackage::query()->orderByDesc('id')->firstOrFail();
     expect((float) $package->amount)->toBe((float) $amount)->and($package->product_upload)->toBe($uploads);
     $this->assertDatabaseHas('customer_package_translations', ['customer_package_id' => $package->id, 'lang' => 'en', 'name' => 'Updated']);
@@ -162,7 +163,8 @@ test('customer package delete removes only its package and translations and pres
     $customer = createStoreUser('customer');
     $customer->forceFill(['customer_package_id' => $this->package->id, 'remaining_uploads' => 3])->save();
     DB::table('customer_package_payments')->insert(['user_id' => $customer->id, 'customer_package_id' => $this->package->id, 'payment_method' => 'bank', 'payment_details' => 'ref', 'approval' => 1, 'offline_payment' => 1, 'reciept' => 'receipts/test.png']);
-    $this->delete('/temp/admin/customer_packages/destroy/'.$this->package->id.'?page=2&per_page=10')->assertRedirect(route('customer_packages.index', ['page' => 2, 'per_page' => 10]));
+    $this->delete('/temp/admin/customer_packages/destroy/'.$this->package->id.'?page=2&per_page=10')->assertRedirect(route('customer_packages.index', ['page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Customer package has been deleted successfully');
     $this->assertDatabaseMissing('customer_packages', ['id' => $this->package->id]);
     $this->assertDatabaseMissing('customer_package_translations', ['customer_package_id' => $this->package->id]);
     $this->assertDatabaseHas('customer_package_translations', ['customer_package_id' => $other->id]);

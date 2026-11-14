@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
 import { useForm } from '@inertiajs/vue3';
-import { CalendarPlus, CalendarX } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { CalendarPlus, CalendarX, CircleAlert } from '@lucide/vue';
+import { computed, ref, useTemplateRef, watch } from 'vue';
 import {
     empty as emptyPallet,
     open as openPallet,
@@ -12,8 +12,9 @@ import {
     update as updatePallet,
 } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
-import ProductImageReviewFields from '@/components/ProductImageReviewFields.vue';
+import PalletTransferFields from '@/components/PalletTransferFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -25,13 +26,25 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
+import {
+    nonFieldErrors,
+    palletTransferValidation,
+} from '@/lib/palletTransferForm';
 import { productName } from '@/lib/productName';
-import type { Cell, CellMapRow, ProductFilterOption } from '@/types/admin';
+import { useFormValidation } from '@/lib/useFormValidation';
+import type {
+    Cell,
+    PalletTransferTargets,
+    ProductFilterOption,
+} from '@/types/admin';
 
 const props = defineProps<{
     cell: Cell | null;
     label: string;
-    rows: CellMapRow[];
+    /** Where a transfer can go: every warehouse and its rows. */
+    transferTargets: PalletTransferTargets;
+    /** The cell's warehouse, a transfer's default destination warehouse. */
+    warehouseId: number;
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -62,18 +75,45 @@ const form = useForm({
     expiration_date: '',
     boxes_count: '',
     confirm_empty: false,
+    warehouse_id: null as number | null,
     row_letter: '',
     cell_number: '',
     flat_number: '',
     note: '',
-    image_review_status: '',
-    image_review_note: '',
-    image_source: '',
 });
+
+const formElement = useTemplateRef<HTMLFormElement>('formElement');
+
+/**
+ * The transfer tab validates in the browser first, from the copy of
+ * Admin\TransferPalletRequest's rules (client-side-validation.md); the other
+ * tabs keep their native constraints.
+ */
+const validator = useFormValidation(
+    () =>
+        selectedAction.value === 'transfer'
+            ? palletTransferValidation
+            : undefined,
+    () => formElement.value,
+);
+
+const transferErrors = computed(() => validator.errorsFor(form.errors));
+
+const bannerError = computed(() =>
+    firstError(
+        selectedAction.value === 'transfer'
+            ? nonFieldErrors(form.errors)
+            : form.errors,
+    ),
+);
 
 function resetFields(): void {
     form.reset();
     form.clearErrors();
+    // A transfer goes to the cell's own warehouse unless another is chosen.
+    form.warehouse_id = props.warehouseId;
+    // Start the next tab without the last one's browser errors.
+    validator.onStart();
 }
 
 watch(open, (isOpen) => {
@@ -97,17 +137,6 @@ watch(selectedAction, (action) => {
         form.boxes_count = String(props.cell.pallet.remaining_boxes);
     }
 });
-
-const imageReviewReady = ref(false);
-watch(
-    () => form.product?.id,
-    () => {
-        imageReviewReady.value = false;
-        form.image_review_status = '';
-        form.image_review_note = '';
-        form.image_source = '';
-    },
-);
 
 const remainingBoxes = computed(() => props.cell?.pallet?.remaining_boxes ?? 0);
 
@@ -145,9 +174,6 @@ function buildRequest(): PalletActionRequest | null {
         return {
             action: store(cell, query),
             data: {
-                image_review_status: form.image_review_status,
-                image_review_note: form.image_review_note || null,
-                image_source: form.image_source,
                 product_id: form.product?.id ?? null,
                 expiration_date: form.expiration_date,
                 note: noteOrNull(),
@@ -189,6 +215,9 @@ function buildRequest(): PalletActionRequest | null {
             return {
                 action: transfer(pallet, query),
                 data: {
+                    // A letter names one row per warehouse, so the transfer
+                    // names the destination warehouse too.
+                    warehouse_id: form.warehouse_id,
                     row_letter: form.row_letter,
                     cell_number: form.cell_number,
                     flat_number: form.flat_number,
@@ -211,21 +240,15 @@ function buildRequest(): PalletActionRequest | null {
 }
 
 function submit(): void {
-    if (
-        selectedAction.value === 'store' &&
-        (!imageReviewReady.value || !form.image_review_status)
-    ) {
-        return;
-    }
-
     const request = buildRequest();
 
-    if (!request) {
+    if (!request || !validator.onBefore()) {
         return;
     }
 
     form.transform(() => request.data).submit(request.action, {
         preserveScroll: true,
+        onStart: validator.onStart,
         onSuccess: () => {
             open.value = false;
         },
@@ -261,7 +284,7 @@ const submitLabel = computed(() => {
         <div
             v-if="cell?.pallet"
             data-testid="pallet-action-details"
-            class="mb-4 flex items-start gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-neutral-800 dark:bg-neutral-950"
+            class="mb-4 flex items-start gap-3 rounded-md border border-line bg-subtle p-3"
         >
             <img
                 v-if="cell.pallet.product_image_url"
@@ -275,9 +298,7 @@ const submitLabel = computed(() => {
                 class="h-12 w-12 shrink-0 rounded object-cover"
             />
             <div class="min-w-0 space-y-0.5">
-                <p
-                    class="truncate font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <p class="truncate font-medium text-ink">
                     {{
                         productName(
                             cell.pallet.product_name,
@@ -285,7 +306,7 @@ const submitLabel = computed(() => {
                         )
                     }}
                 </p>
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{
                         t('cells.palletActions.details.remainingBoxes', {
                             count: cell.pallet.remaining_boxes,
@@ -294,14 +315,14 @@ const submitLabel = computed(() => {
                 </p>
                 <div
                     v-if="cell.pallet.expiration_date"
-                    class="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400"
+                    class="flex items-center gap-1 text-xs text-muted"
                 >
                     <CalendarX class="h-3 w-3 shrink-0" />
                     {{ formatDate(cell.pallet.expiration_date) }}
                 </div>
                 <div
                     v-if="cell.pallet.added_at"
-                    class="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-500"
+                    class="flex items-center gap-1 text-xs text-muted"
                 >
                     <CalendarPlus class="h-3 w-3 shrink-0" />
                     {{ formatDateTime(cell.pallet.added_at) }}
@@ -323,7 +344,7 @@ const submitLabel = computed(() => {
                 :class="
                     selectedAction === action
                         ? selectedToggleClass
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800'
+                        : 'border border-line-strong text-ink hover:bg-subtle'
                 "
                 @click="selectedAction = action"
             >
@@ -337,11 +358,20 @@ const submitLabel = computed(() => {
 
         <form
             id="pallet-action-form"
+            ref="formElement"
             class="space-y-4"
+            :novalidate="selectedAction === 'transfer' ? true : undefined"
             @submit.prevent="submit"
+            @focusout="validator.onFocusOut"
+            @input="validator.onInput"
+            @change="validator.onChange"
         >
-            <RequiredLegend v-if="selectedAction === 'store'" />
-            <ActionErrorBanner :message="firstError(form.errors)" />
+            <RequiredLegend
+                v-if="
+                    selectedAction === 'store' || selectedAction === 'transfer'
+                "
+            />
+            <ActionErrorBanner :message="bannerError" />
 
             <template
                 v-if="selectedAction === 'store' || selectedAction === 'edit'"
@@ -362,16 +392,6 @@ const submitLabel = computed(() => {
                             `cells.palletActions.${selectedAction}.productPlaceholder`,
                         )
                     "
-                />
-                <ProductImageReviewFields
-                    v-if="selectedAction === 'store' && form.product"
-                    :key="form.product.id"
-                    :product-id="form.product.id"
-                    id-prefix="receiving-image-review"
-                    v-model:status="form.image_review_status"
-                    v-model:note="form.image_review_note"
-                    v-model:source="form.image_source"
-                    @ready="imageReviewReady = $event"
                 />
                 <div>
                     <label
@@ -417,7 +437,7 @@ const submitLabel = computed(() => {
                 </div>
                 <label
                     v-if="selectedAction === 'edit' && editWouldEmptyPallet"
-                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                    class="flex items-start gap-2 text-sm text-ink"
                 >
                     <input
                         v-model="form.confirm_empty"
@@ -434,7 +454,7 @@ const submitLabel = computed(() => {
                     selectedAction === 'remove-boxes'
                 "
             >
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{
                         t(
                             `cells.palletActions.${selectedAction === 'open' ? 'open' : 'removeBoxes'}.remainingBoxesHint`,
@@ -464,7 +484,7 @@ const submitLabel = computed(() => {
                 </div>
                 <label
                     v-if="boxesWouldEmptyPallet"
-                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                    class="flex items-start gap-2 text-sm text-ink"
                 >
                     <input
                         v-model="form.confirm_empty"
@@ -480,7 +500,7 @@ const submitLabel = computed(() => {
             </template>
 
             <template v-else-if="selectedAction === 'empty'">
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{
                         t('cells.palletActions.empty.confirmText', {
                             location: label,
@@ -490,52 +510,16 @@ const submitLabel = computed(() => {
             </template>
 
             <template v-else-if="selectedAction === 'transfer'">
-                <div>
-                    <label for="pallet-action-to-row" :class="fieldLabelClass">
-                        {{ t('cells.palletActions.transfer.rowLabel') }}
-                    </label>
-                    <select
-                        id="pallet-action-to-row"
-                        v-model="form.row_letter"
-                        required
-                        :class="plainFieldInputClass"
-                    >
-                        <option value="" disabled>—</option>
-                        <option
-                            v-for="row in rows"
-                            :key="row.id"
-                            :value="row.letter"
-                        >
-                            {{ row.letter }}
-                        </option>
-                    </select>
-                </div>
-                <div>
-                    <label for="pallet-action-to-cell" :class="fieldLabelClass">
-                        {{ t('cells.palletActions.transfer.cellNumberLabel') }}
-                    </label>
-                    <input
-                        id="pallet-action-to-cell"
-                        v-model="form.cell_number"
-                        type="number"
-                        min="1"
-                        required
-                        :class="plainFieldInputClass"
-                    />
-                </div>
-                <div>
-                    <label for="pallet-action-to-flat" :class="fieldLabelClass">
-                        {{ t('cells.palletActions.transfer.flatNumberLabel') }}
-                    </label>
-                    <input
-                        id="pallet-action-to-flat"
-                        v-model="form.flat_number"
-                        type="number"
-                        min="1"
-                        required
-                        :class="plainFieldInputClass"
-                    />
-                </div>
+                <PalletTransferFields
+                    v-model:warehouse-id="form.warehouse_id"
+                    v-model:row-letter="form.row_letter"
+                    v-model:cell-number="form.cell_number"
+                    v-model:flat-number="form.flat_number"
+                    id-prefix="pallet-action-to-"
+                    :warehouses="transferTargets.warehouses"
+                    :rows="transferTargets.rows"
+                    :errors="transferErrors"
+                />
             </template>
 
             <div v-if="selectedAction !== 'edit'">
@@ -545,12 +529,26 @@ const submitLabel = computed(() => {
                 <textarea
                     id="pallet-action-note"
                     v-model="form.note"
+                    name="note"
                     rows="3"
                     maxlength="1000"
                     :placeholder="t('cells.palletActions.notePlaceholder')"
                     :class="plainFieldInputClass"
                 ></textarea>
+                <FieldError
+                    v-if="selectedAction === 'transfer'"
+                    :message="transferErrors.note"
+                />
             </div>
+
+            <p
+                v-if="selectedAction === 'transfer' && validator.blocked.value"
+                role="alert"
+                class="flex items-center gap-1 text-sm text-danger"
+            >
+                <CircleAlert class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {{ t('common.formValidation.blocked') }}
+            </p>
         </form>
 
         <template #footer>
@@ -559,11 +557,7 @@ const submitLabel = computed(() => {
                 :label="submitLabel"
                 :processing-label="t('cells.palletActions.submitting')"
                 :processing="form.processing"
-                :disabled="
-                    form.processing ||
-                    (selectedAction === 'store' &&
-                        (!imageReviewReady || !form.image_review_status))
-                "
+                :disabled="form.processing"
             />
         </template>
     </FilterDialog>

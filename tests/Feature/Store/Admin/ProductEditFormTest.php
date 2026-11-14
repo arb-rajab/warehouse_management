@@ -4,11 +4,14 @@ use App\Http\Middleware\BlockMaliciousRequests;
 use App\Models\Category;
 use App\Models\Language;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductTranslation;
-use App\Models\StoreProductBarcode;
 use App\Models\Upload;
 use App\Models\User;
+use App\Services\ProductBarcodeLabels;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -16,7 +19,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 /**
  * The physical product edit form (.ai/archive/store-backoffice/changes-20261014.md
  * §23): one stored variant product with an Arabic translation, a foreign
- * variant photo, a tax, a flash deal, a type and a store barcode, beside a
+ * variant photo, a tax, a flash deal, a type and a barcode, beside a
  * second product whose rows must never change.
  */
 beforeEach(function () {
@@ -66,13 +69,13 @@ beforeEach(function () {
         ['product_id' => $this->product->id, 'lang' => 'ar', 'name' => 'زيت زيتون', 'unit' => 'زجاجة', 'description' => '<p>زيت</p>'],
     ]);
     DB::table('product_variations')->insert(['product_id' => $this->product->id, 'name' => 'Cold pressed']);
-    StoreProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '8710000000001']);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '8710000000001']);
     DB::table('product_taxes')->insert(['product_id' => $this->product->id, 'tax_id' => $this->vat, 'tax' => 21, 'tax_type' => 'percent']);
     DB::table('flash_deal_products')->insert(['flash_deal_id' => $this->flashDeal, 'product_id' => $this->product->id]);
 
     // Noise: another product's rows and barcode never change.
     $this->other = createStoreProduct(['name' => 'Sunflower oil', 'slug' => 'sunflower-oil', 'added_by' => 'seller', 'thumbnail_img' => null]);
-    StoreProductBarcode::query()->create(['product_id' => $this->other->id, 'barcode' => '8710000000002']);
+    ProductBarcode::query()->create(['product_id' => $this->other->id, 'barcode' => '8710000000002']);
     DB::table('product_translations')->insert(['product_id' => $this->other->id, 'lang' => 'ar', 'name' => 'زيت دوار الشمس', 'unit' => 'زجاجة', 'description' => null]);
 });
 
@@ -226,7 +229,8 @@ test('the edit form renders Inertia with the full payload in the requested langu
                 ['variant' => 'ExtraLarge', 'price' => '15.25', 'sku' => '', 'qty' => '0', 'image' => null, 'files' => []],
             ],
         ])
-        ->where('initialFiles', ['photos' => [], 'thumbnail_img' => [], 'old_photo' => [], 'pdf' => [], 'meta_img' => []]));
+        ->where('initialFiles', ['photos' => [], 'thumbnail_img' => [], 'old_photo' => [], 'pdf' => [], 'meta_img' => []])
+        ->where('barcodeImages', [['id' => ProductBarcode::query()->where('product_id', $this->product->id)->value('id'), 'barcode' => '8710000000001', 'printable' => true]]));
     $this->get(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'ar']), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
 });
 
@@ -321,7 +325,8 @@ test('saving the unchanged form keeps every stock row, its id and its values, an
     Artisan::shouldReceive('call')->with('cache:clear')->once()->andReturn(0);
 
     $this->post(route('products.update', $this->product), productEditForm())
-        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'en']));
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'en']))
+        ->assertInertiaFlash('success', 'Product has been updated successfully');
 
     expect($committed)->toBe([true])
         ->and(productEditStocks($this->product->id))->toEqual($stocks)
@@ -406,8 +411,9 @@ test('a default-language save writes the base fields and its translation and kee
             ['lang' => 'en', 'name' => 'Extra virgin olive oil', 'unit' => 'jar', 'description' => '<p>Cold</p>'],
         ])
         ->and(DB::table('product_variations')->where('product_id', $this->product->id)->pluck('name')->all())->toBe(['Organic'])
+        // The kept barcode keeps its row (and id); only the new one is inserted.
         ->and(DB::table('product_barcodes')->orderBy('id')->get(['product_id', 'barcode'])->map(fn ($row) => [$row->product_id, $row->barcode])->all())->toBe([
-            [$this->other->id, '8710000000002'], [$this->product->id, '8710000000001'], [$this->product->id, '4006381333931'],
+            [$this->product->id, '8710000000001'], [$this->other->id, '8710000000002'], [$this->product->id, '4006381333931'],
         ])
         ->and(DB::table('product_taxes')->where('product_id', $this->product->id)->orderBy('id')->get(['tax_id', 'tax', 'tax_type'])->map(fn ($row) => (array) $row)->all())
         ->toEqual([['tax_id' => $this->vat, 'tax' => 9, 'tax_type' => 'percent'], ['tax_id' => $this->service, 'tax' => 1.5, 'tax_type' => 'amount']]);
@@ -514,7 +520,7 @@ test('stored uploads round-trip whoever owns them; new references follow the lib
     expect(DB::table('products')->where('id', $this->product->id)->value('old_photo'))->toBe($stored->id.','.$foreign->id);
 });
 
-test('the product\'s own store barcodes may be posted again; another product\'s may not', function () {
+test('the product\'s own barcodes may be posted again; another product\'s may not', function () {
     actingAsStoreUser(createStoreStaff('product_edit'));
     Artisan::shouldReceive('call')->andReturn(0);
     $before = productEditSnapshot();
@@ -523,6 +529,115 @@ test('the product\'s own store barcodes may be posted again; another product\'s 
     expect(productEditSnapshot())->toEqual($before);
     $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => []]))->assertSessionHasNoErrors();
     expect(DB::table('product_barcodes')->pluck('barcode')->all())->toBe(['8710000000002']);
+});
+
+test('values the product already holds save again, even one another product shares or its own id; new ones must be new and not an id', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    // Legacy data: a value two products share, and the import's own-id row.
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '8710000000002']);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+    $held = ['8710000000001', '8710000000002', (string) $this->product->id];
+    $before = productEditSnapshot();
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => [...$held, (string) $this->other->id]]))
+        ->assertSessionHasErrors(['product_barcodes.3' => __('messages.barcode_is_product_id')]);
+    expect(productEditSnapshot())->toEqual($before);
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => $held]))->assertSessionHasNoErrors();
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('barcode')->pluck('barcode')->all())->toEqualCanonicalizing($held)
+        ->and(DB::table('product_barcodes')->where('product_id', $this->other->id)->pluck('barcode')->all())->toBe(['8710000000002']);
+});
+
+test('a save never deletes a barcode the form did not show: one added in the WMS after the form loaded stays', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $kept = ProductBarcode::query()->where('product_id', $this->product->id)->sole();
+    // Added in the WMS (or by the import, or another tab) while the form was open.
+    $late = ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-LATE']);
+
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001', '4006381333931'],
+        'product_barcodes_seen' => ['8710000000001'],
+    ]))->assertSessionHasNoErrors()->assertInertiaFlash('success', 'Product has been updated successfully');
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->get(['id', 'barcode'])->map(fn ($row) => [$row->id, $row->barcode])->all())
+        ->toEqual([[$kept->id, '8710000000001'], [$late->id, 'WMS-LATE'], [DB::table('product_barcodes')->where('barcode', '4006381333931')->value('id'), '4006381333931']])
+        ->and(DB::table('product_barcodes')->where('product_id', $this->other->id)->pluck('barcode')->all())->toBe(['8710000000002']);
+});
+
+test('a value the form showed and the user removed is deleted, with its duplicates on the product, and nothing else', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => ' 8710000000001 ']);
+    $stays = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'STAYS']);
+    $late = ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-LATE']);
+
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['STAYS'],
+        'product_barcodes_seen' => ['8710000000001', 'STAYS'],
+    ]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->pluck('id')->all())->toEqual([$stays->id, $late->id])
+        ->and(DB::table('product_barcodes')->where('product_id', $this->other->id)->count())->toBe(1);
+});
+
+test('an empty seen list deletes nothing: every row the form did not show stays', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $before = DB::table('product_barcodes')->orderBy('id')->get()->toArray();
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => [], 'product_barcodes_seen' => []]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->orderBy('id')->get()->toArray())->toEqual($before);
+});
+
+test('without the seen list a save keeps today\'s replace: the product ends up with exactly the posted values, kept rows keeping their ids', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $kept = ProductBarcode::query()->where('product_id', $this->product->id)->sole();
+    ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-LATE']);
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => ['8710000000001', '4006381333931']]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->pluck('barcode')->all())->toBe(['8710000000001', '4006381333931'])
+        ->and(DB::table('product_barcodes')->where('barcode', '8710000000001')->value('id'))->toEqual($kept->id);
+});
+
+test('the seen list is validated', function (mixed $seen, string $field) {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $before = productEditSnapshot();
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes_seen' => $seen]))->assertSessionHasErrors($field);
+    expect(productEditSnapshot())->toEqual($before);
+})->with([
+    'not a list' => ['8710000000001', 'product_barcodes_seen'],
+    'too many' => [array_fill(0, 51, 'X'), 'product_barcodes_seen'],
+    'too long' => [[str_repeat('9', 256)], 'product_barcodes_seen.0'],
+]);
+
+test('a value another product takes between validation and the write is refused under the lock, and nothing is written', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->never();
+    $before = productEditSnapshot();
+    $racer = $this->other;
+    $lock = Mockery::mock(Lock::class);
+    $lock->shouldReceive('block')->once()->andReturnUsing(function (int $seconds, Closure $callback) use ($racer) {
+        DB::table('product_barcodes')->insert(['product_id' => $racer->id, 'barcode' => '4006381333931']);
+
+        return $callback();
+    });
+    // Cache::partialMock() would build the manager without its container, so every other
+    // store lookup in the request would fail. A proxied mock of the real manager keeps it.
+    $cache = Mockery::mock(app('cache'));
+    $cache->shouldReceive('lock')->once()->with('product-barcodes', 10)->andReturn($lock);
+    Cache::swap($cache);
+
+    $this->post(route('products.update', $this->product), productEditForm(['name' => 'Renamed', 'product_barcodes' => ['8710000000001', '4006381333931']]))
+        ->assertSessionHasErrors(['product_barcodes.1' => 'The product barcode has already been taken.']);
+
+    DB::table('product_barcodes')->where('product_id', $racer->id)->where('barcode', '4006381333931')->delete();
+    expect(productEditSnapshot())->toEqual($before);
 });
 
 test('the update validates every field and refuses rows that do not match the choices', function (array|Closure $overrides, string $field) {
@@ -577,17 +692,18 @@ test('a failed update rolls every table back and clears no cache', function () {
     actingAsStoreUser(createStoreStaff('product_edit'));
     $before = productEditSnapshot();
     Artisan::shouldReceive('call')->never();
-    StoreProductBarcode::saving(fn () => throw new RuntimeException('Persistence failure'));
+    ProductBarcode::saving(fn () => throw new RuntimeException('Persistence failure'));
     $this->withoutExceptionHandling();
     try {
+        // A new barcode, so the save inserts one (a kept one is not rewritten).
         expect(fn () => $this->post(route('products.update', $this->product), productEditForm([
-            'name' => 'Renamed', 'choice_options' => [['attribute_id' => $this->size, 'values' => ['S', 'M']]],
+            'name' => 'Renamed', 'product_barcodes' => ['8710000000001', '4006381333931'], 'choice_options' => [['attribute_id' => $this->size, 'values' => ['S', 'M']]],
             'variants' => [['variant' => 'S', 'price' => '1', 'qty' => '1'], ['variant' => 'M', 'price' => '1', 'qty' => '1']],
             'flash_deal_id' => $this->flashDeal, 'flash_discount_type' => 'amount',
         ])))->toThrow(RuntimeException::class);
         expect(productEditSnapshot())->toEqual($before);
     } finally {
-        StoreProductBarcode::flushEventListeners();
+        ProductBarcode::flushEventListeners();
     }
 });
 
@@ -611,9 +727,122 @@ test('the WAF still refuses a script payload before anything is written, and the
         ->assertInertia(fn (Assert $page) => $page->where('description', '<p>Old</p>'));
 });
 
+test('the edit form sends each saved barcode once, with its id and whether it can be shown as an image', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $arabic = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧']);
+    $word = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'متجر']);
+    // One table: a barcode added in the WMS is an input of this form too.
+    $wms = ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-ADDED']);
+    // A legacy duplicate on the same product, padded, and a blank row are shown once and not at all.
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => ' 8710000000001 ']);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '   ']);
+    // The import's own-id row, plain or padded, is not offered for removal; another product's id is an ordinary value.
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => ' '.$this->product->id.' ']);
+    // The legacy column is not an input of this form.
+    DB::table('products')->where('id', $this->product->id)->update(['barcode' => 'LEGACY-1']);
+
+    $this->get(route('products.admin.edit', $this->product))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('product.product_barcodes', ['8710000000001', '٥٩٠١٢٣٤١٢٣٤٥٧', 'متجر', 'WMS-ADDED'])
+        ->where('barcodeImages', [
+            ['id' => ProductBarcode::query()->where('barcode', '8710000000001')->value('id'), 'barcode' => '8710000000001', 'printable' => true],
+            ['id' => $arabic->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧', 'printable' => true],
+            ['id' => $word->id, 'barcode' => 'متجر', 'printable' => false],
+            ['id' => $wms->id, 'barcode' => 'WMS-ADDED', 'printable' => true],
+        ]));
+});
+
+test('the own-id row stays: the form neither shows it nor deletes it, whatever else is saved', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $ownId = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+    $kept = ProductBarcode::query()->where('product_id', $this->product->id)->where('barcode', '8710000000001')->firstOrFail();
+    $other = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'REMOVE-ME']);
+    $ids = fn () => DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->pluck('id')->all();
+
+    $this->get(route('products.admin.edit', $this->product))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('product.product_barcodes', ['8710000000001', 'REMOVE-ME'])
+        ->where('barcodeImages', fn ($images) => collect($images)->pluck('barcode')->all() === ['8710000000001', 'REMOVE-ME']));
+
+    // Saving the form as it loaded changes nothing.
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001', 'REMOVE-ME'],
+        'product_barcodes_seen' => ['8710000000001', 'REMOVE-ME'],
+    ]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$kept->id, $ownId->id, $other->id]);
+
+    // Removing another barcode keeps the own-id row, with its id.
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001'],
+        'product_barcodes_seen' => ['8710000000001', 'REMOVE-ME'],
+    ]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$kept->id, $ownId->id]);
+
+    // Removing every shown barcode, with the seen list posted as the blank entry of a form that loaded none, keeps it too.
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => [],
+        'product_barcodes_seen' => ['8710000000001'],
+    ]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$ownId->id]);
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => [], 'product_barcodes_seen' => ['']]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$ownId->id]);
+
+    // Even a client that posts no seen list, and not the own id, cannot delete it.
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => []]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$ownId->id]);
+});
+
+test('typing the product\'s own id adds no second row', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $ownId = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001', (string) $this->product->id],
+        'product_barcodes_seen' => ['8710000000001'],
+    ]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->where('barcode', (string) $this->product->id)->pluck('id')->all())->toEqual([$ownId->id])
+        ->and(DB::table('product_barcodes')->where('product_id', $this->product->id)->count())->toBe(2);
+});
+
+test('a store barcode image is the WMS label of its converted value, served inline and answered with a 304 when unchanged', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $barcode = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧']);
+    $url = route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => $barcode]);
+    $labels = new ProductBarcodeLabels;
+    $product = Product::query()->findOrFail($this->product->id);
+
+    $response = $this->get($url)->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml')
+        ->assertHeader('Content-Disposition', 'inline');
+    expect($response->headers->get('Cache-Control'))->toContain('private')->toContain('no-cache')
+        ->and($response->getContent())->toBe($labels->barcodeSvg($product, '5901234123457'))
+        ->and($response->getContent())->toContain('>5901234123457</text>')->toContain('>Olive oil</text>')
+        ->and($response->headers->get('ETag'))->toBe('"'.$labels->etag($product, '5901234123457').'"');
+    $this->get($url, ['If-None-Match' => $response->headers->get('ETag')])->assertNotModified();
+    // The URL is unchanged; its parameter is now {barcode}, bound through Product::barcodes().
+    expect(route('products.store_barcodes.image', ['product' => 5, 'barcode' => 7], false))->toBe('/temp/admin/products/5/store-barcodes/7/image');
+});
+
+test('the store barcode image resolves only this product\'s barcodes and refuses blank or unencodable values', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $other = ProductBarcode::query()->where('product_id', $this->other->id)->sole();
+    $word = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'متجر']);
+    $blank = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '  ']);
+
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => $other]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => 999999]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => 999999, 'barcode' => $word]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => $blank]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => $word]))->assertUnprocessable();
+});
+
 test('every edit route refuses unauthorized callers and writes nothing', function (string $caller) {
     actingAsRefusedStoreCaller($caller);
     $before = productEditSnapshot();
+    $barcode = ProductBarcode::query()->where('product_id', $this->product->id)->value('id');
+    assertStoreCallerRefused($this->get(route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => $barcode])), $caller);
     assertStoreCallerRefused($this->get(route('products.admin.edit', $this->product)), $caller);
     assertStoreCallerRefused($this->get(route('products.seller.edit', $this->product)), $caller);
     assertStoreCallerRefused($this->post(route('products.update', $this->product), productEditForm(['name' => 'Taken over'])), $caller);
@@ -628,6 +857,7 @@ test('only product_edit opens and saves the edit form', function () {
     $this->get(route('products.seller.edit', $this->product))->assertForbidden();
     $this->post(route('products.update', $this->product), productEditForm(['name' => 'Taken over']))->assertForbidden();
     $this->postJson(route('products.edit_variant_combinations', $this->product), [])->assertForbidden();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => ProductBarcode::query()->where('product_id', $this->product->id)->value('id')]))->assertForbidden();
     expect(productEditSnapshot())->toEqual($before);
 });
 
@@ -637,6 +867,7 @@ test('WMS authentication opens no product edit form and writes nothing', functio
     $this->get(route('products.admin.edit', $this->product))->assertRedirect(route('shop.login'));
     $this->post(route('products.update', $this->product), productEditForm())->assertRedirect(route('shop.login'));
     $this->post(route('products.edit_variant_combinations', $this->product), [])->assertRedirect(route('shop.login'));
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'barcode' => ProductBarcode::query()->where('product_id', $this->product->id)->value('id')]))->assertRedirect(route('shop.login'));
     expect(productEditSnapshot())->toEqual($before);
 });
 

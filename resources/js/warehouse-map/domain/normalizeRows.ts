@@ -58,6 +58,7 @@ function normalizeCell(
     letter: string,
     rowIdx: number,
     now: number,
+    warehouseId?: number,
 ): Slot {
     const pallet = cell.pallet ? normalizePallet(cell.pallet) : null;
 
@@ -75,6 +76,7 @@ function normalizeCell(
             ? `${pallet.productName} ${pallet.productArName}`.toLowerCase()
             : '',
         expiresInDays: daysUntil(pallet?.expirationDate ?? null, now),
+        warehouseId,
     };
 }
 
@@ -102,7 +104,13 @@ export function normalizeRows(
         warehouse.rows.push({ id: row.id, letter, idx: rowIdx });
 
         for (const cell of row.cells ?? []) {
-            const slot = normalizeCell(cell, letter, rowIdx, now);
+            const slot = normalizeCell(
+                cell,
+                letter,
+                rowIdx,
+                now,
+                row.warehouse?.id,
+            );
             const key = columnKey(letter, slot.col);
             const column = warehouse.byColumn.get(key) ?? [];
 

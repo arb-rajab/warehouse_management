@@ -29,7 +29,7 @@ defineProps<{
                 :class="
                     language.code === lang
                         ? selectedToggleClass
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
+                        : 'text-muted hover:bg-subtle'
                 "
                 >{{ language.name }}</Link
             >

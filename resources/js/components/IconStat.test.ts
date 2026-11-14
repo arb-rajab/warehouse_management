@@ -108,8 +108,10 @@ describe('IconStat', () => {
     });
 
     it('applies the tone to the whole pair', () => {
-        const wrapper = mountStat({ tone: 'text-green-700' });
+        const wrapper = mountStat({ tone: 'text-success-strong' });
 
-        expect(wrapper.get('button').classes()).toContain('text-green-700');
+        expect(wrapper.get('button').classes()).toContain(
+            'text-success-strong',
+        );
     });
 });

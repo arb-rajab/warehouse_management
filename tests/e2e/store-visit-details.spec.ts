@@ -85,7 +85,14 @@ test('visit detail and ranked day maps keep popups, Inertia navigation, note own
     const updated = `Own visit note ${stamp}`;
     await page.getByLabel('Visit note', { exact: true }).fill(updated);
     await page.getByRole('button', { name: 'Save note', exact: true }).click();
-    await expect(page.getByRole('status')).toHaveText('Note saved.');
+    await expect(
+        page.getByRole('status').filter({ hasText: /^Note saved\.$/ }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('status').filter({
+            hasText: 'Visit note has been updated successfully',
+        }),
+    ).toBeVisible();
     seedStoreFixtures(String.raw`
         if (App\Models\Visit::findOrFail(${id})->note !== ${php(updated)} || App\Models\Visit::findOrFail(${id + 2})->note !== ${php(note)}) throw new RuntimeException('Visit note ownership changed');
     `);

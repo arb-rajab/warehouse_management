@@ -478,7 +478,7 @@ describe('StoreRichTextField', () => {
             'The content is invalid.',
         );
         expect(content.attributes('aria-invalid')).toBe('true');
-        expect(content.classes()).toContain('border-red-600');
+        expect(content.classes()).toContain('border-danger');
     });
 
     it('posts an empty table it would otherwise lose, while a required field still counts it as missing', async () => {

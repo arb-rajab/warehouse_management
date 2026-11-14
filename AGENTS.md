@@ -25,6 +25,24 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
 8. Any store back office select that searches another table (customer, product,
    brand, city, ...) must be a `StoreSearchSelect` shaped like the product search,
    with its row content defined per entity, per [.ai/rules/store-search-select.md](.ai/rules/store-search-select.md).
+9. Every user action that succeeds and redirects must flash a success message, per
+   [.ai/rules/success-messages.md](.ai/rules/success-messages.md): `flashSuccess()` from
+   the `FlashesSuccess` controller concern, with the text in `lang/{en,ar}/store_admin.php`
+   and an `assertInertiaFlash` test; never on a failure path.
+10. Label/value details on show pages, summaries and dialogs must use the shared
+    `DetailList`/`DetailItem`, per [.ai/rules/detail-lists.md](.ai/rules/detail-lists.md):
+    the label sits above its value, empty values show "-", and a bare `<dl>`/`dt`/`dd`,
+    a two-column label grid or a label-left/value-right line is never used.
+11. Product barcodes live in the one table `product_barcodes`, per
+    [.ai/rules/product-barcodes.md](.ai/rules/product-barcodes.md): own-id rows are
+    never deleted by a form, new values pass `NewProductBarcode` under its lock,
+    every product delete path deletes its barcodes, labels go through
+    `ProductBarcodeLabels`, and the Store form always posts `product_barcodes_seen`.
+12. Every setup or readiness check (the dashboard setup checklist included) must say
+    which exact setting is missing and link to it with a highlight, never a bare
+    "not done", per [.ai/rules/setup-checklist-reasons.md](.ai/rules/setup-checklist-reasons.md):
+    reasons come from `SetupChecklist::TARGETS`, the target page validates and marks the
+    `highlight` key, and the page shows exactly what the check reads.
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for

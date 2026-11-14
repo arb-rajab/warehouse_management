@@ -34,7 +34,11 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function mountCells(
     log: CellStatusLog,
-    props: { showUserColumn?: boolean; returnTo?: 'user' } = {},
+    props: {
+        showUserColumn?: boolean;
+        returnTo?: 'user';
+        multipleWarehouses?: boolean;
+    } = {},
 ) {
     usePageMock.mockReturnValue({
         url: cellLogsIndex.url(),
@@ -94,6 +98,92 @@ describe('CellStatusLogRowCells', () => {
         expect(links).toHaveLength(2);
         expect(links[0].text()).toBe(formatSlot('A', 3, 2));
         expect(links[1].text()).toBe(formatSlot('B', 1, 4));
+    });
+
+    describe('warehouse name', () => {
+        const main = { id: 1, name: 'Main' };
+        const cold = { id: 2, name: 'Cold store' };
+        const transfer = (from: typeof main, to: typeof main) =>
+            cellLog({
+                action: 'transferred_out',
+                cell: {
+                    row_letter: 'A',
+                    cell_number: 3,
+                    flat_number: 2,
+                    warehouse: from,
+                },
+                related_cell: {
+                    row_letter: 'B',
+                    cell_number: 1,
+                    flat_number: 4,
+                    warehouse: to,
+                },
+            });
+        const names = (wrapper: ReturnType<typeof mountCells>) =>
+            wrapper
+                .findAll('[data-testid="cell-warehouse"]')
+                .map((node) => node.text());
+
+        it('hides the warehouse in a single-warehouse system', () => {
+            expect(names(mountCells(transfer(main, cold)))).toEqual([]);
+            expect(
+                names(
+                    mountCells(transfer(main, cold), {
+                        multipleWarehouses: false,
+                    }),
+                ),
+            ).toEqual([]);
+        });
+
+        it('names the warehouse under the slot of a normal row', () => {
+            const wrapper = mountCells(
+                cellLog({
+                    cell: {
+                        row_letter: 'A',
+                        cell_number: 3,
+                        flat_number: 2,
+                        warehouse: main,
+                    },
+                }),
+                { multipleWarehouses: true },
+            );
+
+            expect(names(wrapper)).toEqual(['Main']);
+        });
+
+        it('names both warehouses of a cross-warehouse transfer, source first', () => {
+            const wrapper = mountCells(transfer(main, cold), {
+                multipleWarehouses: true,
+            });
+
+            expect(names(wrapper)).toEqual(['Main', 'Cold store']);
+        });
+
+        it('names the warehouse on both sides of a same-warehouse transfer', () => {
+            const wrapper = mountCells(transfer(main, main), {
+                multipleWarehouses: true,
+            });
+
+            expect(names(wrapper)).toEqual(['Main', 'Main']);
+        });
+
+        it('puts the origin first for a transferred_in entry', () => {
+            const log = transfer(cold, main);
+            const wrapper = mountCells(
+                { ...log, action: 'transferred_in' },
+                { multipleWarehouses: true },
+            );
+
+            expect(names(wrapper)).toEqual(['Main', 'Cold store']);
+        });
+
+        it('shows nothing when the payload carries no warehouse', () => {
+            const wrapper = mountCells(cellLog(), {
+                multipleWarehouses: true,
+            });
+
+            expect(names(wrapper)).toEqual([]);
+        });
     });
 
     it('renders the action label and the from/to state transition', () => {
@@ -309,5 +399,109 @@ describe('CellStatusLogRowCells', () => {
         const productCell = wrapper.findAll('td')[2];
         expect(productCell.text()).toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('Widgets');
+    });
+
+    describe('record corrections', () => {
+        const noteChange = (overrides: Partial<CellStatusLog> = {}) =>
+            cellLog({
+                action: 'note_changed',
+                batch_id: '0b5e1d6e-2f43-4a7c-9a39-2f0c3f8f9d10',
+                old_note: 'Olive oil 5L',
+                new_note: 'Olive oil 5L, Brand X',
+                ...overrides,
+            });
+
+        it('says the pallet has no cell yet instead of a slot link', () => {
+            const wrapper = mountCells(
+                noteChange({ cell: null, from_state: null, to_state: null }),
+            );
+            const cellColumn = wrapper.findAll('td')[0];
+
+            expect(
+                cellColumn.get('[data-testid="cell-log-no-cell"]').text(),
+            ).toBe(t('cellLog.columns.noCell'));
+            expect(cellColumn.findComponent(TableLink).exists()).toBe(false);
+        });
+
+        it('shows no state transition when the entry has no states', () => {
+            const wrapper = mountCells(
+                noteChange({ cell: null, from_state: null, to_state: null }),
+            );
+            const actionCell = wrapper.findAll('td')[1];
+
+            expect(actionCell.text()).toBe(cellLogActionLabel('note_changed'));
+            expect(actionCell.text()).not.toContain('→');
+        });
+
+        it('labels the note_changed action', () => {
+            expect(cellLogActionLabel('note_changed')).toBe(
+                t('cellLog.actions.note_changed'),
+            );
+            expect(t('cellLog.actions.note_changed')).not.toBe(
+                'cellLog.actions.note_changed',
+            );
+        });
+
+        it('shows the old and new pallet note', () => {
+            const cell = mountCells(noteChange()).get(
+                '[data-testid="cell-log-correction"]',
+            );
+
+            expect(cell.text()).toContain(t('cellLog.correction.palletNote'));
+            expect(cell.text()).toContain('Olive oil 5L');
+            expect(cell.text()).toContain('Olive oil 5L, Brand X');
+        });
+
+        it('names a cleared note as none', () => {
+            const cell = mountCells(noteChange({ new_note: null })).get(
+                '[data-testid="cell-log-correction"]',
+            );
+
+            expect(cell.text()).toContain(t('cellLog.correction.noNote'));
+        });
+
+        it('shows the reason and the previous product of a product change', () => {
+            const wrapper = mountCells(
+                cellLog({
+                    action: 'product_changed',
+                    reason: 'Arrived as DIVERSEN',
+                    old_product: {
+                        id: 101,
+                        name: 'DIVERSEN',
+                        ar_name: 'متنوع',
+                    },
+                    new_product: { id: 10, name: 'Widgets', ar_name: 'ودجات' },
+                    old_note: 'Olive oil 5L',
+                    new_note: null,
+                }),
+            );
+
+            expect(
+                wrapper.get('[data-testid="cell-log-old-product"]').text(),
+            ).toBe(`${t('cellLog.correction.wasProduct')}: DIVERSEN`);
+            const correction = wrapper.get(
+                '[data-testid="cell-log-correction"]',
+            );
+            expect(correction.text()).toContain(
+                `${t('cellLog.correction.reason')}: Arrived as DIVERSEN`,
+            );
+            expect(correction.text()).toContain('Olive oil 5L');
+        });
+
+        it('leaves the note line out of a product change that touched no note', () => {
+            const correction = mountCells(
+                cellLog({ action: 'product_changed', note: 'Fixed by admin' }),
+            ).get('[data-testid="cell-log-correction"]');
+
+            expect(correction.text()).toBe('Fixed by admin');
+        });
+
+        it('shows no previous product on other actions', () => {
+            expect(
+                mountCells(cellLog())
+                    .find('[data-testid="cell-log-old-product"]')
+                    .exists(),
+            ).toBe(false);
+        });
     });
 });

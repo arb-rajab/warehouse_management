@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Payment;
 use App\Http\Controllers\Controller;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
+use App\Support\StorePaymentGateways;
 use App\Utility\PayhereUtility;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Session;
 
@@ -17,19 +20,46 @@ class PayhereController extends Controller
 {
     private $security_key;
 
+    /**
+     * `$amount` (in the store's currency) as PayHere is charged it, with the currency code to
+     * send; null when the store has no active rate for the gateway's currency.
+     *
+     * @return array{0: float, 1: string}|null
+     */
+    private static function charged(float $amount): ?array
+    {
+        $currency = GatewayCurrency::forGateway('payhere');
+        $converted = $currency->fromStore($amount);
+
+        return $converted === null ? null : [$converted, $currency->chargeCode()];
+    }
+
+    private static function refused()
+    {
+        Log::error('PayHere refused: the store has no active rate for the gateway currency.', ['currency' => GatewayCurrency::forGateway('payhere')->chargeCode()]);
+        flash(__('storefront.checkout.payment_failed'))->error();
+
+        return redirect()->route('cart');
+    }
+
     public function pay(Request $request){
         if(Session::has('payment_type')){
             if(Session::get('payment_type') == 'cart_payment'){
                 $combined_order = CombinedOrder::findOrFail($request->session()->get('combined_order_id'));
                 $combined_order_id = $combined_order->id;
                 $amount = $combined_order->grand_total;
+                $charge = self::charged((float) $amount);
+                if ($charge === null) {
+                    return self::refused();
+                }
+                [$amount, $currency] = $charge;
                 $first_name = json_decode($combined_order->shipping_address)->name;
                 $last_name = 'X';
                 $phone = json_decode($combined_order->shipping_address)->phone;
                 $email = json_decode($combined_order->shipping_address)->email;
                 $address = json_decode($combined_order->shipping_address)->address;
                 $city = json_decode($combined_order->shipping_address)->city;
-                return PayhereUtility::create_checkout_form($combined_order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city);
+                return PayhereUtility::create_checkout_form($combined_order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city, $currency);
             }
 
             elseif (Session::get('payment_type') == 'wallet_payment') {
@@ -37,6 +67,11 @@ class PayhereController extends Controller
                 // The account rides in the signed order_id; custom_1 is not signed.
                 $order_id = 'W'.$user_id.'-'.Str::random(10);
                 $amount = $request->amount;
+                $charge = self::charged((float) $amount);
+                if ($charge === null) {
+                    return self::refused();
+                }
+                [$amount, $currency] = $charge;
                 $first_name = Auth::user()->name;
                 $last_name = 'X';
                 $phone = '123456789';
@@ -44,7 +79,7 @@ class PayhereController extends Controller
                 $address = 'dummy address';
                 $city = 'Colombo';
 
-                return PayhereUtility::create_wallet_form($user_id, $order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city);
+                return PayhereUtility::create_wallet_form($user_id, $order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city, $currency);
             }
             elseif (Session::get('payment_type') == 'customer_package_payment') {
                 $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
@@ -53,6 +88,11 @@ class PayhereController extends Controller
                 // The account and the package ride in the signed order_id; custom_1 and custom_2 are not signed.
                 $order_id = 'P'.$user_id.'-'.$package_id.'-'.Str::random(10);
                 $amount = $customer_package->amount;
+                $charge = self::charged((float) $amount);
+                if ($charge === null) {
+                    return self::refused();
+                }
+                [$amount, $currency] = $charge;
                 $first_name = Auth::user()->name;
                 $last_name = 'X';
                 $phone = '123456789';
@@ -60,7 +100,7 @@ class PayhereController extends Controller
                 $address = 'dummy address';
                 $city = 'Colombo';
 
-                return PayhereUtility::create_customer_package_form($user_id, $package_id, $order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city);
+                return PayhereUtility::create_customer_package_form($user_id, $package_id, $order_id, $amount, $first_name, $last_name, $phone, $email, $address, $city, $currency);
             }
         }
     }
@@ -138,18 +178,20 @@ class PayhereController extends Controller
      * secret, and reports a completed payment.
      *
      * The three notify handlers each rebuilt the signature from
-     * config('services.payhere.secret'), which is null once config is cached, so the
+     * `PAYHERE_SECRET` read straight from the environment, which is null once
+     * config is cached, so the
      * "secret" was empty and anyone could sign a payment-complete call for any
      * order. They also took the merchant id from the request. With no secret or
-     * merchant id configured this refuses everything, and it compares in
+     * merchant id configured (StorePaymentGateways: saved on the Payment
+     * methods page, else `.env`) this refuses everything, and it compares in
      * constant time.
      *
      * @param  array<string, mixed>  $post
      */
     private static function notificationIsAuthentic(array $post): bool
     {
-        $secret = (string) config('services.payhere.secret');
-        $merchantId = (string) config('services.payhere.merchant_id');
+        $secret = (string) StorePaymentGateways::get('payhere', 'secret');
+        $merchantId = (string) StorePaymentGateways::get('payhere', 'merchant_id');
 
         if ($secret === '' || $merchantId === '') {
             return false;
@@ -203,8 +245,9 @@ class PayhereController extends Controller
      */
     public static function checkout_success($combined_order_id,$responses)
     {
-        $payment = self::verifiedPayment($responses);
         $combined_order = CombinedOrder::find($combined_order_id);
+        $due = $combined_order === null ? null : app(GatewayPaymentService::class)->amountDue(GatewayPaymentService::CART, (int) $combined_order->user_id, $combined_order->id, null);
+        $payment = self::verifiedPayment($responses, $due);
 
         if ($payment === null || $combined_order === null
             || ! app(GatewayPaymentService::class)->complete($payment, (int) $combined_order->user_id, GatewayPaymentService::CART, $combined_order->id)) {
@@ -220,11 +263,40 @@ class PayhereController extends Controller
      *
      * @param  array<string, mixed>  $post
      */
-    private static function verifiedPayment(array $post): ?VerifiedPayment
+    private static function verifiedPayment(array $post, ?float $dueInStoreCurrency = null): ?VerifiedPayment
     {
         $payment_id = (string) ($post['payment_id'] ?? '');
 
-        return $payment_id === '' ? null : new VerifiedPayment('payhere', $payment_id, (float) $post['payhere_amount'], json_encode($post));
+        if ($payment_id === '') {
+            return null;
+        }
+
+        $currency = GatewayCurrency::forGateway('payhere');
+        $reported = (float) ($post['payhere_amount'] ?? 0);
+
+        // The signed notification names the currency it was paid in: only the one this store charges.
+        $code = $currency->chargeCode();
+        if ($code !== '' && strtoupper((string) ($post['payhere_currency'] ?? '')) !== $code) {
+            return null;
+        }
+
+        if ($currency->isStoreCurrency()) {
+            $amount = $reported;
+        } elseif ($dueInStoreCurrency !== null) {
+            // An order or a package: the converted amount due, to the cent, pays what is due.
+            if (! $currency->matchesDue($reported, $dueInStoreCurrency)) {
+                return null;
+            }
+            $amount = $dueInStoreCurrency;
+        } else {
+            // A wallet top-up has no stored amount due: credit what was paid, in the store's currency.
+            $amount = $currency->toStore($reported);
+            if ($amount === null) {
+                return null;
+            }
+        }
+
+        return new VerifiedPayment('payhere', $payment_id, $amount, json_encode($post));
     }
 
     public static function checkout_incomplete()
@@ -322,7 +394,8 @@ class PayhereController extends Controller
      */
     public static function customer_package_success($id,$customer_package_id,$payment_details)
     {
-        $payment = self::verifiedPayment($payment_details);
+        $due = app(GatewayPaymentService::class)->amountDue(GatewayPaymentService::CUSTOMER_PACKAGE, (int) $id, null, (int) $customer_package_id);
+        $payment = self::verifiedPayment($payment_details, $due);
 
         if ($payment === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $id, GatewayPaymentService::CUSTOMER_PACKAGE, null, (int) $customer_package_id)) {
             return PayhereController::customer_package_incomplete();

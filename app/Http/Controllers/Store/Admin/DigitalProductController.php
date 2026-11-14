@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterDigitalProductsRequest;
 use App\Http\Requests\Store\Admin\StoreDigitalProductRequest;
@@ -46,6 +47,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class DigitalProductController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreProductTaxes;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
@@ -95,7 +97,10 @@ class DigitalProductController extends Controller implements HasMiddleware
     /**
      * Creates an admin digital product as the legacy form did, with the
      * generated slug, then the product's tax rows, one empty-variant stock row at the unit
-     * price with no quantity and the default-language translation.
+     * price with no quantity and the default-language translation. It then
+     * opens the main Products list (products.all, which lists digital
+     * products too) with the flashed success message; staff who may not open
+     * that list return to the digital products list instead.
      */
     public function store(StoreDigitalProductRequest $request): RedirectResponse
     {
@@ -112,8 +117,9 @@ class DigitalProductController extends Controller implements HasMiddleware
             $this->saveStock($product, $data);
             $this->saveTranslation($product, config('app.default_language'), $data);
         });
+        $this->flashSuccess('digital_product_has_been_created_successfully');
 
-        return redirect()->route('digitalproducts.index');
+        return redirect()->route($request->user('store')->can('show_all_products') ? 'products.all' : 'digitalproducts.index');
     }
 
     public function edit(EditReferenceTranslationRequest $request, Product $product): Response
@@ -168,6 +174,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $this->saveStock($product, $data);
             $this->saveTranslation($product, $data['lang'], $data);
         });
+        $this->flashSuccess('digital_product_has_been_updated_successfully');
 
         return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $data['lang']]);
     }
@@ -175,7 +182,8 @@ class DigitalProductController extends Controller implements HasMiddleware
     /**
      * Deleting a digital product still removes its translations and stock
      * rows and then hard-deletes the `products` row, as the legacy handler
-     * did; the three statements now commit or fail together.
+     * did; its barcodes go with it, as on every product delete path. The
+     * statements commit or fail together.
      */
     public function destroy(Request $request, Product $product): RedirectResponse
     {
@@ -183,8 +191,10 @@ class DigitalProductController extends Controller implements HasMiddleware
             $product = $this->lockedDigitalProduct($product);
             $product->product_translations()->delete();
             $product->stocks()->delete();
+            $product->barcodes()->delete();
             $product->delete();
         });
+        $this->flashSuccess('digital_product_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
@@ -225,6 +235,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public function updatePublished(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductPublished(Product::query()->digital(), $product, $request->boolean('status'));
+        $this->flashSuccess('digital_product_published_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
@@ -232,6 +243,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public function updateFeatured(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductFeatured(Product::query()->digital(), $product, $request->boolean('status'));
+        $this->flashSuccess('digital_product_featured_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
@@ -239,6 +251,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public function updateTodaysDeal(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductTodaysDeal(Product::query()->digital(), $product, $request->boolean('status'));
+        $this->flashSuccess('digital_product_todays_deal_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }

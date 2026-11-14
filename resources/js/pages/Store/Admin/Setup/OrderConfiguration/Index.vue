@@ -10,12 +10,14 @@ import { search } from '@/actions/App/Http/Controllers/Store/Admin/ProductSearch
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
+import StoreDeliverySettingsForm from '@/components/StoreDeliverySettingsForm.vue';
 import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { SearchOption } from '@/types/searchSelect';
+import type { StoreDeliverySettings } from '@/types/store';
 const props = defineProps<{
     settings: {
         minimum_order_amount_check: boolean;
@@ -25,6 +27,7 @@ const props = defineProps<{
         default_representative_id: string | number | null;
     };
     selectedProduct: SearchOption | null;
+    delivery: StoreDeliverySettings;
     selectedRepresentative: SearchOption | null;
 }>();
 const access = useStoreAccess();
@@ -120,6 +123,7 @@ const representative = ref<SearchOption | null>(props.selectedRepresentative);
                     :processing="processing"
                 />
             </Form>
+            <StoreDeliverySettingsForm :delivery="delivery" />
         </div>
     </StoreAdminLayout>
 </template>

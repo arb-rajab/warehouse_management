@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { divIcon, marker } from 'leaflet';
 import type { LeafletMouseEvent, Map as LeafletMap, Marker } from 'leaflet';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import FormField from '@/components/FormField.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreLeafletMap from '@/components/StoreLeafletMap.vue';
 import { t } from '@/lib/i18n';
 
@@ -11,14 +12,35 @@ export interface StoreGoogleMapSettings {
     google_map: boolean;
     google_map_latitude: string;
     google_map_longtitude: string;
+    /** Whether a key is saved on this page; the key itself is never sent. */
+    google_map_api_key_set: boolean;
+    /** Bullets plus the last four characters of the saved key, or ''. */
+    google_map_api_key_mask: string;
+    /** Whether MAP_API_KEY supplies a key. */
+    google_map_api_key_from_env: boolean;
 }
 const props = defineProps<{
     settings: StoreGoogleMapSettings;
     errors: Record<string, string>;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
 }>();
 const enabled = ref(props.settings.google_map);
 const latitude = ref(props.settings.google_map_latitude);
 const longitude = ref(props.settings.google_map_longtitude);
+const keyAvailable =
+    props.settings.google_map_api_key_set ||
+    props.settings.google_map_api_key_from_env;
+// Same condition as UpdateGoogleMapRequest: the map is on and no key (saved or
+// from MAP_API_KEY) exists; otherwise a blank field keeps the saved key.
+const keyRequired = computed(() => enabled.value && !keyAvailable);
+const keyStatus = computed(() =>
+    props.settings.google_map_api_key_set
+        ? 'apiKeyStatusSaved'
+        : props.settings.google_map_api_key_from_env
+          ? 'apiKeyStatusEnv'
+          : 'apiKeyStatusNone',
+);
 let map: LeafletMap | null = null;
 let pin: Marker | null = null;
 
@@ -107,14 +129,41 @@ watch([latitude, longitude], movePin);
             :required="!enabled || (latitude === '' && longitude === '')"
             @change="toggle"
         />
-        <p class="text-sm text-gray-600 dark:text-neutral-300">
+        <p class="text-sm text-muted">
             {{ t('store.googleMap.requirementsHint') }}
         </p>
+        <StoreHighlight :active="highlight === 'google_map_api_key'">
+            <FormField
+                id="google_map_api_key"
+                :label="t('store.googleMap.apiKey')"
+                :placeholder="
+                    settings.google_map_api_key_mask ||
+                    t('store.googleMap.apiKeyPlaceholder')
+                "
+                :required="keyRequired"
+                :error="errors.google_map_api_key"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="255"
+                dir="ltr"
+                aria-describedby="google_map_api_key_help"
+            />
+            <div
+                id="google_map_api_key_help"
+                class="mt-1 space-y-1 text-sm text-muted"
+            >
+                <p>{{ t(`store.googleMap.${keyStatus}`) }}</p>
+                <p>{{ t('store.googleMap.apiKeyHelp') }}</p>
+                <p v-if="keyRequired">
+                    {{ t('store.googleMap.apiKeyRequiredHint') }}
+                </p>
+            </div>
+        </StoreHighlight>
         <template v-if="enabled">
             <h2 class="text-lg font-semibold">
                 {{ t('store.googleMap.location') }}
             </h2>
-            <p class="text-sm text-gray-600 dark:text-neutral-300">
+            <p class="text-sm text-muted">
                 {{ t('store.googleMap.hint') }}
             </p>
             <div class="grid gap-4 sm:grid-cols-2">
@@ -157,12 +206,12 @@ watch([latitude, longitude], movePin);
 
 <style scoped>
 :deep(.store-default-location-marker) {
-    border: 2px solid white;
+    border: 2px solid var(--surface);
     border-radius: 50%;
-    background: #1d4ed8;
-    color: white;
+    background: var(--info-color);
+    color: var(--page);
     text-align: center;
     line-height: 26px;
-    box-shadow: 0 1px 4px #0008;
+    box-shadow: var(--shadow-card);
 }
 </style>

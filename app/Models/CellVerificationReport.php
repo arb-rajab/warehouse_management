@@ -63,6 +63,14 @@ class CellVerificationReport extends Model
     use HasFactory;
 
     /**
+     * The warehouse of the cell a report names, loaded by the admin listings
+     * and the mobile API (see CellStatusLog::WITH_WAREHOUSES).
+     *
+     * @var list<string>
+     */
+    public const array WITH_WAREHOUSE = ['cell.row.warehouse:id,name'];
+
+    /**
      * Eager loads needed by CellVerificationReportResource — shared by every listing.
      *
      * @var list<string>
@@ -70,7 +78,7 @@ class CellVerificationReport extends Model
     public const array WITH_DETAILS = [
         'round:id,user_id,completed_at,created_at',
         'cell:id,row_id,cell_number,flat_number',
-        'cell.row:id,letter',
+        'cell.row:id,warehouse_id,letter',
         'user:id,name',
         'expectedProduct:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
         'expectedProduct.thumbnailUpload:id,file_name,external_link',

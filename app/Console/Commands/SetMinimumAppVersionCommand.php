@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\ReadsTextInput;
 use App\Models\MobileAppVersionRequirement;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -12,12 +13,14 @@ use Illuminate\Support\Facades\Cache;
 #[Description('Reject mobile API requests from any app build older than this version')]
 class SetMinimumAppVersionCommand extends Command
 {
+    use ReadsTextInput;
+
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
-        $version = (string) $this->argument('version');
+        $version = $this->textArgument('version');
 
         if (preg_match('/^\d+\.\d+\.\d+$/', $version) !== 1) {
             $this->components->error('Version must be in the form MAJOR.MINOR.PATCH, e.g. 1.4.0.');

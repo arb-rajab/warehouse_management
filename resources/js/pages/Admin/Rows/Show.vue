@@ -6,6 +6,8 @@ import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellSlot from '@/components/CellSlot.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
 import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
@@ -16,20 +18,20 @@ import {
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { usePageError } from '@/lib/pageErrors';
 import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
-    CellMapRow,
     CellSlotLocation,
+    PalletTransferTargets,
     ProductFilterOptions,
     Row,
 } from '@/types/admin';
 
 const props = defineProps<{
     row: Row;
-    rows: CellMapRow[];
+    transferTargets: PalletTransferTargets;
     cells: Cell[];
     today: string;
     filterOptions: ProductFilterOptions;
@@ -188,8 +190,8 @@ const palletActionError = usePageError('action');
                     :products="filterOptions.products"
                 />
                 <Link
-                    :href="edit(row)"
-                    class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
+                    :href="edit(row, rowLinkOptions(row.warehouse))"
+                    class="inline-flex items-center gap-1 text-sm text-muted hover:underline"
                 >
                     <Pencil class="h-3.5 w-3.5" />
                     {{ t('rows.show.editRow') }}
@@ -197,19 +199,26 @@ const palletActionError = usePageError('action');
             </div>
         </PageHeader>
 
+        <DetailList :title="t('rows.show.details')" class="mb-6">
+            <DetailItem
+                :label="t('rows.show.warehouse')"
+                :value="row.warehouse.name"
+            />
+        </DetailList>
+
         <ActionErrorBanner :message="palletActionError" />
 
         <div class="overflow-x-auto pb-2">
             <div class="flex flex-col gap-2">
                 <div class="flex gap-2">
                     <div
-                        class="sticky start-0 z-10 h-6 w-12 shrink-0 bg-gray-50 dark:bg-neutral-950"
+                        class="sticky start-0 z-10 h-6 w-12 shrink-0 bg-subtle"
                     ></div>
                     <div
                         v-for="cellNumber in cellNumbers"
                         :key="cellNumber"
                         data-testid="cell-header"
-                        class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
+                        class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-muted"
                     >
                         {{ t('rows.show.column', { n: cellNumber }) }}
                     </div>
@@ -217,13 +226,13 @@ const palletActionError = usePageError('action');
 
                 <div class="flex gap-2">
                     <div
-                        class="sticky start-0 z-10 flex flex-col gap-2 bg-gray-50 dark:bg-neutral-950"
+                        class="sticky start-0 z-10 flex flex-col gap-2 bg-subtle"
                     >
                         <div
                             v-for="flatNumber in flatNumbers"
                             :key="flatNumber"
                             data-testid="flat-header"
-                            class="flex h-28 w-12 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
+                            class="flex h-28 w-12 shrink-0 items-center justify-center text-xs font-medium text-muted"
                         >
                             {{ t('rows.show.flat', { n: flatNumber }) }}
                         </div>
@@ -274,7 +283,8 @@ const palletActionError = usePageError('action');
             v-model:open="palletActionsDialogOpen"
             :cell="palletActionsCell"
             :label="palletActionsLabel"
-            :rows="rows"
+            :transfer-targets="transferTargets"
+            :warehouse-id="row.warehouse.id"
         />
     </AdminLayout>
 </template>

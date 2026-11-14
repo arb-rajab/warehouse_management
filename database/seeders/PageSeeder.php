@@ -10,7 +10,8 @@ class PageSeeder extends Seeder
     /**
      * Run the database seeds.
      *
-     * The 5 legacy storefront policy pages (HomeController::sellerpolicy()/
+     * The 5 legacy storefront policy pages and the home page row. The
+     * policy pages (HomeController::sellerpolicy()/
      * returnpolicy()/supportpolicy()/terms()/privacypolicy()) each look up a
      * Page by `type` and read straight off the result with no null guard --
      * see tests/Feature/LegacyStorefrontRendersTest.php's docblock. This is
@@ -26,6 +27,8 @@ class PageSeeder extends Seeder
             'return_policy_page' => ['title' => 'Return Policy', 'slug' => 'return-policy'],
             'seller_policy_page' => ['title' => 'Seller Policy', 'slug' => 'seller-policy'],
             'support_policy_page' => ['title' => 'Support Policy', 'slug' => 'support-policy'],
+            // The back office's Website > Home settings screen opens this row (WebsiteHomeController::edit).
+            'home_page' => ['title' => 'Home Page', 'slug' => 'home'],
         ];
 
         foreach ($pages as $type => $attributes) {

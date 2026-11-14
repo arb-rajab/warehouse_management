@@ -96,7 +96,7 @@ watch(
     <div class="space-y-3">
         <p
             v-if="loading"
-            class="flex items-center gap-2 text-sm text-gray-600 dark:text-neutral-300"
+            class="flex items-center gap-2 text-sm text-muted"
             role="status"
         >
             <LoaderCircle class="h-4 w-4 animate-spin" />{{
@@ -116,12 +116,17 @@ watch(
             {{ t('imageReview.retry') }}
         </button>
         <template v-if="details">
-            <p class="font-medium text-gray-900 dark:text-neutral-100">
+            <p class="font-medium text-ink">
                 {{ productName(details.name, details.ar_name) }}
             </p>
-            <p class="text-sm text-gray-600 dark:text-neutral-300">
-                {{ t('imageReview.productCode') }}: {{ details.id
-                }}<span v-for="barcode in details.barcodes" :key="barcode">
+            <p class="text-sm text-muted">
+                {{ t('imageReview.productCode') }}:
+                <span class="font-mono">{{ details.id }}</span
+                ><span
+                    v-for="barcode in details.barcodes"
+                    :key="barcode"
+                    class="font-mono"
+                >
                     · {{ barcode }}</span
                 >
             </p>
@@ -134,7 +139,7 @@ watch(
             />
             <p
                 v-else
-                class="flex items-center gap-2 text-sm text-amber-800 dark:text-amber-300"
+                class="flex items-center gap-2 text-sm text-warning-strong"
             >
                 <TriangleAlert class="h-4 w-4" />{{
                     t(
@@ -144,7 +149,7 @@ watch(
                     )
                 }}
             </p>
-            <p class="text-sm text-gray-600 dark:text-neutral-300">
+            <p class="text-sm text-muted">
                 {{ t('imageReview.instructions') }}
             </p>
             <label :for="`${idPrefix}-status`" :class="fieldLabelClass"
@@ -180,19 +185,19 @@ watch(
                 :class="plainFieldInputClass"
             />
             <div v-if="history" class="space-y-3">
-                <h3 class="font-medium text-gray-900 dark:text-neutral-100">
+                <h3 class="font-medium text-ink">
                     {{ t('imageReview.history') }}
                 </h3>
                 <p
                     v-if="!details.reviews.data.length"
-                    class="text-sm text-gray-600 dark:text-neutral-300"
+                    class="text-sm text-muted"
                 >
                     {{ t('imageReview.noHistory') }}
                 </p>
                 <article
                     v-for="review in details.reviews.data"
                     :key="review.id"
-                    class="space-y-1 rounded border border-gray-200 p-3 text-sm dark:border-neutral-700 dark:text-neutral-200"
+                    class="space-y-1 rounded border border-line p-3 text-sm"
                 >
                     <p class="flex items-center gap-2">
                         <Check

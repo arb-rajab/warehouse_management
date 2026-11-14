@@ -45,6 +45,9 @@ it.each(['en', 'ar'] as const)(
             google_map: false,
             google_map_latitude: '33.513',
             google_map_longtitude: '36.291',
+            google_map_api_key_set: true,
+            google_map_api_key_mask: '••••••••wXyZ',
+            google_map_api_key_from_env: false,
         };
         const wrapper = mount(Index, { props: { settings } });
         expect(wrapper.getComponent(ResourceFormPage).props()).toMatchObject({
@@ -68,3 +71,23 @@ it.each(['en', 'ar'] as const)(
         wrapper.unmount();
     },
 );
+it('marks only the Google Maps key for a setup checklist link', async () => {
+    const wrapper = mount(Index, {
+        props: {
+            settings: {
+                google_map: false,
+                google_map_latitude: '',
+                google_map_longtitude: '',
+                google_map_api_key_set: false,
+                google_map_api_key_mask: '',
+                google_map_api_key_from_env: false,
+            },
+        },
+    });
+    expect(wrapper.findAll('[data-highlighted]')).toHaveLength(0);
+    await wrapper.setProps({ highlight: 'google_map_api_key' });
+    const marked = wrapper.findAll('[data-highlighted]');
+    expect(marked).toHaveLength(1);
+    expect(marked[0].find('#google_map_api_key').exists()).toBe(true);
+    wrapper.unmount();
+});

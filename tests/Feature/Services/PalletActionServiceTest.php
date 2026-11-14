@@ -8,6 +8,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\PalletActionService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -173,13 +174,14 @@ test('changing a pallets product writes a product_changed log carrying the new p
 
     $log = CellStatusLog::query()->sole();
 
-    expect($log->only(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'boxes_count', 'user_id', 'note']))->toEqual([
+    expect($log->only(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'old_product_id', 'pallet_id', 'boxes_count', 'user_id', 'note']))->toEqual([
         'cell_id' => $cell->id,
         'related_cell_id' => null,
         'action' => CellLogAction::ProductChanged,
         'from_state' => CellState::Full,
         'to_state' => CellState::Full,
         'product_id' => $newProduct->id,
+        'old_product_id' => $oldProduct->id,
         'pallet_id' => $pallet->id,
         'boxes_count' => 5,
         'user_id' => $user->id,
@@ -234,4 +236,87 @@ test('open skips the allowed-levels rule only when told to, as a verification re
     palletActionsUnderTest()->open($pallet, null, false, $user->id, null, enforceAllowedLevels: false);
 
     expect($cell->refresh()->state)->toBe(CellState::Opened);
+});
+
+test('every action that works on a cell refuses an unplaced pallet before locking anything, naming pallet_not_placed', function (Closure $action) {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $user = User::factory()->mobileUser()->create();
+    [$destination] = secondLevelCells(1);
+
+    try {
+        $action(palletActionsUnderTest(), $pallet, $user, $destination);
+        $this->fail('Expected the unplaced pallet to be refused.');
+    } catch (InvalidSlotStateException $exception) {
+        expect($exception->errorCode)->toBe('pallet_not_placed')
+            ->and($exception->getMessage())->toBe(__('messages.pallet_not_placed'));
+    }
+
+    expect($pallet->fresh()->cell_id)->toBeNull()
+        ->and(Pallet::query()->count())->toBe(1)
+        ->and($destination->fresh()->state)->toBe(CellState::Empty)
+        ->and(CellStatusLog::query()->count())->toBe(0);
+})->with([
+    'open' => [fn ($service, $pallet, $user) => $service->open($pallet, null, false, $user->id, null)],
+    'removeBoxes' => [fn ($service, $pallet, $user) => $service->removeBoxes($pallet, 1, false, $user->id, null)],
+    'emptyPallet' => [fn ($service, $pallet, $user) => $service->emptyPallet($pallet, $user->id, null)],
+    'transfer' => [fn ($service, $pallet, $user, $destination) => $service->transfer($pallet, $destination->id, $user->id, null)],
+    'update' => [fn ($service, $pallet, $user) => $service->update($pallet, $pallet->product_id, null, 3, $user->id, false)],
+]);
+
+test('placing a pallet that another request placed after it was read is refused as already placed, leaving the target cell empty', function () {
+    [$first, $second] = secondLevelCells(2);
+    $pallet = Pallet::factory()->unplaced()->create();
+    $user = User::factory()->mobileUser()->create();
+
+    $staleCopy = Pallet::query()->findOrFail($pallet->id);
+    palletActionsUnderTest()->place(Pallet::query()->findOrFail($pallet->id), $first->id, $user->id, null);
+
+    expect(fn () => palletActionsUnderTest()->place($staleCopy, $second->id, $user->id, null))
+        ->toThrow(InvalidSlotStateException::class, __('messages.pallet_already_placed'));
+
+    expect($pallet->fresh()->cell_id)->toBe($first->id)
+        ->and($second->fresh()->state)->toBe(CellState::Empty)
+        ->and(CellStatusLog::query()->count())->toBe(1);
+});
+
+test('place writes one stored log with the pallets remaining boxes and returns the placed pallet', function () {
+    [$cell] = secondLevelCells(1);
+    $pallet = Pallet::factory()->unplaced()->create(['remaining_boxes' => 4]);
+    $user = User::factory()->mobileUser()->create();
+
+    $placed = palletActionsUnderTest()->place($pallet, $cell->id, $user->id, 'Aisle 1');
+
+    expect($placed->cell_id)->toBe($cell->id)
+        ->and($cell->fresh()->state)->toBe(CellState::Full)
+        ->and(CellStatusLog::query()->sole()->only(['action', 'boxes_count', 'note', 'pallet_id', 'user_id']))->toEqual([
+            'action' => CellLogAction::Stored,
+            'boxes_count' => 4,
+            'note' => 'Aisle 1',
+            'pallet_id' => $pallet->id,
+            'user_id' => $user->id,
+        ]);
+});
+
+test('the pallets own note is kept by place, open, remove-boxes, transfer and the admin correction', function () {
+    [$first, $second] = secondLevelCells(2);
+    Setting::current()->update(['allowed_open_levels' => [1, 2, 3, 4, 5, 6]]);
+    $pallet = Pallet::factory()->unplaced()->create(['remaining_boxes' => 10, 'note' => 'Olive oil 5L']);
+    $user = User::factory()->create();
+    $actions = palletActionsUnderTest();
+    Row::query()->whereKey($first->row_id)->update(['warehouse_id' => Pallet::query()->with('receipt')->findOrFail($pallet->id)->receipt->warehouse_id]);
+
+    $actions->place($pallet, $first->id, $user->id, 'Placed');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->open($pallet->fresh(), 2, false, $user->id, 'Opened');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->removeBoxes($pallet->fresh(), 1, false, $user->id, 'Removed');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->transfer($pallet->fresh(), $second->id, $user->id, 'Moved');
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
+
+    $actions->update($pallet->fresh(), Product::factory()->create()->id, null, 5, $user->id, false);
+    expect($pallet->fresh()->note)->toBe('Olive oil 5L');
 });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterCampaignsRequest;
 use App\Http\Requests\Store\Admin\StoreOfferRequest;
 use App\Http\Requests\Store\Admin\ToggleCampaignRequest;
@@ -24,6 +25,8 @@ use Inertia\Response;
 
 class OfferController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     public static function middleware(): array
     {
         return [new Middleware('permission:view_all_offer_deals', only: ['index']), new Middleware('permission:add_offer_deal', only: ['create', 'brandCreate', 'store']), new Middleware('permission:edit_offer_deal', only: ['edit', 'update', 'update_status', 'update_repeatable', 'update_multiple_usage']), new Middleware('permission:delete_offer_deal', only: ['destroy'])];
@@ -63,6 +66,7 @@ class OfferController extends Controller implements HasMiddleware
     public function store(StoreOfferRequest $request): RedirectResponse
     {
         $this->saveOffer(new Offer, $request->validated());
+        $this->flashSuccess('offer_has_been_created_successfully');
 
         return redirect()->route('offer_deals.index');
     }
@@ -70,6 +74,7 @@ class OfferController extends Controller implements HasMiddleware
     public function update(UpdateOfferRequest $request, Offer $offer): RedirectResponse
     {
         $this->saveOffer($offer, $request->validated());
+        $this->flashSuccess('offer_has_been_updated_successfully');
 
         return redirect()->route('offer_deals.index');
     }
@@ -113,6 +118,7 @@ class OfferController extends Controller implements HasMiddleware
             $offer->users()->detach();
             $offer->delete();
         });
+        $this->flashSuccess('offer_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('offer_deals.index', $request);
     }
@@ -136,6 +142,11 @@ class OfferController extends Controller implements HasMiddleware
     {
         $offer->$field = $request->boolean('value');
         $offer->save();
+        $this->flashSuccess(match ($field) {
+            'is_active' => 'offer_status_has_been_updated_successfully',
+            'is_repeatable' => 'offer_repeatable_status_has_been_updated_successfully',
+            default => 'offer_multiple_usage_status_has_been_updated_successfully',
+        });
 
         return $this->redirectPreservingQuery('offer_deals.index', $request);
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\ChecksCustomerAccount;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\BulkCustomersRequest;
 use App\Http\Requests\Store\Admin\FilterCustomersRequest;
 use App\Http\Requests\Store\Admin\StoreCustomerRequest;
@@ -44,6 +45,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class CustomerController extends Controller implements HasMiddleware
 {
     use ChecksCustomerAccount;
+    use FlashesSuccess;
 
     private const array LIST_COLUMNS = ['id', 'name', 'email', 'phone', 'company_name', 'is_rep', 'is_delete', 'banned', 'admin_verified', 'is_important', 'activity_status', 'rep_id', 'rep_serial', 'rep_package_id', 'profits', 'registration_completed', 'from_api', 'email_verified_at', 'created_at', 'updated_at', ...CustomerListResource::PLAIN_ATTRIBUTES];
 
@@ -208,6 +210,7 @@ class CustomerController extends Controller implements HasMiddleware
         if (! $representative) {
             app(UserService::class)->createCustomerOnOtajer($customer);
         }
+        $this->flashSuccess($representative ? 'representative_has_been_created_successfully' : 'customer_has_been_created_successfully');
 
         return redirect()->route($representative ? 'representatives.index' : 'customers.index');
     }
@@ -264,6 +267,7 @@ class CustomerController extends Controller implements HasMiddleware
             $customer->trade_license = app(TradeLicenseStorage::class)->store($request->file('trade_license'));
         }
         $customer->save();
+        $this->flashSuccess('customer_has_been_updated_successfully');
 
         return $this->toList($customer);
     }
@@ -273,6 +277,7 @@ class CustomerController extends Controller implements HasMiddleware
         $this->assertCustomer($customer);
         $customer->is_delete = 1;
         $customer->save();
+        $this->flashSuccess('customer_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery($customer->is_rep ? 'representatives.index' : 'customers.index', $request);
     }
@@ -282,6 +287,7 @@ class CustomerController extends Controller implements HasMiddleware
         $this->assertCustomer($customer);
         $customer->is_delete = null;
         $customer->save();
+        $this->flashSuccess('customer_has_been_restored_successfully');
 
         return $this->toList($customer);
     }
@@ -297,6 +303,7 @@ class CustomerController extends Controller implements HasMiddleware
                 $customer->save();
             }
         });
+        $this->flashSuccess('customers_have_been_deleted_successfully');
 
         return redirect()->route('customers.index');
     }
@@ -316,6 +323,7 @@ class CustomerController extends Controller implements HasMiddleware
         $this->assertCustomer($customer);
         $customer->banned = $customer->banned ? 0 : 1;
         $customer->save();
+        $this->flashSuccess($customer->banned ? 'customer_has_been_banned_successfully' : 'customer_has_been_unbanned_successfully');
 
         return $this->toList($customer);
     }
@@ -328,6 +336,7 @@ class CustomerController extends Controller implements HasMiddleware
         if (! $customer->admin_verified) {
             $customer->last_order_at = null;
         } $customer->save();
+        $this->flashSuccess($customer->admin_verified ? 'customer_has_been_verified_successfully' : 'customer_verification_has_been_removed_successfully');
 
         return $this->toList($customer);
     }
@@ -347,6 +356,7 @@ class CustomerController extends Controller implements HasMiddleware
         $this->assertCustomer($customer);
         $customer->is_important = $important ? 1 : 0;
         $customer->save();
+        $this->flashSuccess($important ? 'customer_has_been_marked_as_important_successfully' : 'customer_has_been_marked_as_not_important_successfully');
 
         return $this->toList($customer);
     }
@@ -356,6 +366,7 @@ class CustomerController extends Controller implements HasMiddleware
         $this->assertCustomer($customer);
         $customer->activity_status = $request->validated('new_status');
         $customer->save();
+        $this->flashSuccess('customer_activity_status_has_been_updated_successfully');
 
         return $this->toList($customer);
     }
@@ -365,6 +376,7 @@ class CustomerController extends Controller implements HasMiddleware
         $this->assertCustomer($customer);
         $customer->admin_notes = $request->validated('admin_notes');
         $customer->save();
+        $this->flashSuccess('customer_notes_have_been_updated_successfully');
 
         return $this->toList($customer);
     }
@@ -381,6 +393,7 @@ class CustomerController extends Controller implements HasMiddleware
         $this->assertCustomer($customer);
         $customer->password = $request->validated('password');
         $customer->save();
+        $this->flashSuccess('customer_password_has_been_updated_successfully');
 
         return $this->toList($customer);
     }
@@ -392,6 +405,7 @@ class CustomerController extends Controller implements HasMiddleware
             throw ValidationException::withMessages(['agreement' => __('messages.customer_agreement_incomplete')]);
         }
         $customer->sendTermsAgreementNotification();
+        $this->flashSuccess('terms_agreement_has_been_sent_successfully');
 
         return $this->toList($customer);
     }

@@ -3,6 +3,7 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Warehouse;
 
 test('a cell\'s pallet carries both raw product name columns, whatever the request locale', function () {
     // The payload no longer varies by `Accept-Language`: both store columns
@@ -52,6 +53,7 @@ test('an authenticated worker can list a row cells with every property the app r
     expect(collect($response->json('data'))->firstWhere('id', $occupiedCell->id))->toEqual([
         'id' => $occupiedCell->id,
         'row_letter' => 'Z',
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         'cell_number' => 1,
         'flat_number' => 1,
         'state' => 'full',
@@ -73,6 +75,7 @@ test('an authenticated worker can list a row cells with every property the app r
     expect(collect($response->json('data'))->firstWhere('id', $emptyCell->id))->toEqual([
         'id' => $emptyCell->id,
         'row_letter' => 'Z',
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         'cell_number' => 2,
         'flat_number' => 1,
         'state' => 'empty',
@@ -238,6 +241,7 @@ test('an authenticated worker can look up a cell by its coordinates with every p
     expect($response->json())->toEqual([
         'id' => $cell->id,
         'row_letter' => 'Z',
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         'cell_number' => 2,
         'flat_number' => 1,
         'state' => 'full',
@@ -334,4 +338,31 @@ test('an inactive cell is reported as such by the lookup and listing endpoints',
     $listing = $this->getJson("/api/v1/rows/{$row->letter}/cells");
     $listing->assertOk();
     expect(collect($listing->json('data'))->firstWhere('id', $cell->id)['is_active'])->toBeFalse();
+});
+
+test('a row letter two warehouses use needs ?warehouse_id= to list its cells', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->getJson('/api/v1/rows/A/cells')->assertUnprocessable()->assertJsonValidationErrors(['warehouse_id' => 'This row letter is used in more than one warehouse. Choose the warehouse.']);
+
+    $response = $this->getJson("/api/v1/rows/A/cells?warehouse_id={$north->id}");
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id')->sort()->values()->all())->toBe($northRow->cells()->orderBy('id')->pluck('id')->all())
+        ->and($response->json('data.0.warehouse'))->toEqual(['id' => $north->id, 'name' => 'North']);
+});
+
+test('a cell of a row letter two warehouses use is found with ?warehouse_id=', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $this->getJson('/api/v1/rows/A/cells/2/flats/1')->assertUnprocessable();
+    $this->getJson("/api/v1/rows/A/cells/2/flats/1?warehouse_id={$north->id}")
+        ->assertOk()
+        ->assertJsonPath('id', $northRow->cells()->where('cell_number', 2)->value('id'));
 });

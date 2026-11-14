@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\GatewayPayment;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 use Spatie\Health\Models\HealthCheckResultHistoryItem;
@@ -36,7 +37,9 @@ Schedule::command('import:collections')->hourlyAt(50)->withoutOverlapping(15)->o
 Schedule::command('health:check')->everyMinute()->withoutOverlapping(2);
 Schedule::command('health:schedule-check-heartbeat')->everyMinute()->withoutOverlapping(2);
 Schedule::command('health:queue-check-heartbeat')->everyFiveMinutes();
-Schedule::command('model:prune', ['--model' => [HealthCheckResultHistoryItem::class]])->daily();
+// GatewayPayment prunes only pending gateway payments that expired 90 days ago
+// (signed off by the owner 2026-11-12); a completed row is never pruned.
+Schedule::command('model:prune', ['--model' => [HealthCheckResultHistoryItem::class, GatewayPayment::class]])->daily();
 
 // Deliberately NOT scheduled: every command below changes data, and none may be
 // put on the scheduler without sign-off from the business owner. Run them by

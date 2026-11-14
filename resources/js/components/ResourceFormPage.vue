@@ -52,12 +52,21 @@ const props = withDefaults(
          * server's appear; the native bubbles give way (`novalidate`).
          */
         validation?: ValidationSchema;
+        /**
+         * Forwarded to the Inertia `<Form>`: the fields (or all, with `true`)
+         * emptied after a successful or a failed submit, such as a password
+         * asked to confirm a change (Settings/Smtp.vue's current password).
+         */
+        resetOnSuccess?: boolean | string[];
+        resetOnError?: boolean | string[];
     }>(),
     {
         transform: (data: Record<string, FormDataConvertible>) => data,
         layout: () => AdminLayout,
         wide: false,
         requiredLegend: true,
+        resetOnSuccess: false,
+        resetOnError: false,
     },
 );
 
@@ -87,6 +96,8 @@ const validator = useFormValidation(
                 ref="formComponent"
                 :action="action"
                 :transform="transform"
+                :reset-on-success="resetOnSuccess"
+                :reset-on-error="resetOnError"
                 :novalidate="validation ? true : undefined"
                 :on-before="validation ? validator.onBefore : undefined"
                 :on-start="validation ? validator.onStart : undefined"
@@ -101,7 +112,7 @@ const validator = useFormValidation(
                 <p
                     v-if="validation && validator.blocked.value"
                     role="alert"
-                    class="flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
+                    class="flex items-center gap-1 text-sm text-danger"
                 >
                     <CircleAlert
                         class="h-3.5 w-3.5 shrink-0"
@@ -114,7 +125,7 @@ const validator = useFormValidation(
                     <Link
                         v-if="cancelHref"
                         :href="cancelHref"
-                        class="inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                        class="inline-flex items-center justify-center rounded-md border border-line-strong px-3 py-2 text-sm font-medium text-ink hover:bg-subtle"
                     >
                         {{ t('common.cancel') }}
                     </Link>

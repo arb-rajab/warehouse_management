@@ -5,6 +5,8 @@ import {
     index as queriesIndex,
     reply,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreSupportReplyForm from '@/components/StoreSupportReplyForm.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -28,40 +30,36 @@ const access = useStoreAccess();
                 t('store.support.back')
             }}</TableActionLink></PageHeader
         >
-        <dl class="mb-6 space-y-3">
-            <div>
-                <dt class="font-medium">{{ t('store.support.customer') }}</dt>
-                <dd>
-                    <TableObjectLink
-                        v-if="query.user"
-                        :allowed="access.can('edit_customer')"
-                        :href="customerEdit(query.user)"
-                        >{{ query.user.name }}</TableObjectLink
-                    >
-                    <template v-else>{{
-                        t('store.support.missingUser')
-                    }}</template>
-                </dd>
-            </div>
-            <div>
-                <dt class="font-medium">{{ t('store.support.date') }}</dt>
-                <dd>
-                    {{
-                        query.created_at ? formatDateTime(query.created_at) : ''
-                    }}
-                </dd>
-            </div>
-            <div>
-                <dt class="font-medium">{{ t('store.support.question') }}</dt>
-                <dd class="whitespace-pre-wrap">{{ query.question }}</dd>
-            </div>
-            <div>
-                <dt class="font-medium">{{ t('store.support.reply') }}</dt>
-                <dd class="whitespace-pre-wrap">
-                    {{ query.reply ?? t('store.support.unanswered') }}
-                </dd>
-            </div>
-        </dl>
+        <DetailList :columns="2" class="mb-6">
+            <DetailItem :label="t('store.support.customer')"
+                ><TableObjectLink
+                    v-if="query.user"
+                    :allowed="access.can('edit_customer')"
+                    :href="customerEdit(query.user)"
+                    >{{ query.user.name }}</TableObjectLink
+                ><template v-else>{{
+                    t('store.support.missingUser')
+                }}</template></DetailItem
+            >
+            <DetailItem
+                :label="t('store.support.date')"
+                :value="
+                    query.created_at ? formatDateTime(query.created_at) : null
+                "
+            />
+            <DetailItem
+                full
+                preserve
+                :label="t('store.support.question')"
+                :value="query.question"
+            />
+            <DetailItem
+                full
+                preserve
+                :label="t('store.support.reply')"
+                :value="query.reply ?? t('store.support.unanswered')"
+            />
+        </DetailList>
         <StoreSupportReplyForm
             v-if="canReply && access.can('reply_to_product_queries')"
             :action="reply(query)"

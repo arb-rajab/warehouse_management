@@ -9,6 +9,7 @@ use App\Events\SetTruckAvailability;
 use App\Http\Controllers\Concerns\ReservesTripTrucks;
 use App\Http\Controllers\Concerns\WritesTripCheckpoints;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\BulkDeleteTripsRequest;
 use App\Http\Requests\Store\Admin\FilterTripsRequest;
@@ -50,6 +51,7 @@ use Inertia\Response;
  */
 class TripController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ReservesTripTrucks;
     use SearchesOptions;
     use WritesTripCheckpoints;
@@ -105,6 +107,7 @@ class TripController extends Controller implements HasMiddleware
         });
         $this->sortBasedOnShortestPath($trip);
         $this->driverService->notifyDriver($trip);
+        $this->flashSuccess('trip_has_been_created_successfully');
 
         return redirect()->route('trips.show', $trip->id);
     }
@@ -183,6 +186,7 @@ class TripController extends Controller implements HasMiddleware
         if ($driverChanged) {
             $this->driverService->notifyDriver($trip);
         }
+        $this->flashSuccess('trip_has_been_updated_successfully');
 
         return redirect()->route('trips.show', $trip->id);
     }
@@ -217,6 +221,7 @@ class TripController extends Controller implements HasMiddleware
             $available = $status === TripStatus::Closed && ! $truck->trips()->where('status', '<>', TripStatus::Closed->value)->exists();
             event(new SetTruckAvailability($trip, $truck, $available));
         });
+        $this->flashSuccess('trip_status_has_been_updated_successfully');
 
         return $this->redirectToList($request->tripList(), $request);
     }
@@ -225,6 +230,7 @@ class TripController extends Controller implements HasMiddleware
     {
         $trip->notes = $request->validated('notes');
         $trip->save();
+        $this->flashSuccess('trip_notes_have_been_updated_successfully');
 
         return $this->redirectToList($request->tripList(), $request);
     }
@@ -234,6 +240,7 @@ class TripController extends Controller implements HasMiddleware
         DB::transaction(function () use ($trip): void {
             $this->deleteTrip(Trip::query()->lockForUpdate()->findOrFail($trip->id));
         });
+        $this->flashSuccess('trip_has_been_deleted_successfully');
 
         return $this->redirectToList($request->tripList(), $request);
     }
@@ -246,6 +253,7 @@ class TripController extends Controller implements HasMiddleware
             Trip::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get()
                 ->each(fn (Trip $trip) => $this->deleteTrip($trip));
         });
+        $this->flashSuccess('trips_have_been_deleted_successfully');
 
         return $this->redirectToList($request->tripList(), $request);
     }

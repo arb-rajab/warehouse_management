@@ -15,6 +15,8 @@ import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/Tr
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
@@ -189,108 +191,60 @@ const tableColumns = computed(() => [
             </div>
         </PageHeader>
         <ActionErrorBanner :message="cmrError" />
-        <dl
-            class="mb-6 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4"
-        >
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.status') }}
-                </dt>
-                <dd class="font-medium">
-                    {{ t(`store.trips.status.${trip.status}`) }}
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.dueDate') }}
-                </dt>
-                <dd>
-                    {{ trip.due_date ?? t('store.trips.index.notAvailable') }}
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.driver') }}
-                </dt>
-                <dd>
-                    <TableLink
-                        v-if="trip.driver && access.can('edit_driver')"
-                        :href="driverEdit(trip.driver)"
-                        >{{ trip.driver.name }}</TableLink
-                    >
-                    <template v-else>{{
-                        trip.driver?.name ?? t('store.trips.index.notAvailable')
-                    }}</template>
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.truck') }}
-                </dt>
-                <dd>
-                    <TableLink
-                        v-if="trip.truck && access.can('edit_truck')"
-                        :href="truckEdit(trip.truck)"
-                        >{{ truckLabel(trip.truck) }}</TableLink
-                    >
-                    <template v-else>{{
-                        trip.truck
-                            ? truckLabel(trip.truck)
-                            : t('store.trips.index.notAvailable')
-                    }}</template>
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.startedAt') }}
-                </dt>
-                <dd>
-                    {{
-                        trip.started_at
-                            ? formatDateTime(trip.started_at)
-                            : t('store.trips.index.notAvailable')
-                    }}
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.closedAt') }}
-                </dt>
-                <dd>
-                    {{
-                        trip.closed_at
-                            ? formatDateTime(trip.closed_at)
-                            : t('store.trips.index.notAvailable')
-                    }}
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.distance') }}
-                </dt>
-                <dd>
-                    {{
-                        t('store.trips.index.km', {
-                            distance: kilometres(trip.distance),
-                        })
-                    }}
-                </dd>
-            </div>
-            <div>
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.duration') }}
-                </dt>
-                <dd>{{ formatDuration(trip.duration ?? 0) }}</dd>
-            </div>
-            <div class="sm:col-span-2 lg:col-span-4">
-                <dt class="text-gray-500 dark:text-neutral-400">
-                    {{ t('store.trips.index.notes') }}
-                </dt>
-                <dd class="whitespace-pre-line">
-                    {{ trip.notes || t('store.trips.index.notAvailable') }}
-                </dd>
-            </div>
-        </dl>
+        <DetailList plain :columns="4" class="mb-6">
+            <DetailItem
+                :label="t('store.trips.index.status')"
+                :value="t(`store.trips.status.${trip.status}`)"
+            />
+            <DetailItem
+                :label="t('store.trips.index.dueDate')"
+                :value="trip.due_date"
+            />
+            <DetailItem :label="t('store.trips.index.driver')"
+                ><TableLink
+                    v-if="trip.driver && access.can('edit_driver')"
+                    :href="driverEdit(trip.driver)"
+                    >{{ trip.driver.name }}</TableLink
+                ><template v-else>{{ trip.driver?.name }}</template></DetailItem
+            >
+            <DetailItem :label="t('store.trips.index.truck')"
+                ><TableLink
+                    v-if="trip.truck && access.can('edit_truck')"
+                    :href="truckEdit(trip.truck)"
+                    >{{ truckLabel(trip.truck) }}</TableLink
+                ><template v-else>{{
+                    trip.truck ? truckLabel(trip.truck) : null
+                }}</template></DetailItem
+            >
+            <DetailItem
+                :label="t('store.trips.index.startedAt')"
+                :value="
+                    trip.started_at ? formatDateTime(trip.started_at) : null
+                "
+            />
+            <DetailItem
+                :label="t('store.trips.index.closedAt')"
+                :value="trip.closed_at ? formatDateTime(trip.closed_at) : null"
+            />
+            <DetailItem
+                :label="t('store.trips.index.distance')"
+                :value="
+                    t('store.trips.index.km', {
+                        distance: kilometres(trip.distance),
+                    })
+                "
+            />
+            <DetailItem
+                :label="t('store.trips.index.duration')"
+                :value="formatDuration(trip.duration ?? 0)"
+            />
+            <DetailItem
+                full
+                preserve
+                :label="t('store.trips.index.notes')"
+                :value="trip.notes"
+            />
+        </DetailList>
         <h2 class="mb-3 text-lg font-semibold">
             {{ t('store.trips.show.checkpoints') }}
         </h2>
@@ -440,7 +394,7 @@ const tableColumns = computed(() => [
                             <p
                                 v-if="savedNotesCheckpointId === checkpoint.id"
                                 role="status"
-                                class="mt-1 text-xs text-green-700 dark:text-green-400"
+                                class="mt-1 text-xs text-success-strong"
                             >
                                 {{ t('store.trips.show.notesSaved') }}
                             </p>

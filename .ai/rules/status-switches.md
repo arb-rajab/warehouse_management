@@ -38,12 +38,13 @@ hard to read.
 
 - `<button role="switch" aria-checked>` with the label as `aria-label`, a
   colored track and sliding knob, and the state as visible text. On is green
-  (green-600, dark green-500) with a check in the knob; off is gray (gray-500,
-  dark neutral-500: at least 3:1 against the page in both modes).
+  (`bg-success`, hover `bg-success-strong`) with a check in the knob; off is
+  `bg-muted`: at least 3:1 against the page in both modes. The knob is
+  `bg-surface shadow-card` and everything switches for dark mode through the
+  tokens, so there are no `dark:` variants.
 - Processing: disabled, `aria-busy`, a spinning `LoaderCircle` in the knob,
   "Saving…" as the text.
-- Focus: `focus-visible:ring-2` blue ring with an offset, dark-mode offset
-  colour included. Keyboard: Space and Enter (native button).
+- Focus: `focus-visible:ring-2 ring-focus` with `ring-offset-surface`. Keyboard: Space and Enter (native button).
 - RTL: the knob is placed with logical `start-*`, so it mirrors without an
   `rtl:` variant. Do not position it with physical `left`/`translate-x`.
 - `locked` (`{ reason, hint? }`): no form; the switch stays focusable with

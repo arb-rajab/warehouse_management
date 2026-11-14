@@ -4,6 +4,7 @@ namespace App\Http\Requests\Concerns;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Rules\NewProductBarcode;
 use App\Support\ProductFormNumber;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,7 +27,15 @@ use Illuminate\Validation\Validator;
  * they are excluded, as the form never posted them.
  *
  * On edit (`$product` given) a stored upload reference round-trips whoever
- * owns it, and the product's own store barcodes may be posted again.
+ * owns it, and the product's own barcodes may be posted again.
+ *
+ * Barcodes: any text up to 255 characters, distinct, at most 50. A value the
+ * product does not hold yet must be new across every product and not an
+ * existing product's id (NewProductBarcode, shared with the WMS form); a value
+ * it already holds passes, so legacy duplicates and the Otajer import's
+ * own-id row can be saved again. The edit form also posts
+ * `product_barcodes_seen`, the values it loaded, so InHouseProductWriter
+ * deletes only what was shown and then removed.
  *
  * @mixin FormRequest
  */
@@ -44,10 +53,6 @@ trait ValidatesStoreProduct
         $variantCount = count($this->variantNamesOrNone());
         $vat = self::vatSectionEnabled();
         $taxes = array_map(fn (array $rules): array => $vat ? $rules : ['exclude'], $this->productTaxRules());
-        $barcode = Rule::unique('product_barcodes', 'barcode');
-        if ($product !== null) {
-            $barcode->whereNot('product_id', $product->id);
-        }
 
         return [
             'name' => ['required', 'string', 'max:200'],
@@ -65,7 +70,11 @@ trait ValidatesStoreProduct
             'product_types' => ['nullable', 'array', 'list', 'max:50'],
             'product_types.*' => ['nullable', 'string', 'max:255'],
             'product_barcodes' => ['nullable', 'array', 'list', 'max:50'],
-            'product_barcodes.*' => ['nullable', 'string', 'max:255', 'distinct', $barcode],
+            'product_barcodes.*' => ['nullable', 'string', 'max:255', 'distinct', new NewProductBarcode($product)],
+            ...($product === null ? [] : [
+                'product_barcodes_seen' => ['nullable', 'array', 'list', 'max:50'],
+                'product_barcodes_seen.*' => ['nullable', 'string', 'max:255'],
+            ]),
             'photos' => ['nullable', 'string', 'max:2000', $this->retainableImageUploadIdsRule($product?->getAttribute('photos'))],
             'thumbnail_img' => ['nullable', 'integer', $product ? $this->retainableImageUploadRule('thumbnail_img', $product->thumbnail_img) : $this->imageUploadRule()],
             'video_provider' => ['nullable', 'string', Rule::in(['youtube', 'dailymotion', 'vimeo'])],

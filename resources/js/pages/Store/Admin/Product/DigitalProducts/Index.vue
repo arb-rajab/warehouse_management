@@ -108,15 +108,13 @@ const tableColumns = computed(() => [
             :empty-message="t('store.digitalProducts.empty')"
         >
             <template #row="{ row: product }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     <a
                         v-if="product.public_url"
                         :href="product.public_url"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                        class="inline-flex items-center gap-1 text-link hover:underline"
                         >{{ product.name
                         }}<ArrowUpRight class="h-3 w-3 shrink-0"
                     /></a>

@@ -147,6 +147,16 @@ class Product extends Model
     public const array WITH_STORE_LIST = ['stocks', 'taxes', 'offers', 'collection', 'product_translations'];
 
     /**
+     * Eager loads for the storefront's product card (partials/product_box_1):
+     * it prints the translated name and the offer badge of every card, so a
+     * list of cards built without them trips the lazy-loading guard in
+     * local/testing and costs production two extra queries per card.
+     *
+     * @var list<string>
+     */
+    public const array WITH_STORE_CARD = ['offers', 'product_translations:id,product_id,lang,name'];
+
+    /**
      * The columns a product search matches, in the order the FULLTEXT index
      * declares them — `MATCH` only resolves against an index covering exactly
      * this column list, so the two must stay in step with
@@ -229,9 +239,12 @@ class Product extends Model
     }
 
     /**
-     * Ordered oldest-first (by id) so the admin products screen lists a
-     * product's barcodes in the order they were added, deterministically —
-     * see ProductController::index()'s column-scoped eager load.
+     * Every barcode of the product in the one shared table `product_barcodes`
+     * (see ProductBarcode): those added in the WMS, on the store form and by
+     * the Otajer import, which also stores the product's own id. Ordered
+     * oldest-first (by id) so the admin products screen lists a product's
+     * barcodes in the order they were added, deterministically — see
+     * ProductController::index()'s column-scoped eager load.
      *
      * @return HasMany<ProductBarcode, $this>
      */
@@ -417,23 +430,25 @@ class Product extends Model
 
     /**
      * Scope a query to products that currently have at least one pallet
-     * somewhere in the warehouse. `pallets.cell_id` is non-nullable and
-     * unique (see Pallet's docblock), so every pallet row is inherently "in
-     * a cell" — this reduces to "has at least one pallet row", with no
-     * cell-state check needed.
+     * somewhere in the warehouse — this reduces to "has at least one pallet
+     * row", with no cell-state check needed. A received but unplaced pallet
+     * (no cell yet) counts: it is stock the warehouse holds.
      *
      * Shared by the admin products index's `inactive` filter
      * (`Admin\ProductController::index()`), the dashboard's
      * inactive-in-warehouse count (`BuildsDashboardStats`) and
      * {@see self::activeOrInWarehouse()}, so the "in the warehouse"
-     * definitions can never drift apart.
+     * definitions can never drift apart. `$warehouseIds` narrows it to a
+     * pallet stored in one of those warehouses (the dashboard's warehouse
+     * filter); null means any warehouse.
      *
      * @param  EloquentBuilder<Product>  $query
+     * @param  list<int>|null  $warehouseIds
      */
     #[Scope]
-    protected function inWarehouse(EloquentBuilder $query): void
+    protected function inWarehouse(EloquentBuilder $query, ?array $warehouseIds = null): void
     {
-        $query->whereExists(self::palletOfProductSubquery());
+        $query->whereExists(self::palletOfProductSubquery()->forWarehouses($warehouseIds));
     }
 
     /**
@@ -958,6 +973,35 @@ class Product extends Model
     }
 
     /**
+     * Highest store grade first (the `stars` field of the store API: the
+     * `amount` of the product's collection, 0 for a product with none), ties
+     * by name. The tie-breakers keep a page boundary stable.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function orderedByStars(EloquentBuilder $query): void
+    {
+        $query->orderByRaw('COALESCE((SELECT product_collections.amount FROM product_collections WHERE product_collections.id = products.collection_id LIMIT 1), 0) DESC')
+            ->orderBy('products.name')
+            ->orderBy('products.id');
+    }
+
+    /**
+     * Products whose `stars` are at least `$minimum`. A minimum of 0 or less
+     * keeps every product, since a product with no collection shows 0 stars.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function atLeastStars(EloquentBuilder $query, float $minimum): void
+    {
+        if ($minimum > 0) {
+            $query->whereIn('products.collection_id', ProductCollection::query()->select('id')->where('amount', '>=', $minimum));
+        }
+    }
+
+    /**
      * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]
@@ -972,18 +1016,6 @@ class Product extends Model
     public function variations(): HasMany
     {
         return $this->hasMany(ProductVariation::class);
-    }
-
-    /**
-     * The store's own barcodes (table `product_barcodes`), distinct from this
-     * app's {@see self::barcodes()} (table `wms_product_barcodes`) — same
-     * name would otherwise collide, see StoreProductBarcode's docblock.
-     *
-     * @return HasMany<StoreProductBarcode, $this>
-     */
-    public function storeBarcodes(): HasMany
-    {
-        return $this->hasMany(StoreProductBarcode::class);
     }
 
     public function profit(): float

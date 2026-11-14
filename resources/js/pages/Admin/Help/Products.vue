@@ -50,7 +50,7 @@ const previewProducts = [
     >
         <section>
             <h2 :class="sectionHeadingClass">{{ t('imageReview.title') }}</h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('imageReview.help') }}
             </p>
             <HelpUiPreview inert class="mt-2 block"
@@ -63,7 +63,7 @@ const previewProducts = [
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.products.${section}.heading`) }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t(`help.products.${section}.body`) }}
             </p>
             <HelpUiPreview
@@ -125,9 +125,7 @@ const previewProducts = [
                 >
                     <template #row="{ row }">
                         <td class="px-4 py-2">{{ row.id }}</td>
-                        <td
-                            class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                        >
+                        <td class="px-4 py-2 font-medium text-ink">
                             {{ row.name }}
                         </td>
                         <td class="px-4 py-2">{{ row.boxes_count }}</td>
@@ -182,7 +180,7 @@ const previewProducts = [
                         })
                     "
                     :title="t('products.defaultBarcode')"
-                    class="inline-flex text-gray-400 dark:text-neutral-500"
+                    class="inline-flex text-muted"
                 >
                     <Barcode class="h-4 w-4" />
                 </span>

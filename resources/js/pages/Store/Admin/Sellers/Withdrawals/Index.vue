@@ -105,7 +105,7 @@ const tableColumns = computed(() => [
                         <button
                             v-if="access.can('pay_to_seller')"
                             type="button"
-                            class="inline-flex cursor-pointer items-center gap-1 text-blue-700 underline dark:text-blue-400"
+                            class="inline-flex cursor-pointer items-center gap-1 text-link underline"
                             @click="
                                 selected = row;
                                 paymentOpen = true;
@@ -118,7 +118,7 @@ const tableColumns = computed(() => [
                         <button
                             v-if="access.can('view_seller_payout_requests')"
                             type="button"
-                            class="inline-flex cursor-pointer items-center gap-1 text-blue-700 underline dark:text-blue-400"
+                            class="inline-flex cursor-pointer items-center gap-1 text-link underline"
                             @click="
                                 selected = row;
                                 messageOpen = true;

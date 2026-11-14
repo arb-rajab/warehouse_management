@@ -8,6 +8,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 
 function makeEmptyCell(): Cell
 {
@@ -44,6 +45,7 @@ test('a worker can report a cell as correct against their own round', function (
             'row_letter' => $cell->row->letter,
             'cell_number' => $cell->cell_number,
             'flat_number' => $cell->flat_number,
+            'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         ],
         'expected' => [
             'cell_state' => 'empty',
@@ -235,4 +237,44 @@ test('a worker cannot report a cell in a row their round does not cover', functi
         'cell_id' => $coveredCell->id,
         'is_correct' => true,
     ])->assertCreated();
+});
+
+test('a stored report names the warehouse of its cell, also when the letter is shared with another warehouse', function () {
+    $user = actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $south = Warehouse::factory()->create(['name' => 'South']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->for($south)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = $northRow->cells()->first();
+    $round = CellVerificationRound::factory()->for($user)->covering($northRow)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => true,
+    ]);
+
+    $response->assertCreated();
+    expect($response->json('cell'))->toBe([
+        'row_letter' => 'A',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'warehouse' => ['id' => $north->id, 'name' => 'North'],
+    ]);
+});
+
+test('an unplaced pallet is not what a report expects: the empty cell is expected empty', function () {
+    $user = actingAsMobileUser();
+    $cell = makeEmptyCell();
+    $round = CellVerificationRound::factory()->for($user)->covering($cell->row)->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    $this->postJson('/api/v1/cell-verification-reports', [
+        'cell_verification_round_id' => $round->id,
+        'cell_id' => $cell->id,
+        'is_correct' => true,
+    ])->assertCreated()
+        ->assertJsonPath('expected.cell_state', 'empty')
+        ->assertJsonPath('expected.product', null)
+        ->assertJsonPath('expected.boxes_count', null);
 });

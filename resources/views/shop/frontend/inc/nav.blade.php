@@ -13,15 +13,21 @@
 @endif
 
 <!-- Top Bar -->
-<div class="top-navbar bg-white z-1035 h-35px h-sm-auto">
+<div class="top-navbar sf-strip z-1035 h-35px h-sm-auto @if(get_setting('show_currency_switcher') != 'on') d-none d-lg-block @endif">
     <div class="container">
         <div class="row">
             <div class="col-lg-6 col">
-                <ul class="list-inline d-flex justify-content-between justify-content-lg-start mb-0">
-                    <!-- Language toggle (Arabic/English), always shown -->
-                    <li class="list-inline-item mr-4 d-none d-lg-inline-block">
-                        @include('shop.frontend.partials.language_toggle', ['class' => 'd-inline-block py-2'])
-                    </li>
+                <ul class="list-inline d-flex justify-content-between justify-content-lg-start align-items-center h-100 mb-0">
+                    @if (get_setting('helpline_number'))
+                        <!-- Helpline -->
+                        <li class="list-inline-item mr-4 d-none d-lg-inline-block">
+                            <a href="tel:{{ get_setting('helpline_number') }}" class="sf-strip-item fs-13 d-inline-flex py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>
+                                <span>{{ __('storefront.navigation.helpline')}}</span>
+                                <span dir="ltr">{{ get_setting('helpline_number') }}</span>
+                            </a>
+                        </li>
+                    @endif
 
                     <!-- Currency Switcher -->
                     @if(get_setting('show_currency_switcher') == 'on')
@@ -64,22 +70,17 @@
                             <a href="{{ route('seller.login') }}" class="text-secondary fs-12 pl-3 d-inline-block">{{ __('storefront.auth.login_to_seller')}}</a>
                         </li>  --}}
                     @endif
-                    @if (get_setting('helpline_number'))
-                        <!-- Helpline -->
-                        <li class="list-inline-item ml-3 pl-3 mr-0 pr-0">
-                            <a href="tel:{{ get_setting('helpline_number') }}" class="text-secondary fs-12 d-inline-block py-2">
-                                <span>{{ __('storefront.navigation.helpline')}}</span>
-                                <span>{{ get_setting('helpline_number') }}</span>
-                            </a>
-                        </li>
-                    @endif
+                    <!-- Language toggle (Arabic/English), always shown -->
+                    <li class="list-inline-item ml-3 mr-0">
+                        @include('shop.frontend.partials.language_toggle', ['class' => 'd-inline-block py-1', 'buttonClass' => 'btn sf-lang-pill'])
+                    </li>
                 </ul>
             </div>
         </div>
     </div>
 </div>
 
-<header class="@if(get_setting('header_stikcy') == 'on') sticky-top @endif z-1020 bg-white">
+<header class="sf-header @if(get_setting('header_stikcy') == 'on') sticky-top @endif z-1020 bg-white">
     <!-- Search Bar -->
     <div class="position-relative logo-bar-area border-bottom border-md-nonea z-1025">
         <div class="container">
@@ -95,15 +96,23 @@
                 </button>
                 <!-- Header Logo -->
                 <div class="col-auto pl-0 pr-3 d-flex align-items-center">
-                    <a class="d-block py-20px mr-3 ml-0" href="{{ route('home') }}">
+                    {{-- The brand name is a placeholder kept in one place,
+                         messages.brand_name in lang/{en,ar}/messages.php. --}}
+                    <a class="sf-brand mr-3 ml-0" href="{{ route('home') }}">
                         @php
                             $header_logo = get_setting('header_logo');
                         @endphp
                         @if($header_logo != null)
-                            <img src="{{ uploaded_asset($header_logo) }}" alt="{{ config('app.name') }}" class="mw-100 h-90px h-md-90px" height="90">
+                            <img src="{{ uploaded_asset($header_logo) }}" alt="" height="44">
                         @else
-                            <img src="{{ static_asset('assets/img/logo.png') }}" alt="{{ config('app.name') }}" class="mw-100 h-30px h-md-40px" height="40">
+                            <img src="{{ static_asset('assets/img/33logoqr.png') }}" alt="" height="44" class="sf-brand-mark">
                         @endif
+                        <span class="sf-brand-text">
+                            <span class="sf-brand-name">{{ __('messages.brand_name') }}</span>
+                            @if (get_setting('site_motto'))
+                                <span class="sf-brand-motto">{{ get_setting('site_motto') }}</span>
+                            @endif
+                        </span>
                     </a>
                 </div>
                 <!-- Search Icon for small device -->
@@ -113,7 +122,7 @@
                     </a>
                 </div>
                 <!-- Search field -->
-                <div class="flex-grow-1 front-header-search d-flex align-items-center bg-white mx-xl-5">
+                <div class="flex-grow-1 front-header-search d-flex align-items-center bg-white mx-xl-4">
                     <div class="position-relative flex-grow-1 px-3 px-lg-0">
                         <form action="{{ route('search') }}" method="GET" class="stop-propagation">
                             <div class="d-flex position-relative align-items-center">
@@ -124,11 +133,10 @@
                                     <input type="text" class="border border-soft-light form-control fs-14 hov-animate-outline" id="search" name="keyword" @isset($query)
                                         value="{{ $query }}"
                                     @endisset placeholder="{{__('storefront.navigation.i_am_shopping_for')}}" autocomplete="off">
-
-                                    <svg id="Group_723" data-name="Group 723" xmlns="http://www.w3.org/2000/svg" width="20.001" height="20" viewBox="0 0 20.001 20">
-                                        <path id="Path_3090" data-name="Path 3090" d="M9.847,17.839a7.993,7.993,0,1,1,7.993-7.993A8,8,0,0,1,9.847,17.839Zm0-14.387a6.394,6.394,0,1,0,6.394,6.394A6.4,6.4,0,0,0,9.847,3.453Z" transform="translate(-1.854 -1.854)" fill="#b5b5bf"/>
-                                        <path id="Path_3091" data-name="Path 3091" d="M24.4,25.2a.8.8,0,0,1-.565-.234l-6.15-6.15a.8.8,0,0,1,1.13-1.13l6.15,6.15A.8.8,0,0,1,24.4,25.2Z" transform="translate(-5.2 -5.2)" fill="#b5b5bf"/>
-                                    </svg>
+                                    <button type="submit" class="sf-search-btn">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                                        <span>{{ __('storefront.navigation.search') }}</span>
+                                    </button>
                                 </div>
                             </div>
                         </form>
@@ -160,14 +168,14 @@
                     </div>
                 </div>
                 <!-- Wishlist -->
-                <div class="d-none d-lg-block mr-3" style="margin-left: 36px;">
+                <div class="d-none d-lg-block ml-1 mr-1">
                     <div class="" id="wishlist">
                         @include('shop.frontend.partials.wishlist')
                     </div>
                 </div>
                 <!-- Notifications -->
                 <ul class="list-inline mb-0 h-100 d-none d-xl-flex justify-content-end align-items-center">
-                    <li class="list-inline-item ml-3 mr-3 pr-3 pl-0 dropdown">
+                    <li class="list-inline-item ml-0 mr-3 px-0 dropdown">
                         <a class="dropdown-toggle no-arrow text-secondary fs-12" data-toggle="dropdown" href="javascript:void(0);" role="button" aria-haspopup="false" aria-expanded="false">
                             <span class="">
                                 <span class="position-relative d-inline-block">
@@ -382,12 +390,12 @@
                             @endif
                             <li class="user-top-nav-element border border-top-0" data-id="1">
                                 <a href="{{ route('shop.logout') }}" class="text-truncate text-dark px-4 fs-14 d-flex align-items-center hov-column-gap-1">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="15.999" viewBox="0 0 16 15.999">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="15.999" viewBox="0 0 16 15.999" class="text-primary">
                                         <g id="Group_25503" data-name="Group 25503" transform="translate(-24.002 -377)">
                                           <g id="Group_25265" data-name="Group 25265" transform="translate(-216.534 -160)">
-                                            <path id="Subtraction_192" data-name="Subtraction 192" d="M12052.535,2920a8,8,0,0,1-4.569-14.567l.721.72a7,7,0,1,0,7.7,0l.721-.72a8,8,0,0,1-4.567,14.567Z" transform="translate(-11803.999 -2367)" fill="#d43533"/>
+                                            <path id="Subtraction_192" data-name="Subtraction 192" d="M12052.535,2920a8,8,0,0,1-4.569-14.567l.721.72a7,7,0,1,0,7.7,0l.721-.72a8,8,0,0,1-4.567,14.567Z" transform="translate(-11803.999 -2367)" fill="currentColor"/>
                                           </g>
-                                          <rect id="Rectangle_19022" data-name="Rectangle 19022" width="1" height="8" rx="0.5" transform="translate(31.5 377)" fill="#d43533"/>
+                                          <rect id="Rectangle_19022" data-name="Rectangle 19022" width="1" height="8" rx="0.5" transform="translate(31.5 377)" fill="currentColor"/>
                                         </g>
                                     </svg>
                                     <span class="user-top-menu-name text-primary has-transition ml-3">{{ __('storefront.navigation.logout') }}</span>
@@ -401,7 +409,7 @@
     </div>
 
     <!-- Menu Bar -->
-    <div class="d-none d-lg-block position-relative bg-primary h-50px">
+    <div class="sf-catbar d-none d-lg-block position-relative bg-primary h-50px">
         <div class="container h-100">
             <div class="d-flex h-100">
                 <!-- Categoty Menu Button -->
@@ -409,7 +417,10 @@
                     <div class="px-3 h-100" style="padding-top: 12px;padding-bottom: 12px; width:270px; cursor: pointer;">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
-                                <span class="fw-700 fs-16 text-white mr-3">{{ __('storefront.product.categories') }}</span>
+                                <span class="sf-catbar-title fw-700 fs-16 text-white mr-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                                    {{ __('storefront.product.categories') }}
+                                </span>
                                 <a href="{{ route('categories.all') }}" class="text-reset">
                                     <span class="d-none d-lg-inline-block text-white hov-opacity-80">({{ __('storefront.navigation.see_all') }})</span>
                                 </a>

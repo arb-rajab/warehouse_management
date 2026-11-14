@@ -3,6 +3,7 @@ import type { UserSettings } from '../config';
 import type { Theme } from '../data/SettingsStore';
 import { NO_FILTER } from '../domain/SlotFilter';
 import type { Locale, SlotFilter, Warehouse } from '../domain/types';
+import type { WarehouseSelection } from '../domain/warehouseSelection';
 
 export type ViewKind = '2d' | '3d';
 export type InputKindName = 'mouse' | 'touch';
@@ -45,6 +46,8 @@ export interface Hint {
 
 export interface MapState {
     warehouse: Warehouse | null;
+    /** The warehouses the rows were asked for (`null`: every warehouse), as the host's URL names them. */
+    warehouseIds: WarehouseSelection;
     loadFailed: boolean;
     locale: Locale;
     theme: Theme;
@@ -88,6 +91,7 @@ export const INITIAL_SCENE: SceneState = {
 export function initialState(overrides: Partial<MapState> = {}): MapState {
     return {
         warehouse: null,
+        warehouseIds: null,
         loadFailed: false,
         locale: 'en',
         theme: 'dark',

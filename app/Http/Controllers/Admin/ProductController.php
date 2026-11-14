@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
-use App\Http\Controllers\Concerns\BuildsProductQrLabels;
 use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
 use App\Http\Requests\Admin\SearchProductsRequest;
@@ -19,19 +19,22 @@ use App\Models\ProductBarcode;
 use App\Models\ProductImageReview;
 use App\Models\ProductSetting;
 use App\Models\Setting;
+use App\Services\ProductBarcodeAttacher;
+use App\Services\ProductBarcodeLabels;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
-use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use ZipArchive;
 
 class ProductController extends Controller
 {
-    use BuildsCellLogFilterOptions, BuildsProductQrLabels;
+    use BuildsCellLogFilterOptions, FlashesAdminSuccess;
+
+    public function __construct(private readonly ProductBarcodeLabels $labels) {}
 
     /**
      * @var list<string>
@@ -116,6 +119,7 @@ class ProductController extends Controller
         $product->setting()->updateOrCreate([], [
             'boxes_count' => $request->integer('boxes_count'),
         ]);
+        $this->flashAdminSuccess('box_count_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
@@ -147,23 +151,26 @@ class ProductController extends Controller
 
         $setting->minimum_pallets = $request->input('minimum_pallets');
         $setting->save();
+        $this->flashAdminSuccess('minimum_pallets_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
 
     /**
-     * Attaches a new barcode to a product. WMS-owned data in
-     * `wms_product_barcodes`, the same as `updateBoxCount()`/
-     * `updateMinimumPallets()` above — see .ai/rules/shared-database.md.
+     * Attaches a new barcode to a product, in `product_barcodes`, the one
+     * barcode table the store shares (see ProductBarcode). The table has no
+     * unique index, so the request's rules run again under the shared barcode
+     * lock right before the insert: of two admins adding the same value at
+     * once, the second gets the same "already taken" error.
      *
      * Redirects to `admin.products.index` rather than `back()` — see
      * `updateBoxCount()`'s docblock.
      */
-    public function storeBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
+    public function storeBarcode(StoreProductBarcodeRequest $request, Product $product, ProductBarcodeAttacher $attacher): RedirectResponse
     {
-        $product->barcodes()->create([
-            'barcode' => $request->validated('barcode'),
-        ]);
+        $barcode = $request->validated('barcode');
+        $attacher->attach($product, $barcode);
+        $this->flashAdminSuccess('barcode_has_been_added_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
@@ -172,11 +179,15 @@ class ProductController extends Controller
      * Detaches a barcode from a product. The route uses `scopeBindings()`, so
      * `$barcode` only resolves when it belongs to `$product` — without that,
      * an admin could delete any product's barcode by guessing its id while
-     * looking at a different product's row.
+     * looking at a different product's row. The own-id row the Otajer import
+     * stores is a 404, as the page does not list it: the store app's barcode
+     * search finds the product by it.
      */
     public function destroyBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
     {
+        abort_if($barcode->isOwnProductId(), HttpResponse::HTTP_NOT_FOUND);
         $barcode->delete();
+        $this->flashAdminSuccess('barcode_has_been_removed_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
@@ -206,14 +217,14 @@ class ProductController extends Controller
     /**
      * The product's default barcode — its id as a Code 128 label, meant to be
      * printed and stuck on every box/pallet of that product — see
-     * BuildsProductQrLabels. Derived from the id, never stored, so it cannot
+     * ProductBarcodeLabels. Derived from the id, never stored, so it cannot
      * be edited or deleted like a custom barcode.
      */
     public function exportQr(Product $product): HttpResponse
     {
         $setting = Setting::current();
 
-        return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
+        return response($this->labels->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
     }
@@ -224,14 +235,7 @@ class ProductController extends Controller
      */
     public function previewDefaultBarcode(Request $request, Product $product): HttpResponse
     {
-        $setting = Setting::current();
-
-        $etag = md5(implode('|', [
-            $this->productLabelName($product),
-            $product->id,
-            $setting->qr_code_width,
-            $setting->qr_code_height,
-        ]));
+        $etag = $this->labels->etag($product, (string) $product->id);
 
         $notModified = $this->notModifiedResponse($request, $etag, 'private, no-cache');
 
@@ -239,7 +243,8 @@ class ProductController extends Controller
             return $notModified;
         }
 
-        return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
+        // The id label is the id's own barcode label (productQrLabelImage()).
+        return response($this->labels->barcodeSvg($product, (string) $product->id))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', 'inline')
             ->header('Cache-Control', 'private, no-cache')
@@ -248,8 +253,11 @@ class ProductController extends Controller
 
     /**
      * One of the product's stored barcodes as a printable Code 128 SVG label,
-     * carrying exactly that barcode's value. The route uses `scopeBindings()`,
-     * so `$barcode` only resolves when it belongs to `$product`.
+     * carrying that barcode's value as the store pages show it (Arabic digits
+     * converted, spaces trimmed), so one value always gives one label. The
+     * route uses `scopeBindings()`, so `$barcode` only resolves when it
+     * belongs to `$product`; the own-id row and a blank value are 404s (the
+     * page lists neither), a value Code 128 cannot draw a 422.
      */
     public function downloadBarcode(Product $product, ProductBarcode $barcode): HttpResponse
     {
@@ -264,16 +272,9 @@ class ProductController extends Controller
      */
     public function previewBarcode(Request $request, Product $product, ProductBarcode $barcode): HttpResponse
     {
-        $setting = Setting::current();
-
         // Every input of the label, hashed before the SVG is rendered, so a
         // repeat request is answered with a 304 without rendering it.
-        $etag = md5(implode('|', [
-            $this->productLabelName($product),
-            $barcode->barcode,
-            $setting->qr_code_width,
-            $setting->qr_code_height,
-        ]));
+        $etag = $this->labels->etag($product, $this->drawableValue($barcode));
 
         $notModified = $this->notModifiedResponse($request, $etag, 'private, no-cache');
 
@@ -301,24 +302,35 @@ class ProductController extends Controller
 
     private function barcodeLabelSvg(Product $product, ProductBarcode $barcode): string
     {
-        $setting = Setting::current();
+        return $this->labels->barcodeSvg($product, $this->drawableValue($barcode));
+    }
 
-        try {
-            return $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height);
-        } catch (InvalidArgumentException) {
-            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $barcode->barcode]));
-        }
+    /**
+     * The value a label of $barcode encodes: normalized as the store pages
+     * show it. Aborts with a 404 for a row the page does not list (the own-id
+     * row, a blank value) and a 422 for a value Code 128 cannot draw.
+     */
+    private function drawableValue(ProductBarcode $barcode): string
+    {
+        $value = $this->labels->normalize($barcode->barcode);
+        abort_if($value === '' || $barcode->isOwnProductId(), HttpResponse::HTTP_NOT_FOUND);
+        abort_unless($this->labels->isPrintable($value), HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $value]));
+
+        return $value;
     }
 
     /**
      * A ZIP holding one SVG label per barcode of the product — its default
-     * (id) barcode plus every custom one, and none belonging to any other
-     * product. Built whole or not at all: a barcode that cannot be rendered
-     * fails the download rather than being left out of a ZIP that looks complete.
+     * (id) barcode plus every one the page lists (not the own-id row, which
+     * the default label already is), and none belonging to any other product.
+     * A value Code 128 cannot draw (store barcodes may be any text) is left
+     * out and named in `not-printable.txt` inside the ZIP, so one such value
+     * never blocks the download; when none can be drawn the ZIP holds the
+     * default label and that file.
      */
     public function downloadAllBarcodes(Product $product): BinaryFileResponse
     {
-        $barcodes = $product->barcodes()->orderBy('id')->get(['id', 'product_id', 'barcode']);
+        $barcodes = ProductBarcode::listedInWms($product->barcodes()->get(['id', 'product_id', 'barcode']));
 
         $setting = Setting::current();
         $path = tempnam(sys_get_temp_dir(), 'barcodes');
@@ -328,25 +340,30 @@ class ProductController extends Controller
             abort(HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $current = (string) $product->id;
+        $zip->addFromString(
+            "product-{$product->id}-barcode.svg",
+            $this->labels->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height),
+        );
 
-        try {
-            $zip->addFromString(
-                "product-{$product->id}-barcode.svg",
-                $this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height),
-            );
+        $notPrintable = [];
 
-            foreach ($barcodes as $barcode) {
-                $current = $barcode->barcode;
-                $zip->addFromString(
-                    $this->barcodeFileName($product, $barcode),
-                    $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height),
-                );
+        foreach ($barcodes as $barcode) {
+            $value = $this->labels->normalize($barcode->barcode);
+
+            if (! $this->labels->isPrintable($value)) {
+                $notPrintable[] = $value;
+
+                continue;
             }
-        } catch (InvalidArgumentException) {
-            $zip->close();
-            @unlink($path);
-            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $current]));
+
+            $zip->addFromString(
+                $this->barcodeFileName($product, $barcode),
+                $this->labels->productBarcodeLabelImage($product, $value, $setting->qr_code_width, $setting->qr_code_height),
+            );
+        }
+
+        if ($notPrintable !== []) {
+            $zip->addFromString('not-printable.txt', implode("\n", [__('messages.barcodes_not_printable_in_zip'), '', ...$notPrintable])."\n");
         }
 
         if (! $zip->close()) {

@@ -9,14 +9,14 @@ import {
     update as updatePallet,
 } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import FilterDialog from '@/components/FilterDialog.vue';
-import ProductImageReviewFields from '@/components/ProductImageReviewFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { cellPallet, cellWithLocation } from '@/testing/factories';
-import type { CellMapRow, CellWithLocation } from '@/types/admin';
+import type { CellWithLocation, PalletTransferTargets } from '@/types/admin';
 import ActionErrorBanner from './ActionErrorBanner.vue';
 import PalletActionsDialog from './PalletActionsDialog.vue';
+import PalletTransferFields from './PalletTransferFields.vue';
 import SubmitButton from './SubmitButton.vue';
 
 const { submitMock, formState } = vi.hoisted(() => ({
@@ -35,33 +35,32 @@ vi.mock('@inertiajs/vue3', async () => {
         useForm: createUseFormStub(submitMock, () => formState),
         useHttp: () => ({
             get: (
-                url: string,
+                _url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) =>
-                options?.onSuccess?.(
-                    url.includes('image-reviews')
-                        ? {
-                              id: 1,
-                              name: 'Widgets',
-                              ar_name: '',
-                              image_url: 'https://example.com/image.jpg',
-                              image_source: 'https://example.com/image.jpg',
-                              barcodes: ['123'],
-                              reviews: {
-                                  data: [],
-                                  current_page: 1,
-                                  last_page: 1,
-                              },
-                          }
-                        : paginated([]),
-                ),
+            ) => options?.onSuccess?.(paginated([])),
         }),
     };
 });
 
-const rows: CellMapRow[] = [
-    { id: 1, letter: 'A', cells_count: 5, flats_count: 1 },
-];
+const singleWarehouse: PalletTransferTargets = {
+    warehouses: [{ id: 1, name: 'Main' }],
+    rows: [
+        { id: 1, letter: 'A', cells_count: 5, flats_count: 1, warehouse_id: 1 },
+    ],
+};
+
+const twoWarehouses: PalletTransferTargets = {
+    warehouses: [
+        { id: 1, name: 'Main' },
+        { id: 4, name: 'Annex' },
+    ],
+    rows: [
+        { id: 1, letter: 'A', cells_count: 5, flats_count: 1, warehouse_id: 1 },
+        { id: 2, letter: 'B', cells_count: 2, flats_count: 2, warehouse_id: 1 },
+        { id: 3, letter: 'A', cells_count: 3, flats_count: 1, warehouse_id: 4 },
+        { id: 4, letter: 'C', cells_count: 3, flats_count: 1, warehouse_id: 4 },
+    ],
+};
 
 function openedCell(remainingBoxes: number): CellWithLocation {
     return cellWithLocation({
@@ -92,12 +91,16 @@ function fullCell(remainingBoxes: number): CellWithLocation {
  * is only set by the `watch(open, ...)` handler, which needs a false→true
  * transition to fire (see FilterDialog.test.ts for the same pattern).
  */
-async function mountDialog(cell: CellWithLocation | null) {
+async function mountDialog(
+    cell: CellWithLocation | null,
+    transferTargets: PalletTransferTargets = singleWarehouse,
+) {
     const wrapper = mount(PalletActionsDialog, {
         props: {
             cell,
             label: 'A2·1',
-            rows,
+            transferTargets,
+            warehouseId: 1,
             open: false,
             'onUpdate:open': () => {},
         },
@@ -108,7 +111,7 @@ async function mountDialog(cell: CellWithLocation | null) {
     return wrapper;
 }
 
-async function selectReviewedProduct(
+async function selectProduct(
     wrapper: Awaited<ReturnType<typeof mountDialog>>,
 ): Promise<void> {
     wrapper.getComponent(ProductSelect).vm.$emit('update:modelValue', {
@@ -118,7 +121,6 @@ async function selectReviewedProduct(
         active: true,
     });
     await flushPromises();
-    await wrapper.get('#receiving-image-review-status').setValue('matches');
 }
 
 describe('PalletActionsDialog', () => {
@@ -245,7 +247,7 @@ describe('PalletActionsDialog', () => {
             'Store pallet',
         );
 
-        await selectReviewedProduct(wrapper);
+        await selectProduct(wrapper);
         await wrapper.get('#pallet-action-expiration').setValue('2026-12-25');
         await wrapper.get('#pallet-action-note').setValue('Fragile');
         await wrapper.get('form').trigger('submit');
@@ -253,8 +255,6 @@ describe('PalletActionsDialog', () => {
         expect(submitMock).toHaveBeenCalledTimes(1);
         expect(submitMock.mock.calls[0][1]).toMatchObject({
             product_id: 1,
-            image_review_status: 'matches',
-            image_source: 'https://example.com/image.jpg',
             expiration_date: '2026-12-25',
             note: 'Fragile',
         });
@@ -267,49 +267,45 @@ describe('PalletActionsDialog', () => {
             wrapper.get('#pallet-action-expiration').attributes('required'),
         ).toBeUndefined();
 
-        await selectReviewedProduct(wrapper);
+        await selectProduct(wrapper);
         await wrapper.get('#pallet-action-note').setValue('No label on box');
         await wrapper.get('form').trigger('submit');
 
         expect(submitMock).toHaveBeenCalledTimes(1);
         expect(submitMock.mock.calls[0][1]).toMatchObject({
             product_id: 1,
-            image_review_status: 'matches',
-            image_source: 'https://example.com/image.jpg',
             expiration_date: '',
             note: 'No label on box',
         });
     });
 
-    it('blocks storage until an image result is chosen and sends the optional issue note', async () => {
+    it('stores without any image review step and posts no image review fields', async () => {
         const wrapper = await mountDialog(emptyCell());
-        await wrapper.get('form').trigger('submit');
-        expect(submitMock).not.toHaveBeenCalled();
-        await selectReviewedProduct(wrapper);
-        await wrapper.get('#receiving-image-review-status').setValue('');
-        await wrapper.get('form').trigger('submit');
-        expect(submitMock).not.toHaveBeenCalled();
-        await wrapper
-            .get('#receiving-image-review-status')
-            .setValue('doesnt_match');
-        await wrapper
-            .get('#receiving-image-review-note')
-            .setValue('Wrong packaging');
-        await wrapper.get('form').trigger('submit');
-        expect(submitMock.mock.calls[0][1]).toMatchObject({
-            image_review_status: 'doesnt_match',
-            image_review_note: 'Wrong packaging',
-        });
-        wrapper.getComponent(ProductSelect).vm.$emit('update:modelValue', {
-            id: 2,
-            name: 'Other product',
-            ar_name: '',
-            active: true,
-        });
-        await flushPromises();
+
+        expect(wrapper.find('#receiving-image-review-status').exists()).toBe(
+            false,
+        );
         expect(
-            wrapper.getComponent(ProductImageReviewFields).props('status'),
-        ).toBe('');
+            wrapper.getComponent(SubmitButton).attributes('disabled'),
+        ).toBeUndefined();
+
+        await selectProduct(wrapper);
+
+        expect(wrapper.find('#receiving-image-review-status').exists()).toBe(
+            false,
+        );
+        expect(
+            wrapper.getComponent(SubmitButton).attributes('disabled'),
+        ).toBeUndefined();
+
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        const body = submitMock.mock.calls[0][1];
+        expect(body).toMatchObject({ product_id: 1 });
+        expect(body).not.toHaveProperty('image_review_status');
+        expect(body).not.toHaveProperty('image_review_note');
+        expect(body).not.toHaveProperty('image_source');
     });
 
     it('requires a product to be selected to store a pallet', async () => {
@@ -439,15 +435,15 @@ describe('PalletActionsDialog', () => {
             .findAll('[data-testid="pallet-action-tab"]')[2]
             .trigger('click');
 
-        expect(wrapper.get('label[for="pallet-action-to-row"]').text()).toBe(
-            'Destination row',
-        );
-        expect(wrapper.get('label[for="pallet-action-to-cell"]').text()).toBe(
-            'Destination cell number',
-        );
-        expect(wrapper.get('label[for="pallet-action-to-flat"]').text()).toBe(
-            'Destination level',
-        );
+        expect(
+            wrapper.get('label[for="pallet-action-to-row"]').text(),
+        ).toContain('Destination row');
+        expect(
+            wrapper.get('label[for="pallet-action-to-cell"]').text(),
+        ).toContain('Destination cell number');
+        expect(
+            wrapper.get('label[for="pallet-action-to-flat"]').text(),
+        ).toContain('Destination level');
         expect(wrapper.getComponent(SubmitButton).props('label')).toBe(
             'Transfer pallet',
         );
@@ -463,6 +459,167 @@ describe('PalletActionsDialog', () => {
             cell_number: 3,
             flat_number: 2,
         });
+    });
+
+    it("posts the cell's own warehouse by default, and hides the warehouse select while there is only one", async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+
+        expect(wrapper.find('#pallet-action-to-warehouse').exists()).toBe(
+            false,
+        );
+
+        await wrapper.get('#pallet-action-to-row').setValue('A');
+        await wrapper.get('#pallet-action-to-cell').setValue('3');
+        await wrapper.get('#pallet-action-to-flat').setValue('2');
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
+            warehouse_id: 1,
+            row_letter: 'A',
+        });
+    });
+
+    it('transfers to a row of another warehouse chosen in the warehouse select', async () => {
+        const wrapper = await mountDialog(fullCell(6), twoWarehouses);
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+
+        const warehouseSelect = wrapper.get('#pallet-action-to-warehouse');
+
+        expect((warehouseSelect.element as HTMLSelectElement).value).toBe('1');
+        expect(
+            wrapper
+                .findAll('#pallet-action-to-row option:not([disabled])')
+                .map((option) => option.text()),
+        ).toEqual(['A', 'B']);
+
+        await warehouseSelect.setValue('4');
+
+        expect(
+            wrapper
+                .findAll('#pallet-action-to-row option:not([disabled])')
+                .map((option) => option.text()),
+        ).toEqual(['A', 'C']);
+
+        await wrapper.get('#pallet-action-to-row').setValue('C');
+        await wrapper.get('#pallet-action-to-cell').setValue('3');
+        await wrapper.get('#pallet-action-to-flat').setValue('1');
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock).toHaveBeenCalledTimes(1);
+        expect(submitMock.mock.calls[0][0]).toEqual(
+            transfer(43, { mergeQuery: {} }),
+        );
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
+            warehouse_id: 4,
+            row_letter: 'C',
+            cell_number: 3,
+            flat_number: 1,
+        });
+    });
+
+    it('hands the transfer fields both warehouses and every row', async () => {
+        const wrapper = await mountDialog(fullCell(6), twoWarehouses);
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+
+        const fields = wrapper.getComponent(PalletTransferFields);
+
+        expect(fields.props('warehouses')).toEqual(twoWarehouses.warehouses);
+        expect(fields.props('rows')).toEqual(twoWarehouses.rows);
+    });
+
+    it('marks the required transfer fields and shows the legend', async () => {
+        const wrapper = await mountDialog(fullCell(6), twoWarehouses);
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+
+        for (const id of [
+            'pallet-action-to-row',
+            'pallet-action-to-cell',
+            'pallet-action-to-flat',
+        ]) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .find(`label[for="${id}"] [aria-hidden="true"]`)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        expect(
+            wrapper.get('#pallet-action-to-warehouse').attributes('required'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .find(
+                    'label[for="pallet-action-to-warehouse"] [aria-hidden="true"]',
+                )
+                .exists(),
+        ).toBe(false);
+        expect(wrapper.text()).toContain(t('common.requiredLegend'));
+        expect(wrapper.get('form').attributes('novalidate')).toBeDefined();
+    });
+
+    it('holds back a transfer with a missing destination and says which field', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+        await wrapper.get('#pallet-action-to-cell').setValue('0');
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock).not.toHaveBeenCalled();
+        expect(wrapper.get('[role="alert"]').text()).toBe(
+            t('common.formValidation.blocked'),
+        );
+
+        const errors = wrapper
+            .getComponent(PalletTransferFields)
+            .props('errors') as Record<string, string>;
+
+        expect(Object.keys(errors).sort()).toEqual([
+            'cell_number',
+            'flat_number',
+            'row_letter',
+        ]);
+        expect(
+            wrapper.get('#pallet-action-to-cell').attributes('aria-invalid'),
+        ).toBe('true');
+    });
+
+    it('shows a server field error beside its field and a refused action in the banner', async () => {
+        formState.errors = {
+            cell_number: 'The selected slot does not exist.',
+            action: 'The destination is not empty.',
+        };
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+
+        expect(wrapper.getComponent(ActionErrorBanner).props('message')).toBe(
+            'The destination is not empty.',
+        );
+        expect(
+            (
+                wrapper
+                    .getComponent(PalletTransferFields)
+                    .props('errors') as Record<string, string>
+            ).cell_number,
+        ).toBe('The selected slot does not exist.');
     });
 
     it("prefills the edit tab with the pallet's current product, expiration date, and remaining boxes, and hides the note field", async () => {
@@ -617,6 +774,14 @@ describe('PalletActionsDialog', () => {
             await wrapper
                 .findAll('[data-testid="pallet-action-tab"]')
                 [tabIndex].trigger('click');
+
+            if (tabIndex === 2) {
+                // The transfer validates in the browser first.
+                await wrapper.get('#pallet-action-to-row').setValue('A');
+                await wrapper.get('#pallet-action-to-cell').setValue('1');
+                await wrapper.get('#pallet-action-to-flat').setValue('1');
+            }
+
             await wrapper.get('form').trigger('submit');
 
             expect(submitMock.mock.calls[0][0]).toEqual(action);
@@ -624,7 +789,7 @@ describe('PalletActionsDialog', () => {
 
         submitMock.mockReset();
         const storeWrapper = await mountDialog(emptyCell());
-        await selectReviewedProduct(storeWrapper);
+        await selectProduct(storeWrapper);
         await storeWrapper.get('form').trigger('submit');
         expect(submitMock.mock.calls[0][0]).toEqual(
             store(8, { mergeQuery: {} }),

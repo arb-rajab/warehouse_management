@@ -24,6 +24,13 @@ use Illuminate\Support\Facades\DB;
  * on the whole observer on purpose: the latter would also move the flag writes out
  * of the transaction, so a failure there would surface as an error after the pallet
  * action had already committed — inviting a client retry that repeats it.
+ *
+ * A bulk record correction (a log with a `batch_id`: the admin's bulk note or
+ * product change, up to 500 entries in one request) is one desk decision, not
+ * shelf work. PalletCorrectionService inserts those entries in one statement,
+ * so they never reach this observer (they are never flagged, and the service
+ * flushes the stats cache itself), and they do not count towards a later
+ * log's rapid-actions window.
  */
 class CellStatusLogObserver
 {
@@ -69,6 +76,7 @@ class CellStatusLogObserver
 
         $count = CellStatusLog::query()
             ->where('user_id', $log->user_id)
+            ->whereNull('batch_id')
             ->where('created_at', '>=', $log->created_at->subMinutes($windowMinutes))
             ->count();
 

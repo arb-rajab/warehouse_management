@@ -5,6 +5,7 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -19,6 +20,8 @@ const props = defineProps<{
     settings: StoreGeneralSettings;
     timezones: string[];
     initialFiles: Record<StoreGeneralSettingsImage, StoreUpload[]>;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
 }>();
 const images: {
     key: StoreGeneralSettingsImage;
@@ -46,14 +49,16 @@ const uploads = ref<Record<StoreGeneralSettingsImage, string>>({
         #default="{ errors }"
     >
         <FieldError :message="errors.settings" />
-        <FormField
-            id="site_name"
-            name="settings[site_name]"
-            :label="t('store.generalSettings.siteName')"
-            :value="settings.site_name"
-            :error="errors['settings.site_name']"
-            maxlength="255"
-        />
+        <StoreHighlight :active="highlight === 'site_name'">
+            <FormField
+                id="site_name"
+                name="settings[site_name]"
+                :label="t('store.generalSettings.siteName')"
+                :value="settings.site_name"
+                :error="errors['settings.site_name']"
+                maxlength="255"
+            />
+        </StoreHighlight>
         <div v-for="image in images" :key="image.key" class="space-y-1">
             <StoreUploadField
                 :id="image.key"
@@ -64,10 +69,7 @@ const uploads = ref<Record<StoreGeneralSettingsImage, string>>({
                 :initial-files="initialFiles[image.key]"
                 :error="errors[`settings.${image.key}`]"
             />
-            <p
-                v-if="image.hint"
-                class="text-sm text-gray-600 dark:text-neutral-300"
-            >
+            <p v-if="image.hint" class="text-sm text-muted">
                 {{ t(`store.generalSettings.${image.hint}`) }}
             </p>
         </div>
@@ -90,7 +92,7 @@ const uploads = ref<Record<StoreGeneralSettingsImage, string>>({
                     {{ timezone }}
                 </option>
             </select>
-            <p class="mt-1 text-sm text-gray-600 dark:text-neutral-300">
+            <p class="mt-1 text-sm text-muted">
                 {{ t('store.generalSettings.timezoneHint') }}
             </p>
             <FieldError :message="errors['settings.timezone']" />

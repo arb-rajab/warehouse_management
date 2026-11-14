@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Addon;
 use App\Models\BusinessSetting;
 use App\Models\Language;
+use App\Support\PublicSettingsGuard;
 use Illuminate\Http\Request;
 use stdClass;
 
@@ -21,12 +22,22 @@ class ConfigController extends Controller
     public function activated_social_login()
     {
         $activated_social_login_list = BusinessSetting::whereIn('type', ['facebook_login', 'google_login', 'twitter_login'])->get();
-        return response()->json($activated_social_login_list);
+
+        return response()->json(PublicSettingsGuard::filter($activated_social_login_list));
     }
 
     public function business_settings(Request $request)
     {
-        $business_settings = BusinessSetting::whereIn('type', explode(',', $request->keys))->get()->toArray();
+        // Public and unauthenticated, and `keys` names whichever `type` the caller
+        // likes: PublicSettingsGuard is the block-list of what never leaves (mail,
+        // reCAPTCHA secret, API keys, gateway and push credentials, ...). A name is
+        // trimmed and compared lower-cased, an array or a number in `keys` is
+        // read safely, and the rows read are filtered again by their own `type`.
+        $names = PublicSettingsGuard::requested($request->input('keys'));
+
+        $business_settings = $names === []
+            ? []
+            : PublicSettingsGuard::filter(BusinessSetting::whereIn('type', $names)->get())->toArray();
 
         // $language_object = new stdClass();
         // $language_object->id = -123123;

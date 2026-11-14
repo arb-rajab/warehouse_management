@@ -143,7 +143,7 @@ function editAddress(address?: CustomerAddress): void {
                     <div
                         v-for="address in addresses"
                         :key="address.id"
-                        class="mt-3 rounded border border-gray-300 p-4 dark:border-neutral-700"
+                        class="mt-3 rounded border border-line-strong p-4"
                     >
                         <p>
                             <AddressMapLink :address="address.address" /> ·

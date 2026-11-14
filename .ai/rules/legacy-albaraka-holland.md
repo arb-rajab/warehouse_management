@@ -152,7 +152,10 @@ prefix. That is the single point every storefront asset URL goes through.
   settings writer, .ai/archive/store-backoffice/changes-20261013.md §20), `env_key_update` refuses, and the two activation toggles
   that lived in `.env` (`FORCE_HTTPS`, `FILESYSTEM_DRIVER`) report failure.
   Credentials the screens used to save (SMTP, social login, analytics, gateway
-  keys) are now set in the server `.env` by whoever deploys.
+  keys) are now set in the server `.env` by whoever deploys. **Since 2026-11-11
+  SMTP is managed again in the store admin** (SMTP settings page), stored in
+  `business_settings` with the password encrypted and `.env` as the fallback,
+  never by writing `.env` (.ai/rules/admin-env-overrides.md).
   `LegacyEnvFileProtectionTest` covers staff, customer and vendor-admin
   callers against a scratch `.env`. **Permission gap, fixed 2026-10-01 for writes:** the same
   `permission:`-list gap left 173 of the store admin's write routes (store,
@@ -240,13 +243,18 @@ prefix. That is the single point every storefront asset URL goes through.
   every notification unless a secret and merchant id are configured, the
   merchant matches, the signature matches (`hash_equals`) and the status is
   success. `PaymentGatewayRoutesTest` covers all of it, and fails on a new
-  controller under `Payment/` the guard does not know about. **Before
-  enabling a gateway:** move its credentials to config (PayHere and iyzico are
-  done: bKash, Nagad, N-Genius, SSLCommerz, aamarpay and VoguePay still read
-  them through `env()`); the callbacks' verification is in "Gateway crediting"
-  below.
-  The admin checkout and settings pages still offer a gateway that
-  `business_settings` has switched on, and choosing one now gives a 404.
+  controller under `Payment/` the guard does not know about. **Credentials
+  (done 2026-11-10, then 2026-11-12):** no gateway reads `env()` any more
+  (`GatewayCredentialsFromConfigTest`); every gateway credential, currency and
+  `.env`-held mode is read through `App\Support\StorePaymentGateways::get()`:
+  saved on the admin's Payment methods page as one group per gateway
+  (encrypted secrets), else `config/services.php` / `config/nagad.php`. The
+  enabled list is `StorePaymentGateways::enabled()`: chosen on that page, else
+  `STORE_PAYMENT_GATEWAYS` (.ai/rules/admin-env-overrides.md, "Payment
+  gateways"). The callbacks' verification is in "Gateway crediting" below.
+  The checkout, the wallet top-up, the customer packages page and the app's
+  `GET payment-types` offer a gateway only while it is enabled and switched
+  on in Features activation.
 - **Gateway crediting.** Behind the 404, every gateway's callback credited what
   it was told: the order, the payer and the amount came from the request or the
   session, `checkout_done()`/`wallet_payment_done()` (and the API's global
@@ -257,33 +265,65 @@ prefix. That is the single point every storefront asset URL goes through.
   anything. **Fixed 2026-10-03:** `App\Services\GatewayPaymentService` is the
   one sink: one transaction under row locks, the order must be the payer's
   (`combined_orders.user_id`), not paid, without commission, and the amount due
-  is read from the database (`covers()` accepts the whole-unit charge the
-  gateways send); the gateway's reference goes into `wms_gateway_payments`
+  is read from the database (`covers()` requires it to the cent: every gateway
+  sends the exact amount, converted to its own currency); the gateway's reference goes into `wms_gateway_payments`
   (unique per gateway), so a repeated callback credits nothing. A callback hands
   it a `VerifiedPayment` built only from the gateway's own server: SSLCommerz
   `orderValidate`/`sslcommerz_validate`, aamarpay's search API, bKash
   execute/status (status code 0000 required; the web `callback` sets a one-shot
-  session flag `success` pulls), iyzico retrieve (basket and paid price; one
-  token one payment; `App\Services\IyzicoPayments`, keys now in
+  session flag `success` pulls), iyzico retrieve (paid price and currency; one
+  token one payment, the token being the recorded reference on the web; `App\Services\IyzicoPayments`, keys now in
   `config('services.iyzico.*')`), PayHere's signed `order_id`
   (`<combined order>`, `W<user>-…`, `P<user>-<package>-…`) and `payment_id`,
   N-Genius/VoguePay/Nagad order lookups bound to a reference the session
   stored. Storefront callbacks finish the session's own payment
-  (`SessionGatewayPayment`); the API's `begin`/`init` endpoints and the app's
+  (`SessionGatewayPayment`), except SSLCommerz, aamarpay and iyzico, which
+  finish the payment recorded under their reference (`GatewayReturn`, below); the API's `begin`/`init` endpoints and the app's
   bKash/iyzico success calls need `auth:store_api` and price from the database
   (`ApiGatewayPayment`); the API's SSLCommerz and Nagad callbacks, which have no
   token, complete only a payment `begin` recorded as pending. The SSLCommerz
   IPN handler and route are gone. Tests: `LegacyGatewayPaymentCreditingTest`.
-  **Before enabling a storefront gateway that posts back** (SSLCommerz,
-  aamarpay, iyzico): with `SESSION_SAME_SITE=lax` the browser does not send the
-  session cookie on that cross-site POST, so the callback finds no session and
-  credits nothing (it fails safe; the payment then needs reconciling by hand).
+  **Gateways that post back (fixed 2026-11-12):** SSLCommerz, aamarpay and
+  iyzico return with a cross-site POST, which carries no session cookie under
+  `SESSION_SAME_SITE=lax`, so their callbacks credited nothing, and the fresh
+  session they answered with signed the customer out. Their `pay()` now
+  records the payment as pending in `wms_gateway_payments`
+  (`App\Services\GatewayReturn`; `gateway_amount`, `gateway_currency`,
+  `expires_at` added), keyed by the reference sent (`WEB-…`, iyzico's token);
+  the six return routes run outside the `web` group
+  (`routes/shop-gateway-returns.php`, throttled, no CSRF entry any more), read
+  only the reference, re-verify with the provider, require the recorded
+  converted amount and currency to the cent, credit the recorded owner once,
+  and 303 to a signed GET that lands the payer as before (or a neutral "payment
+  received, sign in" page). Rules: .ai/rules/payment-gateway-returns.md. Tests:
+  `GatewayReturnWithoutSessionTest`.
   **Mobile app:** `sslcommerz/begin`, `iyzico/init`, `iyzico/success` and
   `bkash/api/success` now need the bearer token, `bkash/api/process` and
   `nagad/process` are gone (Nagad completes in `nagad/verify`), and
   `user_id`/`amount` are no longer read except a top-up's amount. Seller-package
-  payments go through the same sink (it needs the seller's shop), but have no
-  test: this repository has no `seller_packages` migration.
+  payments go through the same sink (it needs the seller's shop). **Tested
+  2026-11-12** (`GatewayPackagePaymentCreditingTest`, seller and customer
+  packages through N-Genius on the web and the API's iyzico, SSLCommerz, Nagad
+  and bKash): the right owner, the exact converted amount, a replay credits
+  nothing, a wrong amount is refused, the package is activated only after a
+  verified credit. The web has no page that starts a seller package payment; it
+  reaches a gateway through the API (`payment_type=seller_package_payment`) or
+  a session that holds one. That test found `seller_purchase_payment_done()`
+  counting a renewal from the old end date, so a seller whose package had
+  expired paid and stayed expired; it now counts from today unless the package
+  is still active.
+  **PayHere's `/temp/payhere/{checkout,wallet,customer_package}/testing`
+  routes** (a signed test form for a made-up buyer) answer only while PayHere is
+  enabled, in sandbox mode (`payhere_sandbox`, effective value) and outside
+  production: `EnsurePaymentGatewaySandbox` (`payment.sandbox:payhere`),
+  otherwise 404. `PayhereTestingRoutesTest`.
+  **iyzico's buyer identity number** is `IYZICO_IDENTITY_NUMBER`, `.env` only,
+  with no default: the old placeholder `11111111111` was sent on every payment.
+  While it is unset (`IyzicoPayments::identityNumber()`) iyzico refuses to start
+  a payment, on the web and in the API, with `storefront.checkout.iyzico_unavailable`.
+  **Not confirmed with the providers, owner to confirm** (docs/qa/payment-gateway-sandbox-checklist.md,
+  "Needs your input"): N-Genius's live URLs (`NGENIUS_LIVE_*_URL`), and that
+  AamarPay's payment page accepts the GET redirect the store now sends.
 - User-written HTML was printed unescaped, so anyone who could write it could run
   script in the browser of whoever viewed it. The worst case was the **admin
   backend's** ticket page (`backend/support/support_tickets/show`), which printed
@@ -671,10 +711,9 @@ Checked statically, with nothing installed:
   after compiling them with this app's L13 Blade compiler. No implicitly
   nullable parameters. No `${var}` interpolation either: the 48 "`${var}`
   sites" in §7 phase 2 are JavaScript template literals inside `<script>`
-  blocks, not PHP. The only failure is a pre-existing parse error in
-  `frontend/voguepay/customer_package_payment_vogue.blade.php` (an unmatched
-  `)` in the currency lookup). That view 500s whenever it renders; phase 1
-  deletes VoguePay or fixes it.
+  blocks, not PHP. The only failure was a parse error in
+  `frontend/voguepay/customer_package_payment_vogue.blade.php` (since removed:
+  VoguePay now has the one `frontend/voguepay/pay.blade.php`).
 - **Dynamic properties.** A nikic/php-parser scan of legacy `app/` for
   `$this->x =` on undeclared properties (resolving parents through this app's
   L13 vendor) and for `$request->x =`. The only hits were 7 order-status paths
@@ -1270,6 +1309,12 @@ These are uninstalled-addon dead code, so delete them with their controllers.
   Each site needs its guard checked, and the phase 0b schema dump must
   confirm the table is really absent in production, before these go.
 
+  `manual_payment_methods` is the exception: migration
+  `2026_11_10_100000_create_manual_payment_methods_table` creates it where it is
+  missing (guarded by `Schema::hasTable`, a no-op on the shared database), so
+  `GET /payment-types` and the dashboard setup checklist never hit a missing
+  table. Its columns were derived from the code, not from a production dump.
+
 Original list:
 
 - `Affiliate*` ×7
@@ -1382,8 +1427,16 @@ The legacy `webpack.mix.js`/`package.json` (Mix 2, Vue 2, Bootstrap 4) are
 
 Drop them outright. There is nothing to port to Vite.
 
-Done: `vite.config.ts` and the Inertia bundle are untouched and there is no
-second Vite entry. `public/assets/**` and `public/download/` are copied in
+Done: the Inertia bundle is untouched. The Blade side has two small Vite
+entries of its own: `resources/js/legacy-image-upload.ts` and, since the
+Direction A identity, `resources/css/storefront.css`, the storefront's tokens,
+self-hosted IBM Plex fonts and theme overrides, loaded after `aiz-core.css` by
+the storefront layout only (views.md); `base_color` no longer colours the
+storefront. The seller layout has a third entry, `resources/css/seller.css`
+(loaded after `aiz-seller.css`), the standalone login layout reuses
+`storefront.css`, and both share `resources/css/brand/{tokens,fonts}.css`;
+emails and the customer PDFs are styled inline (views.md, "Storefront identity
+beyond the shell"). `public/assets/**` and `public/download/` are copied in
 verbatim, and `static_asset()`/`my_asset()` no longer prefix `public/`.
 `/temp` routes return plain Blade (the views never call `@vite` or extend
 `app.blade.php`), so jQuery/Bootstrap never share a page with the Vue 3 app;
@@ -1760,16 +1813,17 @@ and 5). Each item says where its answer comes from.
   working (signed links replace them); a representative can no longer pay from a
   customer's wallet by sending that customer's `user_id`; the app's product
   coupons now count quantities.
-- [ ] **Move a payment gateway's credentials from `env()` to config** before it
-  is enabled in `STORE_PAYMENT_GATEWAYS` (about 140 reads remain; only PayHere
-  has moved). A gateway's server-to-server callbacks POST to the shop, and this
-  app has no CSRF exceptions (the legacy `VerifyCsrfToken` excluded
-  `/payhere*`, `/sslcommerz*`, `/iyzico*`, `/bkash*`, `/aamarpay*`,
-  `/apple-callback` and others), so they answer 419 until the enabled gateway's
-  callback paths are added to `validateCsrfTokens(except: [...])` in
-  `bootstrap/app.php`, under `temp/`. Exempt only a gateway that verifies the
-  callback itself (PayHere does; the others do not yet). `FORCE_HTTPS` is a decision, not a fix: behind a proxy that does
-  not report https it redirects forever.
+- [x] **Move a payment gateway's credentials from `env()` to config** (done:
+  no gateway reads `env()`; since 2026-11-12 they are read through
+  `StorePaymentGateways`, saved in the admin or else from config). The
+  callbacks' CSRF exemptions are in `bootstrap/app.php` under `temp/`
+  (SSLCommerz, PayHere, iyzico, AamarPay, bKash; Nagad, N-Genius and VoguePay
+  return by GET), and every callback verifies the payment with the gateway's
+  own server ("Gateway crediting" above). Still open: with
+  `SESSION_SAME_SITE=lax` the cross-site POST returns of SSLCommerz, AamarPay
+  and the iyzico storefront arrive without the session and credit nothing
+  (fail safe, reconcile by hand). `FORCE_HTTPS` is a decision, not a fix:
+  behind a proxy that does not report https it redirects forever.
 - [ ] **Legacy roles' guard** (`web` → `store`) and the pivots' `model_type`
   (→ `StoreUser`): the SQL check is in §6.7.1.
 - [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the
@@ -1785,7 +1839,7 @@ The other seams between the two halves stay as they are until their phase:
   - Its controller moves to `App\Http\Controllers\Store\Admin`, its Resources go in `App\Http\Resources\Store`, and its pages in `resources/js/pages/Store/Admin/`. This is new code, so it says "store".
   - Its Blade views are deleted, not moved, and its block of `routes/shop-admin.php` is rewritten in place with the same route names. That is not the piecemeal rename this section rules out: the file stays where it is until phase 6.
   - The storefront and seller area keep their inline `validate()`.
-- the `Setting`/`BusinessSetting` and `ProductBarcode`/`StoreProductBarcode` duplicates (phase 5);
+- the `Setting`/`BusinessSetting` duplicate (phase 5). The `ProductBarcode`/`StoreProductBarcode` duplicate was resolved on 2026-11-08: `product_barcodes` is the one barcode table (see [shared-database.md](shared-database.md#barcodes-one-table));
 - the three image pipelines and `uploaded_asset()` vs `Upload::url` (phases 2 and 6);
 - the generic middleware aliases `admin`/`seller`/`customer` in `bootstrap/app.php` (phase 6).
 
@@ -1796,8 +1850,9 @@ and [docs/backend-replies-20261104.md](../../docs/backend-replies-20261104.md);
 the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that follow from them:
 
 - `POST order/store` and `payments/pay/*` (all through `Api\V1\OrderController::store`) require a `delivery_date`:
-  `YYYY-MM-DD` (or `DD-MM-YYYY`, stored as `YYYY-MM-DD`), at least `store.delivery.lead_days` after today in
-  `store.delivery.timezone`, on a `store.delivery.weekdays` day. A refusal is 422 with `errors.delivery_date`.
+  `YYYY-MM-DD` (or `DD-MM-YYYY`, stored as `YYYY-MM-DD`), at least the lead days after today in the delivery
+  timezone (`StoreDeliverySettings`: saved on the Order configuration page, else `store.delivery.lead_days` /
+  `store.delivery.timezone`), on a `store.delivery.weekdays` day. A refusal is 422 with `errors.delivery_date`.
   Tests that place an order send `validDeliveryDate()` (tests/Pest.php).
 - An `Idempotency-Key` header (at most 128 characters) makes a placed order replay its answer for 24 hours per
   account; only a successful placement is remembered.

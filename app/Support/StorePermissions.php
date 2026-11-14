@@ -24,6 +24,19 @@ final class StorePermissions
     private const string GUARD = 'store';
 
     /**
+     * Permissions only a Super Admin may grant (StaffPrivileges), shown with a
+     * warning on the role form (.ai/rules/admin-env-overrides.md, "Security").
+     * `smtp_settings` chooses the mail server, so whoever holds it can read
+     * every email the shop sends, password-reset emails included.
+     * `payment_methods_configurations` chooses the payment gateway accounts,
+     * keys and enabled gateways, so whoever holds it can redirect payments.
+     * Existing grants are never revoked.
+     *
+     * @var list<string>
+     */
+    public const array SENSITIVE = ['smtp_settings', 'payment_methods_configurations'];
+
+    /**
      * Section => permission names.
      *
      * @var array<string, list<string>>
@@ -264,6 +277,12 @@ final class StorePermissions
         }
 
         return $permissions;
+    }
+
+    /** Whether only a Super Admin may grant this permission. */
+    public static function isSensitive(string $name): bool
+    {
+        return in_array($name, self::SENSITIVE, true);
     }
 
     /** Application permission labels belong to files; custom records remain content. */

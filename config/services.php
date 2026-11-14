@@ -39,8 +39,10 @@ return [
 
     // Merged from the legacy store's config/services.php (see
     // .ai/rules/legacy-albaraka-holland.md sections 0.3 and 1). 'stripe' and
-    // 'paytm-wallet' are inert: both gateway packages were removed in the
-    // legacy repo's own phase-1 pruning, and nothing here reads these keys.
+    // 'paytm-wallet' have no payment flow: both gateway packages were removed in
+    // the legacy repo's own phase-1 pruning. Their keys can be stored on the
+    // Payment methods page (App\Support\StorePaymentGateways), ready for an
+    // integration; nothing charges with them.
 
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
@@ -56,6 +58,8 @@ return [
         'model' => StoreUser::class,
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
+        // Empty: the store's own currency.
+        'currency' => env('STRIPE_CURRENCY'),
     ],
 
     'google' => [
@@ -148,11 +152,80 @@ return [
         'api_key' => env('IYZICO_API_KEY'),
         'secret_key' => env('IYZICO_SECRET_KEY'),
         'currency' => env('IYZICO_CURRENCY_CODE', 'TRY'),
+        // iyzico requires an identity number for every buyer and the store holds none for its customers, so
+        // it is one value the owner provides. No default: unset, iyzico refuses to start a payment
+        // (IyzicoPayments::identityNumber(); the Payments page and the setup checklist name it).
+        'identity_number' => env('IYZICO_IDENTITY_NUMBER'),
+    ],
+
+    // The currency SSLCommerz is charged in. Amounts are converted to it from the
+    // store's default currency (App\Services\GatewayCurrency), so the store needs
+    // an active `currencies` row with this code and a rate.
+    'sslcommerz' => [
+        'currency' => env('SSLCZ_CURRENCY', 'BDT'),
+        'store_id' => env('SSLCZ_STORE_ID'),
+        'store_password' => env('SSLCZ_STORE_PASSWD'),
+    ],
+
+    // Every gateway credential is read through App\Support\StorePaymentGateways::get(), which returns the
+    // values saved on the Payment methods page and falls back to these (never env() outside config/:
+    // production runs `artisan config:cache`, after which env() returns null).
+    'bkash' => [
+        'currency' => env('BKASH_CURRENCY', 'BDT'),
+        'app_key' => env('BKASH_CHECKOUT_APP_KEY'),
+        'app_secret' => env('BKASH_CHECKOUT_APP_SECRET'),
+        'username' => env('BKASH_CHECKOUT_USER_NAME'),
+        'password' => env('BKASH_CHECKOUT_PASSWORD'),
+    ],
+
+    // Nagad charges in BDT only; the amount is converted to it from the store's currency.
+    'nagad' => [
+        'currency' => env('NAGAD_CURRENCY', 'BDT'),
+    ],
+
+    'aamarpay' => [
+        'currency' => env('AAMARPAY_CURRENCY', 'BDT'),
+        'store_id' => env('AAMARPAY_STORE_ID'),
+        'signature_key' => env('AAMARPAY_SIGNATURE_KEY'),
+    ],
+
+    // N-Genius runs against its UAT test environment unless NGENIUS_MODE=live. The live URLs below are
+    // N-Genius's documented production endpoints; check them against the provider's documentation, or
+    // override them with the NGENIUS_*_URL variables, before going live.
+    'ngenius' => [
+        'mode' => env('NGENIUS_MODE', 'uat'),
+        'currency' => env('NGENIUS_CURRENCY', 'AED'),
+        'api_key' => env('NGENIUS_API_KEY'),
+        'outlet_id' => env('NGENIUS_OUTLET_ID'),
+        'urls' => [
+            'uat' => [
+                'identity' => env('NGENIUS_UAT_IDENTITY_URL', 'https://identity-uat.ngenius-payments.com/auth/realms/ni/protocol/openid-connect/token'),
+                'gateway' => env('NGENIUS_UAT_GATEWAY_URL', 'https://api-gateway-uat.ngenius-payments.com'),
+            ],
+            'live' => [
+                'identity' => env('NGENIUS_LIVE_IDENTITY_URL', 'https://identity.ngenius-payments.com/auth/realms/ni/protocol/openid-connect/token'),
+                'gateway' => env('NGENIUS_LIVE_GATEWAY_URL', 'https://api-gateway.ngenius-payments.com'),
+            ],
+        ],
+    ],
+
+    // Empty currency: VoguePay is charged in the store's own currency.
+    'voguepay' => [
+        'currency' => env('VOGUE_CURRENCY'),
+        'merchant_id' => env('VOGUE_MERCHANT_ID'),
     ],
 
     'otajer' => [
         'url' => env('OTAJER_URL') ?: 'https://stores.otajer.com',
         'token' => env('OTAJER_TOKEN') ?: null,
+    ],
+
+    // Ghostscript compresses the receipt bill PDFs (App\Services\PdfOptimizer).
+    // Best effort: without the binary a PDF is stored as sent.
+    'ghostscript' => [
+        'compress_pdfs' => (bool) env('GHOSTSCRIPT_COMPRESS_PDFS', true),
+        'binary' => env('GHOSTSCRIPT_BINARY') ?: 'gs',
+        'timeout' => (int) env('GHOSTSCRIPT_TIMEOUT', 30),
     ],
 
 ];

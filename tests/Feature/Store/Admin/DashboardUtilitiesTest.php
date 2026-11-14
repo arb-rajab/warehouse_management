@@ -32,7 +32,8 @@ test('clear cache forgets only dashboard graph keys without invoking operational
     Cache::shouldReceive('forget')->once()->with(DashboardController::GRAPH_CACHE_KEY)->andReturnTrue();
     Cache::shouldReceive('forget')->once()->with('cached_graph_data')->andReturnTrue();
     Artisan::shouldReceive('call')->never();
-    $this->post(route('cache.clear'))->assertRedirect(route('shop.admin.dashboard'));
+    $this->post(route('cache.clear'))->assertRedirect(route('shop.admin.dashboard'))
+        ->assertInertiaFlash('success', 'Dashboard cache has been cleared successfully');
 });
 
 test('clear cache rejects staff without the cache permission and GET requests without touching cache', function () {

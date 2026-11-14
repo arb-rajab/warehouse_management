@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -32,7 +33,8 @@ test('an admin can finish another workers round and persist its completion witho
     $this->travelTo('2026-10-12 10:00:00');
 
     $this->post("/admin/cell-verification-rounds/{$round->id}/complete?is_correct=0&page=2")
-        ->assertRedirect("/admin/cell-verification-rounds/{$round->id}?is_correct=0&page=2");
+        ->assertRedirect("/admin/cell-verification-rounds/{$round->id}?is_correct=0&page=2")
+        ->assertInertiaFlash('success', 'Verification round has been completed successfully');
 
     expect($round->fresh()->completed_at->toDateTimeString())->toBe('2026-10-12 10:00:00')
         ->and($round->fresh()->user_id)->toBe($worker->id)
@@ -55,7 +57,7 @@ test('an admin can finish an unchecked round and its rows become available for p
     $cell = $row->cells()->sole();
     $product = Product::factory()->boxesCount(10)->create();
     $round = CellVerificationRound::factory()->for($worker)->covering($row)->create();
-    $payload = ['product_id' => $product->id, 'expiration_date' => '2027-01-01', 'image_review_status' => $product->image_url ? 'matches' : 'image_missing', 'image_source' => $product->image_url];
+    $payload = ['product_id' => $product->id, 'expiration_date' => '2027-01-01'];
 
     $this->post("/admin/cells/{$cell->id}/pallet", $payload)
         ->assertSessionHasErrors('action');
@@ -185,8 +187,8 @@ test('an authenticated admin can view the cell verification rounds list with eve
                 ->where('completed_at', $round->completed_at->toIso8601String())
                 ->where('reports_count', 2)
                 ->where('rows', [
-                    ['id' => $rowA->id, 'letter' => 'A'],
-                    ['id' => $rowB->id, 'letter' => 'B'],
+                    ['id' => $rowA->id, 'letter' => 'A', 'warehouse' => ['id' => $rowA->warehouse_id, 'name' => Warehouse::DEFAULT_NAME]],
+                    ['id' => $rowB->id, 'letter' => 'B', 'warehouse' => ['id' => $rowB->warehouse_id, 'name' => Warehouse::DEFAULT_NAME]],
                 ])
                 ->has('user', fn (Assert $userProp) => $userProp
                     ->where('id', $worker->id)
@@ -308,7 +310,7 @@ test('an authenticated admin can view a single round with its own reports and ev
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Admin/CellVerificationRounds/Show')
             ->where('round.id', $round->id)
-            ->where('round.rows', [['id' => $row->id, 'letter' => 'C']])
+            ->where('round.rows', [['id' => $row->id, 'letter' => 'C', 'warehouse' => ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME]]])
             ->where('filterOptions.rows', [['id' => $row->id, 'letter' => 'C']])
             ->where('filterOptions.maxColumnNumber', 1)
             ->has('filterOptions.products', 0)
@@ -321,6 +323,7 @@ test('an authenticated admin can view a single round with its own reports and ev
                     ->where('row_letter', 'C')
                     ->where('cell_number', 1)
                     ->where('flat_number', 1)
+                    ->where('warehouse', ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 )
                 ->has('expected', fn (Assert $expectedProp) => $expectedProp
                     ->where('cell_state', 'full')
@@ -687,6 +690,7 @@ test('accepting a report of an empty cell empties the stored pallet and records 
     $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
 
     $response->assertRedirect("/admin/cell-verification-rounds/{$report->cell_verification_round_id}");
+    $response->assertInertiaFlash('success', 'Report has been accepted successfully');
     $response->assertSessionHasNoErrors();
     expect($cell->fresh()->state)->toBe(CellState::Empty);
     expect(Pallet::find($pallet->id))->toBeNull();
@@ -990,4 +994,20 @@ test('accepting a non-existent report returns a 404', function () {
     actingAsAdmin();
 
     $this->post('/admin/cell-verification-reports/999999/accept')->assertNotFound();
+});
+
+test('the verification rounds can be filtered by warehouse, hydrating the selected warehouse labels', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellVerificationRound::factory()->covering($northRow)->create();
+    CellVerificationRound::factory()->covering($otherRow)->create();
+
+    $this->get("/admin/cell-verification-rounds?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('rounds.data', 1)
+            ->where('rounds.data.0.id', $inNorth->id)
+            ->where('filters.warehouse_ids', [(string) $north->id])
+            ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
+    );
 });

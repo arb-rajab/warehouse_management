@@ -6,6 +6,7 @@ import {
     ChevronDown,
     CircleDashed,
     PackageOpen,
+    Truck,
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
@@ -19,7 +20,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 
-const sections = ['overview', 'productFilter'];
+const sections = ['overview', 'unplaced', 'productFilter', 'warehouseFilter'];
 
 /**
  * Same action/icon pairing as Dashboard/Index.vue's ACTIVITY_ACTIONS
@@ -49,7 +50,7 @@ const activityActions: {
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.dashboard.${section}.heading`) }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t(`help.dashboard.${section}.body`) }}
             </p>
 
@@ -83,6 +84,17 @@ const activityActions: {
                 </div>
             </template>
 
+            <HelpUiPreview v-if="section === 'unplaced'" class="mt-2">
+                <DashboardStatTile
+                    tabindex="-1"
+                    href="#"
+                    :value="0"
+                    tone="warning"
+                    :icon="Truck"
+                    :label="t('dashboard.unplaced.count')"
+                />
+            </HelpUiPreview>
+
             <HelpUiPreview v-if="section === 'productFilter'" class="mt-2">
                 <div>
                     <span :class="fieldLabelClass">{{
@@ -90,12 +102,12 @@ const activityActions: {
                     }}</span>
                     <span
                         tabindex="-1"
-                        class="flex w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-start text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        class="flex w-48 items-center justify-between gap-2 rounded-md border border-line-strong bg-surface px-3 py-2 text-start text-sm"
                     >
                         <span class="truncate">{{
                             t('cellLog.filters.all')
                         }}</span>
-                        <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" />
+                        <ChevronDown class="h-4 w-4 shrink-0 text-muted" />
                     </span>
                 </div>
             </HelpUiPreview>

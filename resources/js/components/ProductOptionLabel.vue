@@ -36,7 +36,7 @@ const alternateLabel = computed(() =>
                     >{{ label }}</span
                 >
                 <span
-                    class="shrink-0 text-xs text-gray-400 dark:text-neutral-500"
+                    class="shrink-0 text-xs text-muted"
                     data-testid="product-option-id"
                     >#{{ product.id }}</span
                 >
@@ -44,7 +44,7 @@ const alternateLabel = computed(() =>
             <span
                 v-if="alternateLabel"
                 dir="auto"
-                class="block text-xs [overflow-wrap:anywhere] text-gray-500 dark:text-neutral-400"
+                class="block text-xs [overflow-wrap:anywhere] text-muted"
                 data-testid="product-option-alternate-name"
                 >{{ alternateLabel }}</span
             >

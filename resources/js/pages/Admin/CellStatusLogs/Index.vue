@@ -14,6 +14,7 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import FilterWarehouseSelect from '@/components/FilterWarehouseSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
 import LocationFilterFields from '@/components/LocationFilterFields.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -42,15 +43,18 @@ import type {
     CellStatusLogFilterOptions,
     CellStatusLogFilters,
     Paginated,
+    WarehouseFilterOptions,
 } from '@/types/admin';
 
 const props = defineProps<{
     logs: Paginated<CellStatusLog>;
     filters: CellStatusLogFilters;
-    filterOptions: CellStatusLogFilterOptions;
+    filterOptions: CellStatusLogFilterOptions & WarehouseFilterOptions;
+    multipleWarehouses: boolean;
 }>();
 
 const filters = reactive({
+    warehouse_ids: (props.filters.warehouse_ids ?? []).map(String),
     product_id: (props.filters.product_id ?? []).map(String),
     pallet_id: props.filters.pallet_id?.toString() ?? '',
     row_id: (props.filters.row_id ?? []).map(String),
@@ -86,6 +90,7 @@ const filtersOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
+        filters.warehouse_ids.length > 0,
         filters.product_id.length > 0,
         filters.row_id.length > 0,
         filters.column_number !== '',
@@ -100,7 +105,10 @@ const activeFilterCount = computed(() =>
 );
 
 const cellColumnFiltered = computed(
-    () => filters.row_id.length > 0 || filters.column_number !== '',
+    () =>
+        filters.warehouse_ids.length > 0 ||
+        filters.row_id.length > 0 ||
+        filters.column_number !== '',
 );
 const productColumnFiltered = computed(() => filters.product_id.length > 0);
 const actionColumnFiltered = computed(() => filters.action.length > 0);
@@ -140,6 +148,7 @@ const { openFilterKey } = useColumnFilterPopover(
 );
 
 function clearFilters(): void {
+    filters.warehouse_ids = [];
     filters.product_id = [];
     filters.pallet_id = '';
     filters.row_id = [];
@@ -218,6 +227,16 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                     <h3 :class="sectionHeadingClass">
                         {{ t('cellLog.filters.sections.location') }}
                     </h3>
+                    <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FilterWarehouseSelect
+                            id="filter-warehouse"
+                            v-model="filters.warehouse_ids"
+                            :label="t('warehouses.filters.label')"
+                            :all-label="t('cellLog.filters.all')"
+                            :selected-count-label="selectedCountLabel"
+                            :selected="filterOptions.warehouses"
+                        />
+                    </div>
                     <LocationFilterFields
                         id-prefix="filter"
                         class="grid grid-cols-1 gap-4 sm:grid-cols-2"
@@ -316,7 +335,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
 
         <div
             v-if="filters.pallet_id"
-            class="mb-4 flex items-center justify-between rounded-md bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+            class="mb-4 flex items-center justify-between rounded-md bg-info-soft px-4 py-2 text-sm text-info-strong"
         >
             <span>{{
                 t('cellLog.filters.palletHistory', { id: filters.pallet_id })
@@ -382,15 +401,24 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
             @sort="onSort"
         >
             <template #column-filter="{ filterKey: key }">
-                <LocationFilterFields
-                    v-if="key === 'location'"
-                    id-prefix="popover-filter"
-                    class="space-y-3"
-                    v-model:row-ids="filters.row_id"
-                    v-model:column-number="filters.column_number"
-                    :rows="filterOptions.rows"
-                    :max-column-number="filterOptions.maxColumnNumber"
-                />
+                <div v-if="key === 'location'" class="space-y-3">
+                    <FilterWarehouseSelect
+                        id="popover-filter-warehouse"
+                        v-model="filters.warehouse_ids"
+                        :label="t('warehouses.filters.label')"
+                        :all-label="t('cellLog.filters.all')"
+                        :selected-count-label="selectedCountLabel"
+                        :selected="filterOptions.warehouses"
+                    />
+                    <LocationFilterFields
+                        id-prefix="popover-filter"
+                        class="space-y-3"
+                        v-model:row-ids="filters.row_id"
+                        v-model:column-number="filters.column_number"
+                        :rows="filterOptions.rows"
+                        :max-column-number="filterOptions.maxColumnNumber"
+                    />
+                </div>
 
                 <div v-else-if="key === 'product'">
                     <FilterProductSelect
@@ -474,6 +502,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
                 <CellStatusLogRowCells
                     :log="log"
                     show-user-column
+                    :multiple-warehouses="multipleWarehouses"
                     @view-pallet-history="viewPalletHistory"
                 />
             </template>

@@ -3,6 +3,7 @@ import { Plus, X } from '@lucide/vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import {
     fieldLabelClass,
@@ -12,7 +13,11 @@ import {
 import { t } from '@/lib/i18n';
 import type { StoreWebsiteHeaderSettings } from '@/types/store';
 
-defineProps<{ errors: Record<string, string> }>();
+defineProps<{
+    errors: Record<string, string>;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
+}>();
 const settings = defineModel<StoreWebsiteHeaderSettings>({ required: true });
 const images = [
     { key: 'header_logo', label: 'logo' },
@@ -43,16 +48,20 @@ function removeRow(index: number): void {
 
 <template>
     <FieldError :message="errors.settings" />
-    <StoreUploadField
+    <StoreHighlight
         v-for="image in images"
         :key="image.key"
-        :id="image.key"
-        :name="`settings[${image.key}]`"
-        :label="t(`store.website.header.${image.label}`)"
-        v-model="settings[image.key]"
-        type="image"
-        :error="errors[`settings.${image.key}`]"
-    />
+        :active="highlight === image.key"
+    >
+        <StoreUploadField
+            :id="image.key"
+            :name="`settings[${image.key}]`"
+            :label="t(`store.website.header.${image.label}`)"
+            v-model="settings[image.key]"
+            type="image"
+            :error="errors[`settings.${image.key}`]"
+        />
+    </StoreHighlight>
     <div v-for="toggle in switches" :key="toggle.key">
         <label :class="fieldLabelClass" class="flex items-center gap-2">
             <input
@@ -90,7 +99,7 @@ function removeRow(index: number): void {
         <div
             v-for="(_, index) in settings.header_menu_labels"
             :key="index"
-            class="grid gap-3 rounded-md border border-gray-200 p-3 sm:grid-cols-2 dark:border-neutral-700"
+            class="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-2"
         >
             <div>
                 <label :for="`menu-label-${index}`" :class="fieldLabelClass"

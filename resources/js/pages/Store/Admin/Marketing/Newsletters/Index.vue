@@ -22,7 +22,7 @@ defineProps<{ smtpConfigured: boolean }>();
             <p
                 v-if="!smtpConfigured"
                 role="status"
-                class="mb-4 flex items-center gap-2 text-amber-700 dark:text-amber-400"
+                class="mb-4 flex items-center gap-2 text-warning-strong"
             >
                 <TriangleAlert class="size-4" aria-hidden="true" />{{
                     t('store.newsletters.smtpMissing')

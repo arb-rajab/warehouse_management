@@ -40,7 +40,7 @@ return new class extends Migration
      * default). `user_id` and `collection_id` match the ids they point at,
      * `users.id` and `product_collections.id`. `barcode` is the store's own
      * single barcode, which its seller pages and seller API read and write;
-     * this app's barcodes stay in `wms_product_barcodes`.
+     * the product barcodes live in `product_barcodes` (App\Models\ProductBarcode).
      *
      * Each added column is guarded on its own, since the store's production
      * database already has every one of them. The three column changes at

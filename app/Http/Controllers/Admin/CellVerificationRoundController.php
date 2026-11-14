@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterCellVerificationReportsRequest;
 use App\Http\Requests\Admin\FilterCellVerificationRoundsRequest;
@@ -12,6 +13,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\CellVerificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +26,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CellVerificationRoundController extends Controller
 {
+    use FlashesAdminSuccess;
+
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 
     /**
@@ -38,9 +42,10 @@ class CellVerificationRoundController extends Controller
 
         $rounds = CellVerificationRound::query()
             ->select(CellVerificationRound::SELECT_COLUMNS)
-            ->with(['user:id,name', 'rows:id,letter'])
+            ->with(['user:id,name', 'rows:id,warehouse_id,letter', 'rows.warehouse:id,name'])
             ->withCount('reports')
             ->filtered($request)
+            ->forWarehouses($request->warehouseIds())
             ->sorted($request)
             ->paginate($perPage)
             ->withQueryString();
@@ -48,11 +53,12 @@ class CellVerificationRoundController extends Controller
         return Inertia::render('Admin/CellVerificationRounds/Index', [
             'rounds' => $this->paginated(CellVerificationRoundResource::collection($rounds)),
             'filters' => [
-                ...$request->only(['user_id', 'completed', 'date_from', 'date_to', 'created_within_days', 'sort_direction']),
+                ...$request->only(['user_id', 'completed', 'date_from', 'date_to', 'created_within_days', 'sort_direction', 'warehouse_ids']),
                 'per_page' => $perPage,
             ],
             'filterOptions' => [
                 'users' => User::filterOptions(),
+                'warehouses' => Warehouse::selectedOptions($request->warehouseIds() ?? []),
             ],
         ]);
     }
@@ -69,7 +75,7 @@ class CellVerificationRoundController extends Controller
 
         $reports = CellVerificationReport::query()
             ->select(CellVerificationReport::SELECT_COLUMNS)
-            ->with(CellVerificationReport::WITH_DETAILS)
+            ->with([...CellVerificationReport::WITH_DETAILS, ...CellVerificationReport::WITH_WAREHOUSE])
             ->where('cell_verification_round_id', $cellVerificationRound->id)
             ->filtered($request)
             ->sorted($request)
@@ -77,7 +83,7 @@ class CellVerificationRoundController extends Controller
             ->withQueryString();
 
         return Inertia::render('Admin/CellVerificationRounds/Show', [
-            'round' => new CellVerificationRoundResource($cellVerificationRound->loadMissing(['user:id,name', 'rows:id,letter'])->loadCount('reports')),
+            'round' => new CellVerificationRoundResource($cellVerificationRound->loadMissing(['user:id,name', 'rows:id,warehouse_id,letter', 'rows.warehouse:id,name'])->loadCount('reports')),
             'reports' => $this->paginated(CellVerificationReportResource::collection($reports)),
             'filters' => [
                 ...$request->only(['cell_id', 'row_id', 'column_number', 'product_id', 'is_correct', 'date_from', 'date_to', 'created_within_days', 'sort_direction']),
@@ -93,6 +99,7 @@ class CellVerificationRoundController extends Controller
     public function complete(Request $request, CellVerificationRound $cellVerificationRound): RedirectResponse
     {
         $this->cellVerifications->completeRound($cellVerificationRound);
+        $this->flashAdminSuccess('verification_round_has_been_completed_successfully');
 
         return $this->redirectPreservingQuery('admin.cell-verification-rounds.show', $request, [
             'cellVerificationRound' => $cellVerificationRound->id,

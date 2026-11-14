@@ -22,7 +22,8 @@ test('an admin uploads the catalogue and the admin download sends it', function 
     Storage::fake('local');
     actingAsStoreUser(createStoreAdmin());
 
-    $this->post(route('offers.store'), ['catalog' => catalogFile()])->assertRedirect();
+    $this->post(route('offers.store'), ['catalog' => catalogFile()])->assertRedirect()
+        ->assertInertiaFlash('success', 'Offers catalog has been uploaded successfully');
 
     $catalog = OffersCatalog::sole();
 
@@ -81,7 +82,8 @@ test('deleting a catalogue removes the file and the record, and survives a file 
     $this->post(route('offers.store'), ['catalog' => catalogFile()]);
     $catalog = OffersCatalog::sole();
 
-    $this->delete(route('offers.destroy', $catalog->id))->assertRedirect();
+    $this->delete(route('offers.destroy', $catalog->id))->assertRedirect()
+        ->assertInertiaFlash('success', 'Offers catalog has been deleted successfully');
 
     expect(OffersCatalog::count())->toBe(0);
     Storage::disk('local')->assertMissing("uploads/offers/catalogs/{$catalog->file}");

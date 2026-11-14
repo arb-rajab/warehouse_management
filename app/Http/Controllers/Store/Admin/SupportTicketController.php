@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterSupportTicketsRequest;
 use App\Http\Requests\Store\Admin\ReplySupportTicketRequest;
 use App\Http\Requests\Store\Admin\ShowSupportTicketRequest;
@@ -22,6 +23,8 @@ use Inertia\Response;
 
 class SupportTicketController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -85,6 +88,7 @@ class SupportTicketController extends Controller implements HasMiddleware
             return $reply;
         });
         app(\App\Http\Controllers\SupportTicketController::class)->send_support_reply_email_to_user($ticket, $reply);
+        $this->flashSuccess('reply_has_been_sent_successfully');
 
         // The binding takes the plain id. An encrypt()ed one can contain a `/`,
         // which the route cannot match, so returning by it could 404.

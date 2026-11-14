@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterStatesRequest;
 use App\Http\Requests\Store\Admin\StoreStateRequest;
 use App\Http\Requests\Store\Admin\UpdateReferenceStatusRequest;
@@ -22,6 +23,8 @@ use Inertia\Response;
 
 class StateController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -49,6 +52,7 @@ class StateController extends Controller implements HasMiddleware
         if ($state->status) {
             $state->cities()->update(['status' => 1]);
         }
+        $this->flashSuccess('state_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('states.index', $request);
     }
@@ -71,6 +75,7 @@ class StateController extends Controller implements HasMiddleware
             $state->country_id = $request->validated('country_id');
             $state->save();
         });
+        $this->flashSuccess('state_has_been_created_successfully');
 
         return redirect()->route('states.index');
     }
@@ -82,6 +87,7 @@ class StateController extends Controller implements HasMiddleware
             $state->country_id = $request->validated('country_id');
             $state->save();
         });
+        $this->flashSuccess('state_has_been_updated_successfully');
 
         return redirect()->route('states.index');
     }
@@ -91,6 +97,7 @@ class StateController extends Controller implements HasMiddleware
         DB::transaction(function () use ($state) {
             $state->delete();
         });
+        $this->flashSuccess('state_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('states.index', $request);
     }

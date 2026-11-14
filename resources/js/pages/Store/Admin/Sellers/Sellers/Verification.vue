@@ -6,6 +6,8 @@ import {
     index as sellersIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import AddressMapLink from '@/components/AddressMapLink.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -28,8 +30,8 @@ const access = useStoreAccess();
         <div class="grid gap-6 md:grid-cols-2">
             <section class="space-y-3">
                 <h2 class="font-semibold">{{ t('store.sellers.userInfo') }}</h2>
-                <dl class="grid grid-cols-2 gap-3">
-                    <template
+                <DetailList plain :columns="2">
+                    <DetailItem
                         v-for="field in [
                             'name',
                             'email',
@@ -37,12 +39,10 @@ const access = useStoreAccess();
                             'phone',
                         ] as const"
                         :key="field"
-                        ><dt>{{ t(`store.sellers.${field}`) }}</dt>
-                        <dd class="break-words">
-                            {{ seller.user[field] }}
-                        </dd></template
-                    >
-                </dl>
+                        :label="t(`store.sellers.${field}`)"
+                        :value="seller.user[field]"
+                    />
+                </DetailList>
                 <h2 class="font-semibold">{{ t('store.sellers.shopInfo') }}</h2>
                 <p>{{ seller.name }}</p>
                 <p><AddressMapLink :address="seller.address" /></p>
@@ -51,21 +51,22 @@ const access = useStoreAccess();
                 <h2 class="font-semibold">
                     {{ t('store.sellers.verificationInfo') }}
                 </h2>
-                <dl class="grid grid-cols-2 gap-3">
-                    <template v-for="(field, i) in seller.verification" :key="i"
-                        ><dt>{{ field.label }}</dt>
-                        <dd class="break-words">
-                            <a
-                                v-if="field.file_url"
-                                :href="field.file_url"
-                                target="_blank"
-                                rel="noopener"
-                                class="text-blue-700 underline dark:text-blue-400"
-                                >{{ t('store.sellers.download') }}</a
-                            ><template v-else>{{ field.value }}</template>
-                        </dd></template
+                <DetailList plain :columns="2">
+                    <DetailItem
+                        v-for="(field, i) in seller.verification"
+                        :key="i"
+                        :label="field.label"
+                        :value="field.file_url ? null : field.value"
+                        ><a
+                            v-if="field.file_url"
+                            :href="field.file_url"
+                            target="_blank"
+                            rel="noopener"
+                            class="text-link underline"
+                            >{{ t('store.sellers.download') }}</a
+                        ></DetailItem
                     >
-                </dl>
+                </DetailList>
                 <div
                     v-if="
                         !seller.approved &&

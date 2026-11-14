@@ -1,0 +1,19 @@
+{
+    "rules": {
+        "recaptcha_site_key": [
+            "required_with:recaptcha_secret_key",
+            "nullable",
+            "string",
+            "max:100",
+            "regex:/^[A-Za-z0-9_-]{20,100}$/D"
+        ],
+        "recaptcha_secret_key": [
+            "nullable",
+            "string",
+            "max:255",
+            "regex:/^[^\\r\\n]*$/D"
+        ],
+        "recaptcha_secret_clear": ["nullable", "boolean"]
+    },
+    "serverOnly": ["settings", "settings.*"]
+}

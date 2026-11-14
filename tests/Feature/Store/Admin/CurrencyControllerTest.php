@@ -93,7 +93,8 @@ test('the Currencies edit screen returns 404 for a missing id', function () {
 
 test('the Currencies store saves validated values', function () {
     actingAsStoreUser(createStoreStaff('currency_setup'));
-    $this->post('/temp/admin/currency/store', ['name' => 'Dollar', 'code' => 'USD', 'symbol' => '$', 'exchange_rate' => '1.00001'])->assertRedirect(route('currency.index'));
+    $this->post('/temp/admin/currency/store', ['name' => 'Dollar', 'code' => 'USD', 'symbol' => '$', 'exchange_rate' => '1.00001'])->assertRedirect(route('currency.index'))
+        ->assertInertiaFlash('success', 'Currency has been created successfully');
     $this->assertDatabaseHas('currencies', ['name' => 'Dollar']);
 });
 
@@ -175,7 +176,8 @@ test('currency settings save independently with active-currency validation and s
     Cache::put('business_settings', collect());
     Cache::put('system_default_currency', []);
     Cache::put('wms-sentinel', 'retained');
-    $this->post('/temp/admin/currency/settings', ['system_default_currency' => $this->refs['currency'], 'header_script' => 'Unrelated'])->assertRedirect(route('currency.index'));
+    $this->post('/temp/admin/currency/settings', ['system_default_currency' => $this->refs['currency'], 'header_script' => 'Unrelated'])->assertRedirect(route('currency.index'))
+        ->assertInertiaFlash('success', 'Currency settings have been updated successfully');
     $this->assertDatabaseHas('business_settings', ['type' => 'system_default_currency', 'value' => (string) $this->refs['currency']]);
     $this->assertDatabaseMissing('business_settings', ['type' => 'header_script']);
     expect(Cache::get('wms-sentinel'))->toBe('retained')->and(Cache::has('business_settings'))->toBeFalse()->and(Cache::has('system_default_currency'))->toBeFalse();

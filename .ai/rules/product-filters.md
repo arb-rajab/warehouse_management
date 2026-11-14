@@ -25,6 +25,10 @@ The method's legacy PHPDoc does not establish a current consumer.
 Requests accepting chosen IDs should compose
 `FiltersByProductIds::productIdsFilterRules()` and use `$request->productIds()`
 (`list<int>|null`, null when absent), rather than repeating integer conversion.
+The warehouse filter has the same shape (`FiltersByWarehouseIds`,
+`Warehouse::selectedOptions()`, `GET admin/warehouses/search`, and
+`FilterWarehouseSelect.vue` beside `FilterProductSelect.vue`); see
+[warehouses](warehouses.md) and [filter dialogs](filter-dialogs.md).
 
 ## Active or still in the warehouse
 

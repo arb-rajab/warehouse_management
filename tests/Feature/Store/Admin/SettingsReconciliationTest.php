@@ -35,7 +35,7 @@ test('no settings writer reachable by the website permissions writes another pag
     }
     $this->assertDatabaseHas('business_settings', ['type' => 'website_name', 'value' => 'Original']);
     expect(DB::table('business_settings')->count())->toBe(1);
-})->with(array_values(array_unique(array_merge(array_merge(...array_column(SettingsController::PAGES, 'keys')), UpdateWebsiteHeaderRequest::KEYS, UpdateWebsiteHomeRequest::KEYS, UpdateGeneralSettingsRequest::KEYS, UpdateWebsiteFooterRequest::KEYS, UpdateWebsiteAppearanceRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'MAP_API_KEY']))))->with([false, true]);
+})->with(array_values(array_unique(array_merge(array_merge(...array_column(SettingsController::PAGES, 'keys')), UpdateWebsiteHeaderRequest::KEYS, UpdateWebsiteHomeRequest::KEYS, UpdateGeneralSettingsRequest::KEYS, UpdateWebsiteFooterRequest::KEYS, UpdateWebsiteAppearanceRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'google_map_api_key', 'MAP_API_KEY']))))->with([false, true]);
 
 // The four permissions that gated the generic writer (#391's gap: any one of
 // them wrote footer and appearance keys) now reach only their own page.
@@ -67,7 +67,8 @@ test('each former generic writer permission saves only its own website page', fu
 test('the retained script form writes only its two existing settings', function () {
     actingAsStoreUser(createStoreStaff('website_appearance'));
     $payload = ['types' => ['header_script', 'footer_script'], 'header_script' => 'Existing script content', 'footer_script' => null];
-    $this->post(route('website.scripts.compatibility.update'), $payload)->assertRedirect(route('website.appearance'));
+    $this->post(route('website.scripts.compatibility.update'), $payload)->assertRedirect(route('website.appearance'))
+        ->assertInertiaFlash('success', 'Website scripts have been updated successfully');
     $this->assertDatabaseHas('business_settings', ['type' => 'header_script', 'value' => 'Existing script content']);
     $this->postJson(route('website.scripts.compatibility.update'), array_replace($payload, ['types' => [['ar' => 'header_script'], 'footer_script']]))->assertUnprocessable();
     $this->postJson(route('website.scripts.compatibility.update'), $payload + ['site_name' => 'Injected'])->assertUnprocessable();

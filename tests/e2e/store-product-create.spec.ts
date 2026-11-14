@@ -43,6 +43,10 @@ function resetProductForm(): void {
         foreach ($settings as $type => $value) {
             Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $type], ['value' => $value]);
         }
+        // Creating a product now lands on the unfiltered main list, which shows
+        // the seeded factory products: serve their external placeholder images from
+        // this origin, as the strict img-src policy blocks the external host.
+        App\Models\Upload::query()->where('external_link', 'like', 'https://via.placeholder.com/%')->update(['external_link' => '/assets/img/placeholder.jpg']);
         foreach (App\Models\Product::where('name', 'like', 'Browser % oil%')->whereIn('name', [${names.map(php).join(', ')}])->pluck('id') as $id) {
             foreach (['product_translations', 'product_stocks', 'product_taxes', 'product_variations', 'product_barcodes', 'flash_deal_products', 'wms_product_settings'] as $table) {
                 Illuminate\Support\Facades\DB::table($table)->where('product_id', $id)->delete();
@@ -173,7 +177,12 @@ test('a simple product is created from the in-house list with editor content, a 
     expect(await documentViolations(page)).toEqual([]);
 
     expect([302, 303]).toContain(await save(page, 'Save & publish'));
-    await expect(page).toHaveURL(/\/temp\/admin\/products\/admin$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/products\/all$/);
+    await expect(
+        page.getByRole('status').filter({
+            hasText: 'Product has been created successfully',
+        }),
+    ).toBeVisible();
     const product = storedProduct(
         'Browser pantry oil',
         "['published' => $product->published, 'digital' => $product->digital, 'added_by' => $product->added_by, 'description' => $product->description, 'tags' => $product->tags, 'thumbnail' => $product->thumbnail_img, 'start' => $product->discount_start_date, 'end' => $product->discount_end_date, 'discount' => (float) $product->discount, 'slug' => $product->slug, 'taxes' => Illuminate\\Support\\Facades\\DB::table('product_taxes')->where('product_id', $product->id)->get(['tax', 'tax_type'])->map(fn ($t) => [(float) $t->tax, $t->tax_type])->all(), 'stocks' => Illuminate\\Support\\Facades\\DB::table('product_stocks')->where('product_id', $product->id)->get(['variant', 'sku', 'qty'])->map(fn ($s) => [$s->variant, $s->sku, (int) $s->qty])->all(), 'barcodes' => Illuminate\\Support\\Facades\\DB::table('product_barcodes')->where('product_id', $product->id)->pluck('barcode')->all(), 'translation' => App\\Models\\ProductTranslation::where('product_id', $product->id)->where('lang', 'en')->value('name')]",
@@ -266,7 +275,7 @@ test('a variant product generates its SKU rows from colours and attribute values
     await page.locator('#discount').fill('0');
 
     expect([302, 303]).toContain(await save(page, 'Save & unpublish'));
-    await expect(page).toHaveURL(/\/temp\/admin\/products\/admin$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/products\/all$/);
     const product = storedProduct(
         'Browser variant oil',
         "['published' => $product->published, 'variant_product' => $product->variant_product, 'colors' => json_decode($product->colors), 'choice_options' => json_decode($product->choice_options, true), 'stocks' => Illuminate\\Support\\Facades\\DB::table('product_stocks')->where('product_id', $product->id)->orderBy('id')->get(['variant', 'price', 'sku', 'qty', 'image'])->map(fn ($s) => [$s->variant, (float) $s->price, $s->sku, (int) $s->qty, $s->image !== null])->all()]",

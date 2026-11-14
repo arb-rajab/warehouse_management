@@ -29,6 +29,7 @@ use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use Artisan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
@@ -266,11 +267,18 @@ class ProductController extends Controller
             return $this->failed(__('seller.products.this_product_is_not_yours'));
         }
 
-        $product->product_translations()->delete();
-        $product->stocks()->delete();
-        $product->taxes()->delete();
+        // The barcodes go with the product (product_barcodes restricts the
+        // delete otherwise), and nothing is removed unless the product is.
+        $deleted = DB::transaction(function () use ($product, $id): int {
+            $product->product_translations()->delete();
+            $product->stocks()->delete();
+            $product->taxes()->delete();
+            $product->barcodes()->delete();
 
-        if (Product::destroy($id)) {
+            return Product::destroy($id);
+        });
+
+        if ($deleted) {
             Cart::where('product_id', $id)->delete();
 
             return $this->success(__('storefront.product.product_has_been_deleted_successfully'));

@@ -6,6 +6,7 @@ use App\Http\Middleware\CheckoutMiddleware;
 use App\Http\Middleware\EnsureMinimumAppVersion;
 use App\Http\Middleware\EnsurePasswordHasBeenChanged;
 use App\Http\Middleware\EnsurePaymentGatewayEnabled;
+use App\Http\Middleware\EnsurePaymentGatewaySandbox;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\HidePricesFromUnverified;
 use App\Http\Middleware\IsAdmin;
@@ -27,9 +28,12 @@ use App\Http\Middleware\StrictResultStatus;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WmsAuthMiddleware;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Env;
@@ -37,6 +41,7 @@ use Spatie\Honeypot\ProtectAgainstSpam;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -51,6 +56,20 @@ return Application::configure(basePath: dirname(__DIR__))
         // never runs on a blocked request and those responses would ship bare.
         $middleware->append(SendSecureHeaders::class);
         $middleware->append(BlockMaliciousRequests::class);
+
+        // Payment gateways and Sign in with Apple POST to the store from outside, with no CSRF
+        // token: each callback is verified with the provider instead (GatewayPaymentService, the
+        // gateway's signature or its API). The store lives under /temp, so the paths carry it. The
+        // list used to sit in a VerifyCsrfToken class that nothing registered, so every such POST
+        // answered 419 and a customer who had paid at the gateway never had the order completed.
+        // SSLCommerz, AamarPay and iyzico are not listed: their return routes run outside the
+        // `web` group (routes/shop-gateway-returns.php), so no CSRF check runs on them at all,
+        // and any other route under those paths keeps it.
+        $middleware->preventRequestForgery(except: [
+            'temp/payhere*',
+            'temp/bkash*',
+            'temp/apple-callback',
+        ]);
 
         $trustedProxies = array_filter(explode(',', (string) Env::get('TRUSTED_PROXIES', '')));
 
@@ -126,12 +145,39 @@ return Application::configure(basePath: dirname(__DIR__))
             'rep_or_admin' => IsRepresentativeOrAdmin::class,
             'delivery_boy' => IsDeliveryBoy::class,
             'payment.gateway' => EnsurePaymentGatewayEnabled::class,
+            'payment.sandbox' => EnsurePaymentGatewaySandbox::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password']);
+        // `gateways`: the Payment methods page's credentials (secrets among them); its form keeps its own values.
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password', 'recaptcha_secret_key', 'gateways']);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*', '*/api/*') || $request->expectsJson(),
         );
+
+        // The store puts encrypted ids in its URLs and decrypt()s them in many controllers, so a
+        // mistyped or tampered id is a missing record, not a server error. Rendered here and not
+        // mapped, so the exception is still reported: a rotated key must stay visible in the logs.
+        $exceptions->render(fn (DecryptException $exception, Request $request) => app(ExceptionHandler::class)->render(
+            $request,
+            new NotFoundHttpException(previous: $exception),
+        ));
+
+        // A payment provider that does not answer (timeout, DNS, refused) must not
+        // become a 500 mid-checkout: nothing was charged or marked paid, so send the
+        // customer back to the cart (or answer an API client 503). Still reported.
+        $exceptions->render(function (ConnectionException $exception, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*', '*/api/*')) {
+                return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')], 503);
+            }
+
+            if ($request->is('temp', 'temp/*')) {
+                flash(__('storefront.checkout.payment_failed'))->error();
+
+                return redirect()->route('cart');
+            }
+
+            return null;
+        });
     })->create();

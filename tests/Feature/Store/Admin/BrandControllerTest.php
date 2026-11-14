@@ -4,6 +4,7 @@ use App\Models\Brand;
 use App\Models\BrandTranslation;
 use App\Models\Language;
 use App\Models\Pallet;
+use App\Models\ProductBarcode;
 use App\Models\Upload;
 use App\Models\User;
 use Illuminate\Database\QueryException;
@@ -86,7 +87,8 @@ test('brand creation writes the base row, default translation, logo and SEO fiel
     $staff = createStoreStaff('add_brand');
     actingAsStoreUser($staff);
     $image = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image']);
-    $this->post(route('brands.store'), [...$this->payload, 'logo' => $image->id, 'slug' => 'My New Slug', 'order_level' => 5, 'lang' => 'ar'])->assertRedirect(route('brands.index'));
+    $this->post(route('brands.store'), [...$this->payload, 'logo' => $image->id, 'slug' => 'My New Slug', 'order_level' => 5, 'lang' => 'ar'])->assertRedirect(route('brands.index'))
+        ->assertInertiaFlash('success', 'Brand has been created successfully');
     $new = Brand::query()->orderByDesc('id')->firstOrFail();
     expect($new->name)->toBe('Updated')->and($new->slug)->toBe('My-New-Slug')->and($new->logo)->toBe((string) $image->id)
         ->and($new->meta_title)->toBe('SEO title')->and($new->meta_description)->toBe('SEO description')->and($new->top)->toBe(0);
@@ -200,11 +202,17 @@ test('brand deletion keeps deleting that brand\'s products and translations, and
     $owned = createStoreProduct(['brand_id' => $this->brand->id]);
     $otherProduct = createStoreProduct(['brand_id' => $other->id]);
     $unbranded = createStoreProduct(['brand_id' => null]);
+    // The deleted products' barcodes go with them; another product's stay.
+    ProductBarcode::factory()->create(['product_id' => $owned->id]);
+    $keptBarcode = ProductBarcode::factory()->create(['product_id' => $otherProduct->id]);
     $this->delete(route('brands.destroy', [$this->brand, 'page' => 2, 'per_page' => 10, 'search' => 'Dat']))
-        ->assertRedirect(route('brands.index', ['page' => 2, 'per_page' => 10, 'search' => 'Dat']));
+        ->assertRedirect(route('brands.index', ['page' => 2, 'per_page' => 10, 'search' => 'Dat']))
+        ->assertInertiaFlash('success', 'Brand has been deleted successfully');
     $this->assertDatabaseMissing('brands', ['id' => $this->brand->id]);
     $this->assertDatabaseMissing('brand_translations', ['brand_id' => $this->brand->id]);
     $this->assertDatabaseMissing('products', ['id' => $owned->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['product_id' => $owned->id]);
+    $this->assertDatabaseHas('product_barcodes', ['id' => $keptBarcode->id, 'product_id' => $otherProduct->id]);
     $this->assertDatabaseHas('brands', ['id' => $other->id]);
     $this->assertDatabaseHas('brand_translations', ['brand_id' => $other->id, 'name' => 'Other']);
     $this->assertDatabaseHas('products', ['id' => $otherProduct->id, 'brand_id' => $other->id]);
@@ -298,7 +306,7 @@ test('brand migration retains public and mobile contracts and removes only the e
         ->and(route('brands.destroy', 5, false))->toBe('/temp/admin/brands/destroy/5');
     $this->get('/temp/admin/brands/'.$this->brand->id)->assertMethodNotAllowed();
     $this->getJson('/api/v1/store/brands')->assertOk()->assertJsonPath('success', true)->assertJsonPath('status', 200)
-        ->assertJsonPath('data.0', ['id' => $this->brand->id, 'name' => 'Dates', 'logo' => uploaded_asset(null), 'links' => ['products' => route('api.products.brand', $this->brand->id)]]);
+        ->assertJsonPath('data.0', ['id' => $this->brand->id, 'name' => 'Dates', 'logo' => uploaded_asset(null), 'category_ids' => [], 'links' => ['products' => route('api.products.brand', $this->brand->id)]]);
     $this->get('/temp/brands')->assertOk()->assertSee('Dates');
     expect(view()->exists('shop.backend.downloads.brand'))->toBeTrue()
         ->and(view()->exists('shop.backend.product.brands.index'))->toBeFalse()

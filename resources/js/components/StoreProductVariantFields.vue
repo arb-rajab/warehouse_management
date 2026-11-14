@@ -222,13 +222,13 @@ onBeforeUnmount(() => clearTimeout(timer));
         <div
             v-if="unmatchedStocks.length"
             role="alert"
-            class="rounded border border-amber-500 p-3"
+            class="rounded border border-warning p-3"
         >
             <p>{{ t('store.products.form.unmatchedStocks') }}</p>
             <ul>
                 <li v-for="(stock, index) in unmatchedStocks" :key="index">
                     {{ stock.variant }} — {{ stock.price }} — {{ stock.qty }} —
-                    {{ stock.sku }}
+                    <span class="font-mono">{{ stock.sku }}</span>
                 </li>
             </ul>
         </div>
@@ -266,7 +266,7 @@ onBeforeUnmount(() => clearTimeout(timer));
                             class="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
                         />
                         <span
-                            class="inline-block h-4 w-4 rounded border border-gray-300 dark:border-neutral-600"
+                            class="inline-block h-4 w-4 rounded border border-line-strong"
                             :style="{ backgroundColor: color.code }"
                             aria-hidden="true"
                         />
@@ -281,7 +281,7 @@ onBeforeUnmount(() => clearTimeout(timer));
             <legend :class="fieldLabelClass">
                 {{ t('store.products.form.attributes') }}
             </legend>
-            <p class="mb-2 text-xs text-gray-600 dark:text-neutral-400">
+            <p class="mb-2 text-xs text-muted">
                 {{ t('store.products.form.attributesHelp') }}
             </p>
             <div class="flex flex-wrap gap-3">
@@ -346,10 +346,7 @@ onBeforeUnmount(() => clearTimeout(timer));
                 :name="`choice_options[${index}][attribute_id]`"
                 :value="choice.attribute.id"
             />
-            <p
-                v-if="choice.options.length === 0"
-                class="text-sm text-gray-600 dark:text-neutral-400"
-            >
+            <p v-if="choice.options.length === 0" class="text-sm text-muted">
                 {{ t('store.products.form.noValues') }}
             </p>
             <div class="flex flex-wrap gap-3">
@@ -380,7 +377,7 @@ onBeforeUnmount(() => clearTimeout(timer));
         <p
             v-if="failure"
             role="alert"
-            class="flex items-center gap-2 text-sm text-red-700 dark:text-red-300"
+            class="flex items-center gap-2 text-sm text-danger-strong"
         >
             <CircleAlert class="h-4 w-4 shrink-0" />{{ failure }}
         </p>
@@ -415,7 +412,7 @@ onBeforeUnmount(() => clearTimeout(timer));
                     <tr
                         v-for="(row, index) in rows"
                         :key="row.variant"
-                        class="border-t border-gray-200 align-top dark:border-neutral-800"
+                        class="border-t border-line align-top"
                     >
                         <th scope="row" class="p-2 text-start font-medium">
                             <input

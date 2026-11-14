@@ -8,6 +8,7 @@ import {
     Clock,
     Inbox,
     PackageOpen,
+    Truck,
 } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -58,6 +59,7 @@ const stats = {
         custom: { days: 45, until: '2026-09-27', count: 8 },
     },
     stale: { days: 30, count: 5 },
+    unplaced_pallets: { count: 7 },
     low_stock: { count: 4 },
     inactive_in_warehouse: { count: 2 },
     activity_today: { stored: 6, opened: 2, emptied: 1, transferred: 3 },
@@ -71,7 +73,11 @@ const products = [
 
 function mountPage(
     overrides: {
-        filters?: { product_id: number[] | null };
+        filters?: {
+            product_id: number[] | null;
+            warehouse_ids?: number[] | null;
+        };
+        warehouses?: { id: number; name: string }[];
         productPallets?: MatchingPallet[];
     } = {},
 ) {
@@ -86,8 +92,11 @@ function mountPage(
             today: '2026-08-13',
             weekStart: '2026-08-10',
             productPallets: overrides.productPallets ?? [],
-            filters: overrides.filters ?? { product_id: null },
-            filterOptions: { products },
+            filters: {
+                warehouse_ids: null,
+                ...(overrides.filters ?? { product_id: null }),
+            },
+            filterOptions: { products, warehouses: overrides.warehouses ?? [] },
         },
     });
 }
@@ -143,7 +152,10 @@ describe('Dashboard Index', () => {
     it('links the help icon to the dashboard help page', () => {
         const wrapper = mountPage();
 
+        // The shell's own header carries a "Help" link with the same name, so
+        // look inside the page content.
         const helpLink = wrapper
+            .get('main')
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
         expect(helpLink?.attributes('href')).toBe(
@@ -286,7 +298,12 @@ describe('Dashboard Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin',
-            { product_id: [], expiring_days: 90, stale_days: 30 },
+            {
+                product_id: [],
+                warehouse_ids: [],
+                expiring_days: 90,
+                stale_days: 30,
+            },
             { preserveState: true, replace: true },
         );
     });
@@ -356,7 +373,12 @@ describe('Dashboard Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin',
-            { product_id: [], expiring_days: 45, stale_days: 60 },
+            {
+                product_id: [],
+                warehouse_ids: [],
+                expiring_days: 45,
+                stale_days: 60,
+            },
             { preserveState: true, replace: true },
         );
     });
@@ -499,16 +521,60 @@ describe('Dashboard Index', () => {
         expect(wrapper.text()).toContain(t('dashboard.productPallets.empty'));
     });
 
-    it('renders exactly seven sections, including the stale, low-stock and inactive-in-warehouse sections', () => {
+    it('renders exactly eight sections, including the unplaced, stale, low-stock and inactive-in-warehouse sections', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.findAll('section')).toHaveLength(7);
+        expect(wrapper.findAll('section')).toHaveLength(8);
+    });
+
+    it('renders the unplaced pallets tile with its count, linking to the matching list with unplaced=true', () => {
+        const wrapper = mountPage();
+
+        const tile = tileByLabelAndHref(
+            wrapper,
+            t('dashboard.unplaced.count'),
+            palletsIndex({ query: { unplaced: true } }),
+        );
+
+        expect(tile?.props('value')).toBe(7);
+        expect(tile?.props('tone')).toBe('warning');
+        expect(tile?.findComponent(Truck).exists()).toBe(true);
+    });
+
+    it('carries the product and warehouse filters on the unplaced pallets tile link', () => {
+        const wrapper = mountPage({
+            filters: { product_id: [1], warehouse_ids: [2] },
+            warehouses: [{ id: 2, name: 'Annex' }],
+        });
+
+        const tile = tileByLabelAndHref(
+            wrapper,
+            t('dashboard.unplaced.count'),
+            palletsIndex({
+                query: { unplaced: true, product_id: [1], warehouse_ids: [2] },
+            }),
+        );
+
+        expect(tile).toBeDefined();
+    });
+
+    it('places the unplaced section right after the occupancy section', () => {
+        const wrapper = mountPage();
+
+        const headings = wrapper.findAll('section h2').map((h2) => h2.text());
+
+        expect(headings.slice(0, 3)).toEqual([
+            t('dashboard.occupancy.title'),
+            t('dashboard.unplaced.title'),
+            t('dashboard.expiring.title'),
+        ]);
     });
 
     it('renders every section heading', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('dashboard.occupancy.title'));
+        expect(wrapper.text()).toContain(t('dashboard.unplaced.title'));
         expect(wrapper.text()).toContain(t('dashboard.expiring.title'));
         expect(wrapper.text()).toContain(t('dashboard.stale.title'));
         expect(wrapper.text()).toContain(t('dashboard.lowStock.title'));
@@ -578,7 +644,132 @@ describe('Dashboard Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/admin',
-            { product_id: ['1'], expiring_days: 45, stale_days: 30 },
+            {
+                product_id: ['1'],
+                warehouse_ids: [],
+                expiring_days: 45,
+                stale_days: 30,
+            },
+            { preserveState: true, replace: true },
+        );
+    });
+    it('renders the warehouse filter beside the product filter, labelled from the selected warehouses', () => {
+        const wrapper = mountPage({
+            filters: { product_id: null, warehouse_ids: [2] },
+            warehouses: [{ id: 2, name: 'Annex' }],
+        });
+
+        const trigger = wrapper.get('#dashboard-warehouse');
+        expect(trigger.text()).toBe('Annex');
+        expect(wrapper.get('label[for="dashboard-warehouse"]').text()).toBe(
+            t('warehouses.filters.label'),
+        );
+        expect(wrapper.find('#dashboard-product').exists()).toBe(true);
+    });
+
+    it('shows every warehouse by default', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.get('#dashboard-warehouse').text()).toBe(
+            t('cellLog.filters.all'),
+        );
+    });
+
+    it('reloads with the selected warehouses when the warehouse filter changes, keeping the product filter and the custom day counts', async () => {
+        const wrapper = mountPage({ filters: { product_id: [1] } });
+
+        await wrapper.get('#dashboard-warehouse').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[1].setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin',
+            {
+                product_id: [1],
+                warehouse_ids: ['2'],
+                expiring_days: 45,
+                stale_days: 30,
+            },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('keeps the selected warehouses when the product filter changes', async () => {
+        const wrapper = mountPage({
+            filters: { product_id: null, warehouse_ids: [3] },
+            warehouses: [{ id: 3, name: 'Depot' }],
+        });
+
+        await wrapper.get('#dashboard-product').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin',
+            {
+                product_id: ['1'],
+                warehouse_ids: [3],
+                expiring_days: 45,
+                stale_days: 30,
+            },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('includes the active warehouse filter in the pallets and activity-log tile links, but not in the products-page links', () => {
+        const wrapper = mountPage({
+            filters: { product_id: null, warehouse_ids: [2] },
+            warehouses: [{ id: 2, name: 'Annex' }],
+        });
+
+        const tiles = wrapper.findAllComponents(DashboardStatTile);
+        const hrefOf = (label: string) =>
+            tiles.find((tile) => tile.props('label') === label)?.props('href');
+
+        expect(hrefOf(t('dashboard.occupancy.full'))).toEqual(
+            palletsIndex({ query: { state: 'full', warehouse_ids: [2] } }),
+        );
+        expect(hrefOf(t('dashboard.expiring.expired'))).toEqual(
+            palletsIndex({ query: { expired: true, warehouse_ids: [2] } }),
+        );
+        expect(hrefOf(t('cellLog.actions.stored'))).toEqual(
+            cellLogsIndex({
+                query: {
+                    action: ['stored'],
+                    date_from: '2026-08-13',
+                    date_to: '2026-08-13',
+                    warehouse_ids: [2],
+                },
+            }),
+        );
+        expect(hrefOf(t('dashboard.unplaced.count'))).toEqual(
+            palletsIndex({ query: { unplaced: true, warehouse_ids: [2] } }),
+        );
+        expect(hrefOf(t('dashboard.lowStock.count'))).toEqual(
+            productsIndex({ query: { low_stock: true } }),
+        );
+        expect(hrefOf(t('dashboard.inactiveInWarehouse.count'))).toEqual(
+            productsIndex({ query: { inactive: true } }),
+        );
+    });
+
+    it('keeps the selected warehouses when a custom day window is applied', async () => {
+        const wrapper = mountPage({
+            filters: { product_id: null, warehouse_ids: [2] },
+            warehouses: [{ id: 2, name: 'Annex' }],
+        });
+
+        await openCustomExpiringDaysDialog(wrapper);
+        await wrapper
+            .get('#dashboard-custom-expiring-days-form')
+            .trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/admin',
+            {
+                product_id: [],
+                warehouse_ids: [2],
+                expiring_days: 45,
+                stale_days: 30,
+            },
             { preserveState: true, replace: true },
         );
     });

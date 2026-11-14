@@ -38,6 +38,14 @@ class CellVerificationRound extends Model
     public const array SELECT_COLUMNS = ['id', 'user_id', 'completed_at', 'created_at'];
 
     /**
+     * The eager loads behind `rows` in CellVerificationRoundResource: each
+     * row with its warehouse, because a letter names one row per warehouse.
+     *
+     * @var list<string>
+     */
+    public const array WITH_ROWS = ['rows:id,warehouse_id,letter', 'rows.warehouse:id,name'];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -118,6 +126,23 @@ class CellVerificationRound extends Model
     protected function unfinished(Builder $query): void
     {
         $query->whereNull('completed_at');
+    }
+
+    /**
+     * Scope a query to the rounds claiming at least one row of the given
+     * warehouses; null matches every round. `rows.warehouse_id` is compared
+     * inline rather than through `Row::forWarehouses()`: a model scope called
+     * inside `whereHas()` loses Larastan's generic type (.ai/rules/models.md).
+     *
+     * @param  Builder<CellVerificationRound>  $query
+     * @param  list<int>|null  $warehouseIds
+     */
+    #[Scope]
+    protected function forWarehouses(Builder $query, ?array $warehouseIds): void
+    {
+        if ($warehouseIds !== null) {
+            $query->whereHas('rows', fn (Builder $rows) => $rows->whereIn('rows.warehouse_id', $warehouseIds));
+        }
     }
 
     /**

@@ -9,11 +9,19 @@ use App\Http\Resources\CellResource;
 use App\Models\Cell;
 use App\Models\Product;
 use App\Models\Row;
+use Dedoc\Scramble\Attributes\QueryParameter;
+use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CellController extends Controller
 {
+    /**
+     * The row's cells, 20 per page. `{row}` is the row letter; add
+     * `?warehouse_id=` when the letter is used in more than one warehouse.
+     */
+    #[QueryParameter('warehouse_id', description: 'The row\'s warehouse (id from `GET /api/v1/warehouses`). Optional while only one warehouse uses the row letter; required once several do.', required: false, type: 'integer')]
+    #[DocumentedResponse(422, description: 'The row letter is used in more than one warehouse and no `?warehouse_id=` picked one (error on `warehouse_id`).', type: 'array{message: string, errors: array{warehouse_id: list<string>}}')]
     public function index(FilterCellsRequest $request, Row $row): AnonymousResourceCollection
     {
         return CellResource::collection(
@@ -40,8 +48,11 @@ class CellController extends Controller
 
     /**
      * `{cell:cell_number}` is resolved together with the URI's `{flatNumber}`
-     * by `Row::resolveChildRouteBinding()` — see there.
+     * by `Row::resolveChildRouteBinding()` — see there. As for index(), add
+     * `?warehouse_id=` when the row letter is used in more than one warehouse.
      */
+    #[QueryParameter('warehouse_id', description: 'The row\'s warehouse (id from `GET /api/v1/warehouses`). Optional while only one warehouse uses the row letter; required once several do.', required: false, type: 'integer')]
+    #[DocumentedResponse(422, description: 'The row letter is used in more than one warehouse and no `?warehouse_id=` picked one (error on `warehouse_id`).', type: 'array{message: string, errors: array{warehouse_id: list<string>}}')]
     public function show(ShowCellRequest $request, Row $row, Cell $cell): CellResource
     {
         return new CellResource($cell->load(Cell::WITH_ROW_AND_CONTENTS));

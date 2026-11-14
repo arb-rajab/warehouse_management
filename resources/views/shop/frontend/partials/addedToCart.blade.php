@@ -17,7 +17,7 @@
             class="mr-4 lazyload size-90px img-fit rounded-0" alt="Product Image" onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';">
         <div class="media-body mt-2 text-left d-flex flex-column justify-content-between">
             <h6 class="fs-14 fw-700 text-truncate-2">
-                {{  $product->getTranslation('name')  }}
+                {{  $product->loadMissing('product_translations:id,product_id,lang,name')->getTranslation('name')  }}
             </h6>
             @if(Auth::check() && Auth::user()->admin_verified)
             <div class="row mt-2">
@@ -36,7 +36,7 @@
         </div>
     </div>
     @php
-        $featuredRelatedProduts = filter_products(\App\Models\Product::where('category_id', $product->category_id)->where('id', '!=', $product->id))->where('featured', true)->limit(10)->get();
+        $featuredRelatedProduts = filter_products(\App\Models\Product::where('category_id', $product->category_id)->where('id', '!=', $product->id))->where('featured', true)->with('product_translations:id,product_id,lang,name')->limit(10)->get();
     @endphp
 
     @if ($featuredRelatedProduts->count() > 0)
@@ -65,7 +65,7 @@
                                 <h3 class="fw-400 fs-14 text-dark text-truncate-2 lh-1-4 mb-0 h-35px">
                                     <a href="{{ \App\Support\StorefrontUrl::to($related_product) }}" class="d-block text-reset hov-text-primary">{{ $related_product->getTranslation('name') }}</a>
                                 </h3>
-                                @if(Auth::check() && Auth::user()->admin_verifed)
+                                @if(Auth::check() && Auth::user()->admin_verified)
                                 <div class="fs-14 mt-3">
                                     <span class="fw-700 text-primary">{{ home_discounted_base_price($related_product) }}</span>
                                     @if(home_base_price($related_product) != home_discounted_base_price($related_product))

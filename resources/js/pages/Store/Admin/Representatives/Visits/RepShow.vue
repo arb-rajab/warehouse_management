@@ -71,11 +71,7 @@ function filter(): void {
             />
         </form>
         <StoreVisitMap v-if="visitCount > 0" :markers="mapMarkers" />
-        <div
-            v-else
-            role="status"
-            class="rounded-md border border-gray-200 p-6 dark:border-neutral-700"
-        >
+        <div v-else role="status" class="rounded-md border border-line p-6">
             <h2 class="flex items-center gap-2 font-semibold">
                 <PackageSearch class="h-5 w-5" />{{
                     t('store.representatives.visits.emptyDay')

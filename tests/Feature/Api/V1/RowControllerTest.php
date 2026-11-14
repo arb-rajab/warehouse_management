@@ -5,6 +5,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list rows with every property the app reads', function () {
@@ -19,6 +20,7 @@ test('an authenticated worker can list rows with every property the app reads', 
     expect(collect($response->json('data'))->firstWhere('id', $row->id))->toEqual([
         'id' => $row->id,
         'letter' => 'Z',
+        'warehouse' => ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME],
         'cells_count' => 3,
         'flats_count' => 2,
         'has_pallets' => false,
@@ -41,7 +43,9 @@ test('the row listing computes has_pallets without an exists query per row', fun
 
     $response->assertOk();
     expect(collect($response->json('data'))->pluck('has_pallets')->unique()->all())->toBe([true]);
-    expect($queryCount)->toBeLessThan(5);
+    // One more than before warehouses existed: the single `warehouse` eager
+    // load. A per-row query would still add five.
+    expect($queryCount)->toBeLessThan(6);
 });
 
 test('the row listing paginates instead of returning everything at once', function () {
@@ -175,9 +179,10 @@ test('listing every row with its cells computes has_pallets without an exists qu
     expect($payload->where('has_pallets', true))->toHaveCount(10);
     expect($payload->where('has_pallets', false))->toHaveCount(2);
 
-    // A per-row exists query would put this at 12+ on top of the eager loads;
-    // the subquery keeps it flat regardless of how many rows come back.
-    expect($queryCount)->toBeLessThan(12);
+    // A per-row exists query would put this at 12+ on top of the eager loads
+    // (one more since the `warehouse` eager load); the subquery keeps it flat
+    // regardless of how many rows come back.
+    expect($queryCount)->toBeLessThan(13);
 });
 
 test('listing every row with its cells computes is_stale from a caller-supplied stale_after_days instead of a fixed threshold', function () {
@@ -309,3 +314,55 @@ test('an unauthenticated caller cannot list frozen rows', function () {
 
     $response->assertUnauthorized();
 });
+
+test('the row listing can be filtered by warehouse', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $filtered = $this->getJson("/api/v1/rows?warehouse_ids[]={$north->id}");
+    $unfiltered = $this->getJson('/api/v1/rows');
+
+    $filtered->assertOk();
+    expect(collect($filtered->json('data'))->pluck('id')->all())->toBe([$northRow->id])
+        ->and($filtered->json('data.0.warehouse'))->toEqual(['id' => $north->id, 'name' => 'North'])
+        ->and(collect($unfiltered->json('data'))->pluck('id')->sort()->values()->all())->toBe([$northRow->id, $defaultRow->id]);
+});
+
+test('listing every row with its cells can be filtered by warehouse', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response = $this->getJson("/api/v1/rows/full?warehouse_ids[]={$north->id}");
+
+    $response->assertOk();
+    expect(collect($response->json())->pluck('id')->all())->toBe([$northRow->id])
+        ->and($response->json('0.warehouse'))->toEqual(['id' => $north->id, 'name' => 'North'])
+        ->and($response->json('0.cells'))->toHaveCount(2)
+        // Cells nested in a row leave the warehouse to the row.
+        ->and($response->json('0.cells.0'))->not->toHaveKey('warehouse');
+});
+
+test('listing frozen rows can be filtered by warehouse and names each row\'s warehouse', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    CellVerificationRound::factory()->covering($northRow, $defaultRow)->create();
+
+    $all = $this->getJson('/api/v1/rows/frozen');
+    $filtered = $this->getJson("/api/v1/rows/frozen?warehouse_ids[]={$north->id}");
+
+    expect($filtered->json())->toEqual([
+        ['id' => $northRow->id, 'letter' => 'A', 'warehouse' => ['id' => $north->id, 'name' => 'North']],
+    ])->and(collect($all->json())->pluck('id')->sort()->values()->all())->toBe([$northRow->id, $defaultRow->id]);
+});
+
+test('the row listings reject a warehouse id that does not exist', function (string $url) {
+    actingAsMobileUser();
+
+    $this->getJson($url.'?warehouse_ids[]=999999')->assertUnprocessable()->assertJsonValidationErrors('warehouse_ids.0');
+})->with(['/api/v1/rows', '/api/v1/rows/full', '/api/v1/rows/frozen']);

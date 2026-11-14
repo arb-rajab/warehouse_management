@@ -49,7 +49,7 @@ describe('StoreStatusSwitch', () => {
                 checked ? 'start-[1.375rem]' : 'start-0.5',
             );
             expect(wrapper.get('[data-switch-track]').classes()).toContain(
-                checked ? 'bg-green-600' : 'bg-gray-500',
+                checked ? 'bg-success' : 'bg-muted',
             );
         },
     );
@@ -147,7 +147,7 @@ describe('StoreStatusSwitch', () => {
         const reason = wrapper.get(`#${button.attributes('aria-describedby')}`);
         expect(reason.text()).toBe('System default currency');
         expect(wrapper.get('[data-switch-track]').classes()).toContain(
-            'bg-green-600/40',
+            'bg-success/40',
         );
     });
     it('uses the reason as the tooltip without a hint', () => {

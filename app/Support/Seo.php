@@ -146,7 +146,7 @@ final class Seo
             'image' => $image,
             'twitterCard' => $image === null ? 'summary' : 'summary_large_image',
             'siteName' => (string) config('app.name'),
-            'fbAppId' => (string) config('services.facebook.pixel_id'),
+            'fbAppId' => (string) StoreIntegrationIds::get('facebook_pixel_id'),
         ];
     }
 

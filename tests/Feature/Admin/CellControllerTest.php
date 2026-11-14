@@ -209,6 +209,7 @@ test('an authenticated admin can deactivate a cell regardless of its occupancy',
     $response = $this->post("/admin/cells/{$cell->id}/toggle-active", ['note' => 'Sensor malfunction']);
 
     $response->assertRedirect();
+    $response->assertInertiaFlash('success', 'Cell has been deactivated successfully');
     expect($cell->fresh()->is_active)->toBeFalse();
     expect($cell->fresh()->state)->toBe(CellState::Full);
 
@@ -241,11 +242,13 @@ test('an authenticated admin can reactivate a cell, and its occupancy state is n
         'user_id' => $admin->id,
     ]);
 
-    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect();
+    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect()
+        ->assertInertiaFlash('success', 'Cell has been deactivated successfully');
     expect($cell->fresh()->is_active)->toBeFalse();
     expect($cell->fresh()->state)->toBe(CellState::Opened);
 
-    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect();
+    $this->post("/admin/cells/{$cell->id}/toggle-active")->assertRedirect()
+        ->assertInertiaFlash('success', 'Cell has been reactivated successfully');
 
     expect($cell->fresh()->is_active)->toBeTrue();
     expect($cell->fresh()->state)->toBe(CellState::Opened);

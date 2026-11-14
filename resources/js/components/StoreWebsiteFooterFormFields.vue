@@ -3,6 +3,7 @@ import { Plus, X } from '@lucide/vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import {
@@ -19,6 +20,8 @@ defineProps<{
         'footer_logo' | 'payment_method_images',
         StoreUpload[]
     >;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
 }>();
 const settings = defineModel<StoreWebsiteFooterSettings>({ required: true });
 
@@ -50,8 +53,7 @@ const socialLinks = [
     'youtube_link',
     'linkedin_link',
 ] as const;
-const sectionClass =
-    'space-y-4 rounded-md border border-gray-200 p-4 dark:border-neutral-700';
+const sectionClass = 'space-y-4 rounded-md border border-line p-4';
 const legendClass = 'px-1 font-medium';
 
 function updateText(key: TextKey, event: Event): void {
@@ -69,7 +71,7 @@ function removeLink(index: number): void {
 
 <template>
     <FieldError :message="errors.settings" />
-    <p class="text-sm text-gray-600 dark:text-neutral-300">
+    <p class="text-sm text-muted">
         {{ t('store.website.footer.translatableHint') }}
     </p>
     <fieldset :class="sectionClass">
@@ -110,27 +112,33 @@ function removeLink(index: number): void {
         <legend :class="legendClass">
             {{ t('store.website.footer.contact') }}
         </legend>
-        <FormField
+        <StoreHighlight
             v-for="key in contacts"
-            :id="key"
             :key="key"
-            :name="`settings[${key}]`"
-            :label="t(`store.website.fields.${key}`)"
-            :value="settings[key]"
-            :error="errors[`settings.${key}`]"
-            maxlength="255"
-            @input="updateText(key, $event)"
-        />
-        <FormField
-            id="contact_email"
-            name="settings[contact_email]"
-            type="email"
-            :label="t('store.website.fields.contact_email')"
-            :value="settings.contact_email"
-            :error="errors['settings.contact_email']"
-            maxlength="255"
-            @input="updateText('contact_email', $event)"
-        />
+            :active="highlight === key"
+        >
+            <FormField
+                :id="key"
+                :name="`settings[${key}]`"
+                :label="t(`store.website.fields.${key}`)"
+                :value="settings[key]"
+                :error="errors[`settings.${key}`]"
+                maxlength="255"
+                @input="updateText(key, $event)"
+            />
+        </StoreHighlight>
+        <StoreHighlight :active="highlight === 'contact_email'">
+            <FormField
+                id="contact_email"
+                name="settings[contact_email]"
+                type="email"
+                :label="t('store.website.fields.contact_email')"
+                :value="settings.contact_email"
+                :error="errors['settings.contact_email']"
+                maxlength="255"
+                @input="updateText('contact_email', $event)"
+            />
+        </StoreHighlight>
     </fieldset>
     <fieldset :class="sectionClass">
         <legend :class="legendClass">
@@ -148,7 +156,7 @@ function removeLink(index: number): void {
         <div
             v-for="(_, index) in settings.widget_one_labels"
             :key="index"
-            class="grid gap-3 rounded-md border border-gray-200 p-3 sm:grid-cols-2 dark:border-neutral-700"
+            class="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-2"
         >
             <div>
                 <label

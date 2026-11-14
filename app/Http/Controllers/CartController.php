@@ -166,6 +166,17 @@ class CartController extends Controller
 
 
             $product_stock = $product_stocks->where('variant', 'like', '%' . $str . '%')->first();
+
+            // No stock row for the chosen combination: the same answer as too little stock.
+            if ($product_stock === null) {
+                return [
+                    'status' => 0,
+                    'cart_count' => count($carts),
+                    'modal_view' => view('shop.frontend.partials.outOfStockCart')->render(),
+                    'nav_cart_view' => view('shop.frontend.partials.cart')->render(),
+                ];
+            }
+
             $price = $product_stock->price;
 
             if ($product->wholesale_product) {

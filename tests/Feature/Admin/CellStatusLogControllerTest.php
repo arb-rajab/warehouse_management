@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -62,16 +63,24 @@ test('an authenticated admin can view the cell log with every property the table
                 ->where('to_state', 'empty')
                 ->where('note', 'Consolidating stock.')
                 ->where('boxes_count', 7)
+                ->where('batch_id', null)
+                ->where('reason', null)
+                ->where('old_note', null)
+                ->where('new_note', null)
+                ->where('old_product', null)
+                ->where('new_product', null)
                 ->where('created_at', $log->created_at->toIso8601String())
                 ->has('cell', fn (Assert $cell) => $cell
                     ->where('row_letter', 'A')
                     ->where('cell_number', 1)
                     ->where('flat_number', 2)
+                    ->where('warehouse', ['id' => $fromRow->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 )
                 ->has('related_cell', fn (Assert $relatedCell) => $relatedCell
                     ->where('row_letter', 'B')
                     ->where('cell_number', 2)
                     ->where('flat_number', 1)
+                    ->where('warehouse', ['id' => $toRow->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 )
                 ->has('product', fn (Assert $productProp) => $productProp
                     ->where('id', $product->id)
@@ -96,7 +105,7 @@ test('an authenticated admin can view the cell log with every property the table
             )
             ->has('filterOptions.rows', 2)
             ->where('filterOptions.maxColumnNumber', 2)
-            ->has('filterOptions.actions', 9)
+            ->has('filterOptions.actions', 10)
     );
 
     Carbon::setTestNow();
@@ -676,6 +685,7 @@ test('an authenticated admin can acknowledge every unacknowledged flag on a cell
 
     // Returns to the log list by default (no return_to sent).
     $response->assertRedirect(route('admin.cell-logs.index'));
+    $response->assertInertiaFlash('success', 'Flags have been acknowledged successfully');
     $freshFlag = $flag->fresh();
     expect($freshFlag->acknowledged_at)->not->toBeNull();
     expect($freshFlag->acknowledged_by)->toBe($admin->id);
@@ -732,4 +742,83 @@ test('an unauthenticated caller cannot acknowledge cell log flags', function () 
 
     $response->assertRedirect(route('login'));
     expect($flag->fresh()->acknowledged_at)->toBeNull();
+});
+
+test('the cell logs can be filtered by warehouse, hydrating the selected warehouse labels', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    $this->get("/admin/cell-logs?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $inNorth->id)
+            ->where('filters.warehouse_ids', [(string) $north->id])
+            ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
+    );
+});
+
+test('the cell log flags a single-warehouse system so no warehouse name is shown', function () {
+    actingAsAdmin();
+    CellStatusLog::factory()->create();
+
+    $this->get('/admin/cell-logs')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('multipleWarehouses', false)
+    );
+});
+
+test('the cell log flags a system with several warehouses and ships the warehouse of both transfer sides', function () {
+    actingAsAdmin();
+    $main = Warehouse::factory()->create(['name' => 'Main']);
+    $cold = Warehouse::factory()->create(['name' => 'Cold store']);
+    $fromCell = Row::factory()->create(['warehouse_id' => $main->id, 'letter' => 'A', 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+    $toCell = Row::factory()->create(['warehouse_id' => $cold->id, 'letter' => 'A', 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+    CellStatusLog::factory()->create([
+        'cell_id' => $fromCell->id,
+        'related_cell_id' => $toCell->id,
+        'action' => CellLogAction::TransferredOut,
+    ]);
+
+    $this->get('/admin/cell-logs')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('multipleWarehouses', true)
+            ->where('logs.data.0.cell.warehouse', ['id' => $main->id, 'name' => 'Main'])
+            ->where('logs.data.0.related_cell.warehouse', ['id' => $cold->id, 'name' => 'Cold store'])
+    );
+});
+
+test('the cell log loads the warehouses of its cells without a query per row', function () {
+    actingAsAdmin();
+    Warehouse::factory()->count(2)->create();
+    $countQueries = function (): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        test()->get('/admin/cell-logs')->assertOk();
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $count;
+    };
+
+    $makeLog = function (): void {
+        $warehouse = Warehouse::factory()->create();
+        $from = Row::factory()->create(['warehouse_id' => $warehouse->id, 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+        $to = Row::factory()->create(['warehouse_id' => Warehouse::factory()->create()->id, 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+        CellStatusLog::factory()->create([
+            'cell_id' => $from->id,
+            'related_cell_id' => $to->id,
+            'action' => CellLogAction::TransferredOut,
+        ]);
+    };
+
+    $makeLog();
+    // The first request also loads the signed-in user's roles; count from the second.
+    $countQueries();
+    $few = $countQueries();
+    foreach (range(1, 4) as $_) {
+        $makeLog();
+    }
+
+    expect($countQueries())->toBe($few);
 });

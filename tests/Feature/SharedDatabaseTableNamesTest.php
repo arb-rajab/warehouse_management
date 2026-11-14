@@ -36,8 +36,8 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
     // specific enough to this domain that the store app had nothing like it,
     // one of the tables this app shares with the legacy store app
     // (`products`, which this app has taken ownership of; the `uploads` its
-    // thumbnails point at; `product_barcodes`, which Product::storeBarcodes()
-    // reads; and `offers_catalogs`, which the legacy home page reads via
+    // thumbnails point at; `product_barcodes`, the one barcode table
+    // Product::barcodes() reads; and `offers_catalogs`, which the legacy home page reads via
     // OffersCatalog::first() — none of which this app has taken ownership of
     // except `products` — see .ai/rules/shared-database.md), or one of the
     // legacy store's own tables
@@ -58,6 +58,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
     expect($bareNamed)->toBe([
         'addons',
         'addresses',
+        'admin_audit_logs',
         'app_translations',
         'attribute_category',
         'attribute_translations',
@@ -113,6 +114,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'follow_sellers',
         'home_categories',
         'languages',
+        'manual_payment_methods',
         'messages',
         'mobile_app_version_requirements',
         'notifications',
@@ -128,6 +130,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'password_resets',
         'payku_payments',
         'payku_transactions',
+        'payment_gateway_settings',
         'payments',
         'pickup_point_translations',
         'pickup_points',
@@ -140,6 +143,9 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'product_variations',
         'products',
         'proxypay_payments',
+        'receipt_files',
+        'receipt_pallets',
+        'receipts',
         'refund_requests',
         'representative_packages',
         'representative_payments',
@@ -168,6 +174,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'users',
         'visits',
         'wallets',
+        'warehouses',
         'wishlists',
         'zones',
     ]);

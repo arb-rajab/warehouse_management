@@ -22,13 +22,13 @@
                         @endif
                     </span>
                 </div>
-                <h4 class="modal-title text-center fw-700" id="account_delete_confirmModalLabel" style="color: #ff9819;">{{ __('storefront.auth.delete_your_account')}}</h4>
-                <p class="fs-16 fw-600 text-center" style="color: #8d8d8d;">{{ __('storefront.common.warning_you_cannot_undo_this_action')}}</p>
+                <h4 class="modal-title text-center fw-700 text-warning" id="account_delete_confirmModalLabel">{{ __('storefront.auth.delete_your_account')}}</h4>
+                <p class="fs-16 fw-600 text-center text-secondary">{{ __('storefront.common.warning_you_cannot_undo_this_action')}}</p>
             </div>
 
             <div class="modal-body pt-3 pb-5 px-xl-5">
                 <p class="text-danger mt-3"><i><strong>{{ __('storefront.common.note')}}&nbsp;{{ __('storefront.auth.don_t_click_to_any_button_or_don_t_do_any_action_during_account_deletion_it_may_takes_some_times')}}</strong></i></p>
-                <p class="fs-14 fw-700" style="color: #8d8d8d;">{{ __('storefront.auth.deleting_account_means')}}</p>
+                <p class="fs-14 fw-700 text-secondary">{{ __('storefront.auth.deleting_account_means')}}</p>
                 <div class="row bg-soft-warning py-2 mb-2 ml-0 mr-0 border-left border-width-2 border-danger">
                     <div class="col-1">
                         <img src="{{ static_asset('assets/img/warning.png') }}" class="h-20px">

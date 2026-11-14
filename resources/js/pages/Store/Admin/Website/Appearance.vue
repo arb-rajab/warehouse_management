@@ -56,12 +56,12 @@ function transform() {
             <Form
                 :action="updateScripts()"
                 #default="{ errors, processing }"
-                class="mt-8 space-y-4 rounded-md border border-gray-200 p-4 dark:border-neutral-700"
+                class="mt-8 space-y-4 rounded-md border border-line p-4"
             >
                 <h2 class="font-medium">
                     {{ t('store.website.scripts.title') }}
                 </h2>
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{ t('store.website.scripts.hint') }}
                 </p>
                 <FieldError :message="errors.types" />

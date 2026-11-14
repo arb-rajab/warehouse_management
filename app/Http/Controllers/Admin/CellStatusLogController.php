@@ -3,18 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AcknowledgeCellStatusLogFlagsRequest;
 use App\Http\Requests\Admin\FilterCellStatusLogsRequest;
 use App\Http\Resources\CellStatusLogResource;
 use App\Models\CellStatusLog;
+use App\Models\Warehouse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CellStatusLogController extends Controller
 {
-    use BuildsCellLogFilterOptions;
+    use BuildsCellLogFilterOptions, FlashesAdminSuccess;
 
     public function index(FilterCellStatusLogsRequest $request): Response
     {
@@ -22,8 +24,9 @@ class CellStatusLogController extends Controller
 
         $logs = CellStatusLog::query()
             ->forListing()
-            ->with(CellStatusLog::WITH_FLAG_DETAILS)
+            ->with([...CellStatusLog::WITH_FLAG_DETAILS, ...CellStatusLog::WITH_WAREHOUSES])
             ->filtered($request)
+            ->forWarehouses($request->warehouseIds())
             ->sorted($request)
             ->paginate($perPage)
             ->withQueryString();
@@ -32,11 +35,15 @@ class CellStatusLogController extends Controller
 
         return Inertia::render('Admin/CellStatusLogs/Index', [
             'logs' => $this->paginated(CellStatusLogResource::collection($logs)),
+            'multipleWarehouses' => Warehouse::hasMultiple(),
             'filters' => [
-                ...$request->only(['product_id', 'pallet_id', 'row_id', 'column_number', 'user_id', 'action', 'date_from', 'date_to', 'created_within_days', 'expiration_date_from', 'expiration_date_to', 'expires_within_days', 'sort_by', 'sort_direction', 'flagged']),
+                ...$request->only(['product_id', 'pallet_id', 'row_id', 'column_number', 'user_id', 'action', 'date_from', 'date_to', 'created_within_days', 'expiration_date_from', 'expiration_date_to', 'expires_within_days', 'sort_by', 'sort_direction', 'flagged', 'warehouse_ids']),
                 'per_page' => $perPage,
             ],
-            'filterOptions' => $this->productRowUserActionFilterOptions($request->productIds()),
+            'filterOptions' => [
+                ...$this->productRowUserActionFilterOptions($request->productIds()),
+                'warehouses' => Warehouse::selectedOptions($request->warehouseIds() ?? []),
+            ],
         ]);
     }
 
@@ -49,6 +56,8 @@ class CellStatusLogController extends Controller
             'acknowledged_at' => now(),
             'acknowledged_by' => $request->user()->id,
         ]);
+
+        $this->flashAdminSuccess('flags_have_been_acknowledged_successfully');
 
         return $this->redirectAfterAcknowledge($request, $cellStatusLog);
     }

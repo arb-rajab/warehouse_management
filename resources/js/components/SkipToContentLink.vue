@@ -5,7 +5,7 @@ import { t } from '@/lib/i18n';
 <template>
     <a
         href="#main"
-        class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-neutral-900 dark:focus:text-white"
+        class="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-ink focus:shadow-pop focus:ring-2 focus:ring-focus"
     >
         {{ t('nav.skipToContent') }}
     </a>

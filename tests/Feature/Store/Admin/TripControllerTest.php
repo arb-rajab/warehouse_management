@@ -63,7 +63,8 @@ test('a trip can be created with a departure checkpoint and driver using the act
     $driver = createStoreUser('driver');
     $truck = Truck::create(['name' => 'Available truck']);
 
-    $this->post(route('trips.store'), [...tripTestPayload($truck), 'driver_id' => $driver->id])->assertRedirect();
+    $this->post(route('trips.store'), [...tripTestPayload($truck), 'driver_id' => $driver->id])->assertRedirect()
+        ->assertInertiaFlash('success', 'Trip has been created successfully');
 
     $trip = Trip::firstOrFail();
     expect($trip->driver_id)->toBe($driver->id)
@@ -759,7 +760,8 @@ describe('trip deletion', function () {
         createTripTestCheckpoint($kept);
         actingAsStoreUser(createStoreStaff('delete_trip'));
 
-        $this->post(route('trips.bulk-trip-delete', ['list' => 'today', 'search' => 'Trip']), ['id' => [$first->id, $second->id]])->assertRedirect(route('trips.today-trips', ['search' => 'Trip']));
+        $this->post(route('trips.bulk-trip-delete', ['list' => 'today', 'search' => 'Trip']), ['id' => [$first->id, $second->id]])->assertRedirect(route('trips.today-trips', ['search' => 'Trip']))
+            ->assertInertiaFlash('success', 'Trips have been deleted successfully');
 
         expect(Trip::pluck('id')->all())->toBe([$kept->id])->and(Checkpoint::pluck('trip_id')->all())->toBe([$kept->id])
             ->and($first->truck->fresh()->is_available)->toBeTrue()->and($second->truck->fresh()->is_available)->toBeTrue()

@@ -246,11 +246,9 @@ function editorProps(): EditorOptions['editorProps'] {
                   }
                 : {}),
             class: [
-                'min-h-48 rounded-md border bg-white p-3 text-sm text-gray-900 focus:ring-2 focus:ring-gray-400 focus:outline-none dark:bg-neutral-900 dark:text-neutral-100',
-                message.value
-                    ? 'border-red-600 dark:border-red-400'
-                    : 'border-gray-300 dark:border-neutral-700',
-                '[&_a]:text-blue-700 [&_a]:underline dark:[&_a]:text-blue-300 [&_blockquote]:border-s-4 [&_blockquote]:border-gray-300 [&_blockquote]:ps-3 dark:[&_blockquote]:border-neutral-600 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:font-semibold [&_h5]:font-semibold [&_h6]:font-semibold [&_img]:inline [&_img]:max-w-full [&_li]:ms-6 [&_ol]:list-decimal [&_p]:my-1 [&_pre]:rounded [&_pre]:bg-gray-100 [&_pre]:p-2 dark:[&_pre]:bg-neutral-800 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-gray-300 [&_td]:p-2 dark:[&_td]:border-neutral-600 [&_th]:border [&_th]:border-gray-300 [&_th]:p-2 [&_th]:font-semibold dark:[&_th]:border-neutral-600 [&_ul]:list-disc [&_.selectedCell]:bg-blue-100 dark:[&_.selectedCell]:bg-blue-950 [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-blue-500',
+                'min-h-48 rounded-md border bg-surface p-3 text-sm text-ink focus:ring-2 focus:ring-focus focus:outline-none',
+                message.value ? 'border-danger' : 'border-line-strong',
+                '[&_a]:text-link [&_a]:underline [&_blockquote]:border-s-4 [&_blockquote]:border-line-strong [&_blockquote]:ps-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-bold [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:font-semibold [&_h5]:font-semibold [&_h6]:font-semibold [&_img]:inline [&_img]:max-w-full [&_li]:ms-6 [&_ol]:list-decimal [&_p]:my-1 [&_pre]:rounded [&_pre]:bg-subtle [&_pre]:p-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line-strong [&_td]:p-2 [&_th]:border [&_th]:border-line-strong [&_th]:p-2 [&_th]:font-semibold [&_ul]:list-disc [&_.selectedCell]:bg-info-soft [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-focus',
             ].join(' '),
         },
         transformPastedHTML: cleanPastedHtml,
@@ -665,7 +663,7 @@ onUpdated(syncTabStops);
                 data-toolbar-item="blockStyle"
                 :aria-label="t('store.editor.heading')"
                 :value="blockStyle"
-                class="cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                class="cursor-pointer rounded-md border border-line-strong bg-surface px-3 py-2 text-sm"
                 @change="applyFromControl($event, setBlockStyle)"
             >
                 <option value="paragraph">
