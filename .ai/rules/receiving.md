@@ -66,8 +66,10 @@ product owner.
 - `receipt_pallets` (`ReceiptPallet`): one row per pallet as written on the
   bill: `product_id` (signed `integer`, restrict, per
   [shared-database](shared-database.md)), `boxes` (>= 1, by the request),
-  `expiration_date` (nullable), `position` (the order the admin typed, 0
-  upwards) and `pallet_id`, set when finalizing creates the real pallet and
+  `expiration_date` (nullable), `note` (nullable, 255: e.g. the real product
+  name of a pallet recorded under a stand-in product; copied onto the pallet
+  at finalize, see [pallet corrections](pallet-corrections.md)), `position`
+  (the order the admin typed, 0 upwards) and `pallet_id`, set when finalizing creates the real pallet and
   `nullOnDelete`, so the receipt survives a later pallet deletion.
 - Deleting a receipt cascades to its files and pallet entries; a finalized one
   cannot be deleted while its pallets exist (`pallets.receipt_id` restricts).
@@ -137,7 +139,9 @@ product owner.
   filter count them: the product is held. The products page's full/opened/
   expired/expiring columns already go through the cell and leave them out.
 - **Out of scope by design:** cell logs (written against a cell; the first is
-  the `stored` row `place()` writes), verification rounds and reports (they
+  the `stored` row `place()` writes; the one exception is a note or product
+  correction of an unplaced pallet, logged with no cell, see
+  [pallet corrections](pallet-corrections.md)), verification rounds and reports (they
   count cells), row/cell payloads and the map (reach pallets through cells).
 
 ## Placing and listing (mobile API)
@@ -169,8 +173,8 @@ FormRequest per endpoint that takes input.
 | Endpoint | Request | Answers | Errors |
 | --- | --- | --- | --- |
 | `GET receipts` (`api.v1.receipts.index`) | `FilterReceiptsRequest`: `warehouse_ids[]`, `status` | `ReceiptResource`s, newest first, 20 per page, with `pallets_count`/`files_count` | |
-| `POST receipts` (`.store`) | `StoreReceiptRequest`: `warehouse_id`, `note?`, `pallets[]?` (each `product_id`, `boxes` >= 1, `expiration_date?`) | 201, the detail (a draft) | |
-| `GET receipts/{receipt}` (`.show`) | | the detail: `note`, `files` (download `url`), `pallets` (`product_id`, `product`, `boxes`, `expiration_date`, in `position` order) | |
+| `POST receipts` (`.store`) | `StoreReceiptRequest`: `warehouse_id`, `note?`, `pallets[]?` (each `product_id`, `boxes` >= 1, `expiration_date?`, `note?` <= 255) | 201, the detail (a draft) | |
+| `GET receipts/{receipt}` (`.show`) | | the detail: `note`, `files` (download `url`), `pallets` (`product_id`, `product`, `boxes`, `expiration_date`, `note`, in `position` order) | |
 | `PUT receipts/{receipt}/pallets` (`.pallets.update`) | `UpdateReceiptPalletsRequest`: `pallets[]` (present, `[]` clears; same entry rules), `note?` (sent: set, null clears; omitted: kept) | the detail | 409 `receipt_finalized` |
 | `POST receipts/{receipt}/files` (`.files.store`, multipart) | `StoreReceiptFileRequest`: `file` (`ReceiptFile::MIMES`, `MAX_KILOBYTES`) | 201, `ReceiptFileResource` | 409 `receipt_finalized`, 422 `receipt_file_limit_reached` |
 | `GET receipts/{receipt}/files/{file}` (`.files.show`) | | the file inline (`private, no-store`) | 404 when the bytes are gone |
@@ -285,7 +289,7 @@ API only.
   thumbnail for a photo with an image-failed state, link for a PDF) and the
   pallets as written in typed order: a "No." column (the position on the bill,
   computed in the page), the product (`ProductOptionLabel` and its thumbnail),
-  boxes and expiry. **No pallet id, no entry id and no cell link anywhere**;
+  boxes, expiry and the entry's note. **No pallet id, no entry id and no cell link anywhere**;
   a draft shows a hint that the pallets are created when it is finalized.
 - **Bill download.** `ReceiptFile::inlineResponse()` is the one place a bill is
   read (404 when the bytes are gone, `private, no-store`, `nosniff`); the API

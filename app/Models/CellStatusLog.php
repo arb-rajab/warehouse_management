@@ -21,21 +21,26 @@ use Illuminate\Support\Collection;
 
 /**
  * @property int $id
- * @property int $cell_id
+ * @property int|null $cell_id null only for a record correction (note_changed, product_changed) of an unplaced pallet
  * @property int|null $related_cell_id
  * @property CellLogAction $action
- * @property CellState $from_state
- * @property CellState $to_state
+ * @property CellState|null $from_state null exactly when cell_id is
+ * @property CellState|null $to_state null exactly when cell_id is
  * @property int|null $product_id
+ * @property int|null $old_product_id the pallet's product before a product_changed entry (`product_id` is the new one)
  * @property int|null $pallet_id
  * @property int|null $boxes_count
  * @property int $user_id
  * @property string|null $note
+ * @property string|null $batch_id the UUID shared by the entries of one bulk correction request
+ * @property string|null $reason why the product was changed (product_changed from the bulk endpoint)
+ * @property string|null $old_note the pallet's own note before a note_changed/product_changed entry
+ * @property string|null $new_note the pallet's own note after it
  * @property-read Carbon|null $next_log_at
  * @property-read int $duration_seconds
  * @property-read bool $flagged
  */
-#[Fillable(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'boxes_count', 'user_id', 'note'])]
+#[Fillable(['cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'old_product_id', 'pallet_id', 'boxes_count', 'user_id', 'note', 'batch_id', 'reason', 'old_note', 'new_note'])]
 #[ObservedBy(CellStatusLogObserver::class)]
 class CellStatusLog extends Model
 {
@@ -47,7 +52,7 @@ class CellStatusLog extends Model
      *
      * @var list<string>
      */
-    public const array SELECT_COLUMNS = ['id', 'cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'pallet_id', 'boxes_count', 'user_id', 'note', 'created_at'];
+    public const array SELECT_COLUMNS = ['id', 'cell_id', 'related_cell_id', 'action', 'from_state', 'to_state', 'product_id', 'old_product_id', 'pallet_id', 'boxes_count', 'user_id', 'note', 'batch_id', 'reason', 'old_note', 'new_note', 'created_at'];
 
     /**
      * Eager loads needed by CellStatusLogResource — shared by every listing (admin and API).
@@ -62,6 +67,7 @@ class CellStatusLog extends Model
         'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
         'product.thumbnailUpload:id,file_name,external_link',
         'product.setting:product_id,boxes_count',
+        'oldProduct:id,name,ar_name',
         'pallet:id,expiration_date',
         'user:id,name',
     ];
@@ -147,6 +153,17 @@ class CellStatusLog extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * The product a pallet held before a `product_changed` entry; null on
+     * every other action (and on product changes logged before it existed).
+     *
+     * @return BelongsTo<Product, $this>
+     */
+    public function oldProduct(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'old_product_id');
     }
 
     /**

@@ -138,6 +138,7 @@ const palletRows = computed(() =>
                     t('receipts.show.columns.product'),
                     t('receipts.show.columns.boxes'),
                     t('receipts.show.columns.expiration'),
+                    t('receipts.show.columns.note'),
                 ]"
                 :rows="palletRows"
                 :empty-message="t('receipts.show.palletsEmpty')"
@@ -167,6 +168,13 @@ const palletRows = computed(() =>
                                 ? formatDate(row.expiration_date)
                                 : '—'
                         }}
+                    </td>
+                    <td
+                        class="max-w-xs truncate px-4 py-2 text-muted"
+                        :title="row.note ?? undefined"
+                        data-testid="receipt-entry-note"
+                    >
+                        {{ row.note ?? '—' }}
                     </td>
                 </template>
             </DataTable>

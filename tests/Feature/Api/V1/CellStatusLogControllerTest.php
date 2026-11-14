@@ -91,6 +91,12 @@ test('an authenticated worker can list cell logs with every property the app rea
         'created_at' => $log->created_at->toIso8601String(),
         'next_log_at' => null,
         'duration_seconds' => 0,
+        'batch_id' => null,
+        'reason' => null,
+        'old_note' => null,
+        'new_note' => null,
+        'old_product' => null,
+        'new_product' => null,
     ]);
 
     Carbon::setTestNow();

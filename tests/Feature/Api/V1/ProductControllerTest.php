@@ -520,6 +520,7 @@ test('an authenticated worker can list every current pallet of a product, ordere
             'flat_number' => 1,
         ],
         'is_active' => true,
+        'note' => null,
         'placed' => true,
         'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
@@ -670,6 +671,7 @@ test('unplaced pallets are listed as stock with placed false and no location, af
             'placed' => false,
             'location' => null,
             'is_active' => null,
+            'note' => null,
             'warehouse' => ['id' => $warehouse->id, 'name' => 'Annex'],
         ]);
 });

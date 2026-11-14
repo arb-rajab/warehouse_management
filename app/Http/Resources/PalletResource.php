@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property-read Carbon|null $expiration_date
  * @property-read CarbonImmutable|null $cell_entered_at
  * @property-read int $remaining_boxes
+ * @property-read string|null $note
  * @property-read Product $product
  * @property-read Cell|null $cell
  *
@@ -44,6 +45,8 @@ class PalletResource extends JsonResource
             'cell_entered_at' => $this->whenLoaded('cellEnteredLog', fn () => $this->cell_entered_at?->toIso8601String()),
             'remaining_boxes' => $this->remaining_boxes,
             'boxes_depleted_message' => $this->remaining_boxes === 0 ? __('messages.pallet_boxes_depleted') : null,
+            /** The pallet's own note (for example the real product name written on it); null when it has none. */
+            'note' => $this->note,
             'product' => $this->whenLoaded('product', fn () => new ProductResource($this->product)),
             'location' => $this->whenLoaded('cell', fn () => $this->cell?->toLocationArray()),
             'warehouse' => $this->when(

@@ -63,6 +63,12 @@ test('an authenticated admin can view the cell log with every property the table
                 ->where('to_state', 'empty')
                 ->where('note', 'Consolidating stock.')
                 ->where('boxes_count', 7)
+                ->where('batch_id', null)
+                ->where('reason', null)
+                ->where('old_note', null)
+                ->where('new_note', null)
+                ->where('old_product', null)
+                ->where('new_product', null)
                 ->where('created_at', $log->created_at->toIso8601String())
                 ->has('cell', fn (Assert $cell) => $cell
                     ->where('row_letter', 'A')
@@ -99,7 +105,7 @@ test('an authenticated admin can view the cell log with every property the table
             )
             ->has('filterOptions.rows', 2)
             ->where('filterOptions.maxColumnNumber', 2)
-            ->has('filterOptions.actions', 9)
+            ->has('filterOptions.actions', 10)
     );
 
     Carbon::setTestNow();

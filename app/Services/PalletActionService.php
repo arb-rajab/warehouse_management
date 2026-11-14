@@ -279,6 +279,7 @@ class PalletActionService
         ?string $note,
         ?int $relatedCellId = null,
         ?int $boxesCount = null,
+        ?int $oldProductId = null,
     ): void {
         CellStatusLog::create([
             'cell_id' => $cell->id,
@@ -287,6 +288,7 @@ class PalletActionService
             'from_state' => $fromState,
             'to_state' => $toState,
             'product_id' => $productId,
+            'old_product_id' => $oldProductId,
             'pallet_id' => $palletId,
             'boxes_count' => $boxesCount,
             'user_id' => $userId,
@@ -607,9 +609,10 @@ class PalletActionService
      * dashboard stats cache.
      *
      * A product change is logged as a `product_changed` CellStatusLog row
-     * carrying the new product, so the cell's history shows when (and by whom)
-     * the pallet stopped being what it was stored as — the previous product is
-     * on the pallet's earlier log rows. An expiration date or a positive
+     * carrying the new product and the previous one (`old_product_id`), so
+     * the cell's history shows when (and by whom) the pallet stopped being
+     * what it was stored as. The bulk product change of any pallet, placed or
+     * not, is PalletCorrectionService::changeProduct(). An expiration date or a positive
      * remaining_boxes correction on its own still writes no log row. The
      * product is looked up here too, like store() does, rather than trusting
      * the caller's validation to have run against the same database state.
@@ -637,6 +640,7 @@ class PalletActionService
             }
 
             $product = Product::query()->select(['id'])->findOrFail($productId);
+            $oldProductId = $lockedPallet->product_id;
 
             $lockedPallet->update([
                 'product_id' => $product->id,
@@ -655,6 +659,7 @@ class PalletActionService
                     $userId,
                     $note,
                     boxesCount: $lockedPallet->remaining_boxes,
+                    oldProductId: $oldProductId,
                 );
             }
         });

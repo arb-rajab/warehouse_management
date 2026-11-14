@@ -33,8 +33,12 @@ export function acknowledgeFlags(log: CellStatusLog, returnTo?: 'user'): void {
     );
 }
 
+/**
+ * The slot(s) a log row names: a transfer's two sides, else the log's cell —
+ * null `from` only for a correction of a pallet with no cell yet.
+ */
 export function transferPair(log: CellStatusLog): {
-    from: CellSlotLocation;
+    from: CellSlotLocation | null;
     to: CellSlotLocation | null;
 } {
     if (log.action === 'transferred_in' && log.related_cell) {
@@ -42,6 +46,15 @@ export function transferPair(log: CellStatusLog): {
     }
 
     return { from: log.cell, to: log.related_cell };
+}
+
+/**
+ * Whether a log row is a record correction of the pallet's own data (its
+ * product or its note) rather than a shelf action: it shows the old and new
+ * values, and has no states when the pallet has no cell yet.
+ */
+export function isPalletCorrection(log: CellStatusLog): boolean {
+    return log.action === 'product_changed' || log.action === 'note_changed';
 }
 
 /**

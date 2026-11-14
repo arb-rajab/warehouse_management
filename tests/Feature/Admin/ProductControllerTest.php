@@ -57,7 +57,7 @@ test('an authenticated admin can view the products index with every property the
             )
             ->where('expiringSoonDays', 45)
             ->has('filterOptions.rows', 1)
-            ->has('filterOptions.actions', 9)
+            ->has('filterOptions.actions', 10)
     );
 
     Carbon::setTestNow();

@@ -268,6 +268,36 @@ test('finalize creates the pallets in typed order and links each entry, whatever
         ->and($receipt->fresh()->finalized_by)->toBe($user->id);
 });
 
+test('finalize copies each entry note onto the pallet it creates', function () {
+    $user = User::factory()->create();
+    $receipt = Receipt::factory()->create();
+    ReceiptFile::factory()->for($receipt)->create();
+    $noted = ReceiptPallet::factory()->for($receipt)->create(['note' => 'Olive oil 5L, Brand X', 'position' => 0]);
+    $bare = ReceiptPallet::factory()->for($receipt)->create(['note' => null, 'position' => 1]);
+
+    app(ReceiptService::class)->finalize($receipt, $user->id);
+
+    expect(Pallet::query()->findOrFail($noted->fresh()->pallet_id)->note)->toBe('Olive oil 5L, Brand X')
+        ->and(Pallet::query()->findOrFail($bare->fresh()->pallet_id)->note)->toBeNull();
+});
+
+test('create and replacePallets store each entry note, and an entry without one has none', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $service = app(ReceiptService::class);
+
+    $receipt = $service->create($user->id, Warehouse::firstOrCreateDefault()->id, null, [
+        ['product_id' => $product->id, 'boxes' => 1, 'expiration_date' => null, 'note' => 'Line 4: olive oil'],
+        ['product_id' => $product->id, 'boxes' => 2, 'expiration_date' => null],
+    ]);
+
+    expect($receipt->pallets()->orderBy('position')->pluck('note')->all())->toBe(['Line 4: olive oil', null]);
+
+    $service->replacePallets($receipt, [['product_id' => $product->id, 'boxes' => 3, 'expiration_date' => null, 'note' => 'Line 9: rice']], []);
+
+    expect($receipt->pallets()->pluck('note')->all())->toBe(['Line 9: rice']);
+});
+
 test('the exceptions carry the error code their JSON answer names', function () {
     $finalized = new ReceiptFinalizedException;
     $invalid = new InvalidReceiptStateException('receipt_has_no_pallets', 'Add a pallet.');

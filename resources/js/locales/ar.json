@@ -264,7 +264,8 @@
             "note": "ملاحظة",
             "doneBy": "بواسطة",
             "when": "الوقت",
-            "ongoing": "مستمر"
+            "ongoing": "مستمر",
+            "noCell": "لم توضع في خلية بعد"
         },
         "actions": {
             "stored": "تم التخزين",
@@ -276,14 +277,21 @@
             "transferred": "تم النقل",
             "deactivated": "تم التعطيل",
             "reactivated": "تمت إعادة التفعيل",
-            "product_changed": "تم تغيير المنتج"
+            "product_changed": "تم تغيير المنتج",
+            "note_changed": "تم تغيير ملاحظة المنصة"
         },
         "states": {
             "empty": "فارغ",
             "full": "ممتلئ",
             "opened": "مفتوح"
         },
-        "empty": "لا يوجد نشاط بعد."
+        "empty": "لا يوجد نشاط بعد.",
+        "correction": {
+            "reason": "السبب",
+            "palletNote": "ملاحظة المنصة",
+            "noNote": "لا شيء",
+            "wasProduct": "كان"
+        }
     },
     "cellVerificationRound": {
         "title": "جولات التحقق من الخلايا",
@@ -4069,7 +4077,8 @@
                 "number": "الرقم",
                 "product": "المنتج",
                 "boxes": "الصناديق",
-                "expiration": "تاريخ الانتهاء"
+                "expiration": "تاريخ الانتهاء",
+                "note": "ملاحظة"
             }
         }
     }

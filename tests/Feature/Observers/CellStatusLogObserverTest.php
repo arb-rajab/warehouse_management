@@ -66,6 +66,21 @@ test('rapid_actions does not count an action outside the rolling window', functi
     expect($log->flags()->where('reason', CellLogFlagReason::RapidActions)->exists())->toBeFalse();
 });
 
+test('rapid_actions does not count the entries of a bulk correction towards the threshold', function () {
+    Carbon::setTestNow('2026-08-01 10:00:00');
+    $user = User::factory()->create();
+
+    // Bulk corrections are inserted in one statement and skip the observer;
+    // only their batch_id tells them apart from shelf actions.
+    CellStatusLog::factory()->count(12)->create(['user_id' => $user->id, 'action' => CellLogAction::NoteChanged, 'batch_id' => '7c1d4a52-5b2e-4a51-9d3a-0f2b8d9c1e11']);
+    CellStatusLogFlag::query()->delete();
+
+    Carbon::setTestNow(now()->addSeconds(10));
+    $log = CellStatusLog::factory()->create(['user_id' => $user->id]);
+
+    expect($log->flags()->where('reason', CellLogFlagReason::RapidActions)->exists())->toBeFalse();
+});
+
 test('off_hours flags an action just outside the configured working-hours window', function () {
     Carbon::setTestNow('2026-08-01 05:59:00');
 

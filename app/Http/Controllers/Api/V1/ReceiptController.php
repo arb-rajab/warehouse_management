@@ -68,7 +68,7 @@ class ReceiptController extends Controller
 
     /**
      * A receipt with its bill files (each with its download `url`) and its
-     * pallets as written on the bill (product, boxes, expiry), in the order
+     * pallets as written on the bill (product, boxes, expiry, note), in the order
      * they were typed.
      */
     public function show(Receipt $receipt): ReceiptResource
@@ -87,7 +87,8 @@ class ReceiptController extends Controller
     }
 
     /**
-     * Finalize a draft: one unplaced pallet per pallet entry, owned by the
+     * Finalize a draft: one unplaced pallet per pallet entry (carrying the
+     * entry's `note`), owned by the
      * receipt's warehouse (`GET pallets/unplaced`, then
      * `POST pallets/{pallet}/place`). The receipt can no longer change
      * afterwards.

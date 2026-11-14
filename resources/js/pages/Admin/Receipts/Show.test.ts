@@ -62,6 +62,7 @@ function entry(
         },
         boxes: 24,
         expiration_date: '2027-03-15',
+        note: 'Olive oil 5L, Brand X',
         ...overrides,
     };
 }
@@ -93,6 +94,7 @@ function detail(overrides: Partial<ReceiptDetail> = {}): ReceiptDetail {
                 },
                 boxes: 6,
                 expiration_date: null,
+                note: null,
             }),
         ],
         ...overrides,
@@ -262,7 +264,7 @@ describe('Receipts Show', () => {
     });
 
     describe('pallets as written', () => {
-        it('has number, product, boxes and expiration columns and no id column', () => {
+        it('has number, product, boxes, expiration and note columns and no id column', () => {
             const wrapper = mountPage();
 
             expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual([
@@ -270,6 +272,7 @@ describe('Receipts Show', () => {
                 t('receipts.show.columns.product'),
                 t('receipts.show.columns.boxes'),
                 t('receipts.show.columns.expiration'),
+                t('receipts.show.columns.note'),
             ]);
             expect(wrapper.text()).toContain(
                 t('receipts.show.pallets', { count: 2 }),
@@ -297,6 +300,15 @@ describe('Receipts Show', () => {
             expect(second[1].text()).toContain('Lentils');
             expect(second[2].text()).toBe('6');
             expect(second[3].text()).toBe('—');
+        });
+
+        it("shows each row's note, and a dash for a row without one", () => {
+            const wrapper = mountPage();
+            const first = rowCells(wrapper, 0)[4];
+
+            expect(first.text()).toBe('Olive oil 5L, Brand X');
+            expect(first.attributes('title')).toBe('Olive oil 5L, Brand X');
+            expect(rowCells(wrapper, 1)[4].text()).toBe('—');
         });
 
         it('shows a thumbnail only for a product that has an image', () => {

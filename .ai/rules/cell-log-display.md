@@ -63,3 +63,15 @@ A single-warehouse system renders nothing extra.
   warehouses never merge unrelated rows. Layout: each side is a `min-w-0` block
   that truncates with a `title`; the pair wraps on narrow screens and the arrow
   keeps `rtl:rotate-180`.
+
+## Record corrections and cell-less entries
+
+`note_changed` and `product_changed` are record corrections
+(`isPalletCorrection()`). `CellStatusLogRowCells` shows "Not placed yet"
+instead of a slot when `cell` is null (a correction of an unplaced pallet;
+`transferPair()` then returns a null `from`), no state line when the states
+are null, "Was: <old product>" under the product, and in the note column the
+`reason`, the pallet note change (`old_note` → `new_note`, "none" for null;
+only on `note_changed` or when either is set) and any action note. See
+[pallet corrections](pallet-corrections.md).
+

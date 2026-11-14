@@ -400,4 +400,108 @@ describe('CellStatusLogRowCells', () => {
         expect(productCell.text()).toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('Widgets');
     });
+
+    describe('record corrections', () => {
+        const noteChange = (overrides: Partial<CellStatusLog> = {}) =>
+            cellLog({
+                action: 'note_changed',
+                batch_id: '0b5e1d6e-2f43-4a7c-9a39-2f0c3f8f9d10',
+                old_note: 'Olive oil 5L',
+                new_note: 'Olive oil 5L, Brand X',
+                ...overrides,
+            });
+
+        it('says the pallet has no cell yet instead of a slot link', () => {
+            const wrapper = mountCells(
+                noteChange({ cell: null, from_state: null, to_state: null }),
+            );
+            const cellColumn = wrapper.findAll('td')[0];
+
+            expect(
+                cellColumn.get('[data-testid="cell-log-no-cell"]').text(),
+            ).toBe(t('cellLog.columns.noCell'));
+            expect(cellColumn.findComponent(TableLink).exists()).toBe(false);
+        });
+
+        it('shows no state transition when the entry has no states', () => {
+            const wrapper = mountCells(
+                noteChange({ cell: null, from_state: null, to_state: null }),
+            );
+            const actionCell = wrapper.findAll('td')[1];
+
+            expect(actionCell.text()).toBe(cellLogActionLabel('note_changed'));
+            expect(actionCell.text()).not.toContain('→');
+        });
+
+        it('labels the note_changed action', () => {
+            expect(cellLogActionLabel('note_changed')).toBe(
+                t('cellLog.actions.note_changed'),
+            );
+            expect(t('cellLog.actions.note_changed')).not.toBe(
+                'cellLog.actions.note_changed',
+            );
+        });
+
+        it('shows the old and new pallet note', () => {
+            const cell = mountCells(noteChange()).get(
+                '[data-testid="cell-log-correction"]',
+            );
+
+            expect(cell.text()).toContain(t('cellLog.correction.palletNote'));
+            expect(cell.text()).toContain('Olive oil 5L');
+            expect(cell.text()).toContain('Olive oil 5L, Brand X');
+        });
+
+        it('names a cleared note as none', () => {
+            const cell = mountCells(noteChange({ new_note: null })).get(
+                '[data-testid="cell-log-correction"]',
+            );
+
+            expect(cell.text()).toContain(t('cellLog.correction.noNote'));
+        });
+
+        it('shows the reason and the previous product of a product change', () => {
+            const wrapper = mountCells(
+                cellLog({
+                    action: 'product_changed',
+                    reason: 'Arrived as DIVERSEN',
+                    old_product: {
+                        id: 101,
+                        name: 'DIVERSEN',
+                        ar_name: 'متنوع',
+                    },
+                    new_product: { id: 10, name: 'Widgets', ar_name: 'ودجات' },
+                    old_note: 'Olive oil 5L',
+                    new_note: null,
+                }),
+            );
+
+            expect(
+                wrapper.get('[data-testid="cell-log-old-product"]').text(),
+            ).toBe(`${t('cellLog.correction.wasProduct')}: DIVERSEN`);
+            const correction = wrapper.get(
+                '[data-testid="cell-log-correction"]',
+            );
+            expect(correction.text()).toContain(
+                `${t('cellLog.correction.reason')}: Arrived as DIVERSEN`,
+            );
+            expect(correction.text()).toContain('Olive oil 5L');
+        });
+
+        it('leaves the note line out of a product change that touched no note', () => {
+            const correction = mountCells(
+                cellLog({ action: 'product_changed', note: 'Fixed by admin' }),
+            ).get('[data-testid="cell-log-correction"]');
+
+            expect(correction.text()).toBe('Fixed by admin');
+        });
+
+        it('shows no previous product on other actions', () => {
+            expect(
+                mountCells(cellLog())
+                    .find('[data-testid="cell-log-old-product"]')
+                    .exists(),
+            ).toBe(false);
+        });
+    });
 });

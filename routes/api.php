@@ -39,6 +39,13 @@ Route::prefix('v1')->group(function () {
         Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->whereNumber('product')->name('api.v1.product-barcodes.store');
 
         Route::post('pallets', [PalletController::class, 'store'])->name('api.v1.pallets.store');
+        // The admin's pallet list and bulk corrections: WMS admins only, like
+        // receiving. Before pallets/{pallet}. See .ai/rules/pallet-corrections.md.
+        Route::middleware('role:admin')->group(function () {
+            Route::get('pallets', [PalletController::class, 'index'])->name('api.v1.pallets.index');
+            Route::post('pallets/bulk/note', [PalletController::class, 'bulkNote'])->name('api.v1.pallets.bulk-note');
+            Route::post('pallets/change-product', [PalletController::class, 'changeProduct'])->name('api.v1.pallets.change-product');
+        });
         // Before pallets/{pallet}, so "unplaced" is not bound as a pallet id.
         Route::get('pallets/unplaced', [PalletController::class, 'unplaced'])->middleware('cache.headers:private;etag')->name('api.v1.pallets.unplaced');
         Route::get('pallets/{pallet}', [PalletController::class, 'show'])->name('api.v1.pallets.show');

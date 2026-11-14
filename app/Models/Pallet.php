@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $receipt_id the truck receipt the pallet arrived on, if it came from one
  * @property ?Carbon $expiration_date
  * @property int $remaining_boxes
+ * @property string|null $note the pallet's own note (for example the real product name written on it), not an action note
  * @property-read Cell|null $cell
  * @property-read Receipt|null $receipt
  * @property-read Warehouse|null $warehouse
@@ -33,7 +34,7 @@ use Illuminate\Support\Carbon;
  * @property-read CellStatusLog|null $cellEnteredLog
  * @property-read CarbonImmutable|null $cell_entered_at
  */
-#[Fillable(['product_id', 'cell_id', 'receipt_id', 'expiration_date', 'remaining_boxes'])]
+#[Fillable(['product_id', 'cell_id', 'receipt_id', 'expiration_date', 'remaining_boxes', 'note'])]
 #[ObservedBy(PalletObserver::class)]
 class Pallet extends Model
 {
@@ -67,6 +68,10 @@ class Pallet extends Model
      * cell's state is included because opening a pallet changes only that; an
      * unplaced pallet has no cell, so its ETag reads no relation, and placing
      * it changes `cell_id` and therefore the ETag.
+     *
+     * The pallet's `note` is part of it only when set, so the ETag of a pallet
+     * without a note is the one it had before notes existed, and two note
+     * changes in the same second still differ.
      */
     public function etag(): string
     {
@@ -78,6 +83,7 @@ class Pallet extends Model
             $this->remaining_boxes,
             $this->state?->value,
             $this->updated_at?->getTimestamp(),
+            ...($this->note === null ? [] : [$this->note]),
         ]));
     }
 

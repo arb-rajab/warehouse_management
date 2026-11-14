@@ -226,7 +226,7 @@ test('a draft receipt shows its files with their admin download url and its pall
     $pdf = ReceiptFile::factory()->for($receipt)->pdf()->create(['original_name' => 'back.pdf', 'size' => 4096]);
     // Inserted out of order: position decides, not the row id.
     ReceiptPallet::factory()->for($receipt)->create(['product_id' => $gadgets->id, 'boxes' => 7, 'expiration_date' => null, 'position' => 1]);
-    ReceiptPallet::factory()->for($receipt)->create(['product_id' => $widgets->id, 'boxes' => 12, 'expiration_date' => '2027-03-04', 'position' => 0]);
+    ReceiptPallet::factory()->for($receipt)->create(['product_id' => $widgets->id, 'boxes' => 12, 'expiration_date' => '2027-03-04', 'note' => 'Olive oil 5L', 'position' => 0]);
 
     $response = $this->get("/admin/receipts/{$receipt->id}");
 
@@ -248,8 +248,8 @@ test('a draft receipt shows its files with their admin download url and its pall
                     ['id' => $pdf->id, 'original_name' => 'back.pdf', 'mime_type' => 'application/pdf', 'size' => 4096, 'url' => route('admin.receipts.files.show', ['receipt' => $receipt->id, 'file' => $pdf->id]), 'created_at' => $pdf->created_at->toIso8601String()],
                 ])
                 ->where('pallets', [
-                    ['product_id' => $widgets->id, 'product' => ['id' => $widgets->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'image_url' => null, 'boxes_count' => 10, 'active' => true], 'boxes' => 12, 'expiration_date' => '2027-03-04'],
-                    ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 7, 'expiration_date' => null],
+                    ['product_id' => $widgets->id, 'product' => ['id' => $widgets->id, 'name' => 'Widgets', 'ar_name' => 'ودجات', 'image_url' => null, 'boxes_count' => 10, 'active' => true], 'boxes' => 12, 'expiration_date' => '2027-03-04', 'note' => 'Olive oil 5L'],
+                    ['product_id' => $gadgets->id, 'product' => ['id' => $gadgets->id, 'name' => 'Gadgets', 'ar_name' => 'أدوات', 'image_url' => null, 'boxes_count' => 20, 'active' => true], 'boxes' => 7, 'expiration_date' => null, 'note' => null],
                 ])
             )
     );
@@ -275,7 +275,7 @@ test('a finalized receipt shows who finalized it, the same pallets as written, a
     $receipt = Receipt::factory()->finalized()->create();
     ReceiptFile::factory()->for($receipt)->create();
     $pallet = Pallet::factory()->unplaced()->create(['receipt_id' => $receipt->id, 'product_id' => $product->id]);
-    ReceiptPallet::factory()->for($receipt)->create(['product_id' => $product->id, 'boxes' => 9, 'position' => 0, 'pallet_id' => $pallet->id]);
+    ReceiptPallet::factory()->for($receipt)->create(['product_id' => $product->id, 'boxes' => 9, 'note' => 'Olive oil 5L', 'position' => 0, 'pallet_id' => $pallet->id]);
 
     $response = $this->get("/admin/receipts/{$receipt->id}");
 
@@ -288,6 +288,7 @@ test('a finalized receipt shows who finalized it, the same pallets as written, a
                 ->where('product_id', $product->id)
                 ->where('boxes', 9)
                 ->where('expiration_date', ReceiptPallet::query()->first()->expiration_date?->toDateString())
+                ->where('note', 'Olive oil 5L')
                 ->has('product')
             )
     );

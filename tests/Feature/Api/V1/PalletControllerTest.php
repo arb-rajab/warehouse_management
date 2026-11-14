@@ -47,6 +47,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
         'cell_entered_at' => $storedLog->created_at->toIso8601String(),
         'remaining_boxes' => 10,
         'boxes_depleted_message' => null,
+        'note' => null,
         'product' => [
             'id' => $product->id,
             'name' => 'Widgets',
@@ -101,6 +102,7 @@ test('an authenticated worker can add a pallet to an empty slot with no expirati
         'cell_entered_at' => $storedLog->created_at->toIso8601String(),
         'remaining_boxes' => 10,
         'boxes_depleted_message' => null,
+        'note' => null,
         'product' => [
             'id' => $product->id,
             'name' => 'Widgets',
@@ -389,6 +391,7 @@ test('an authenticated worker can view a pallet with every property the app read
         'cell_entered_at' => null,
         'remaining_boxes' => 10,
         'boxes_depleted_message' => null,
+        'note' => null,
         'product' => [
             'id' => $product->id,
             'name' => 'Widgets',

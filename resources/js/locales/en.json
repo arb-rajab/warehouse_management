@@ -264,7 +264,8 @@
             "note": "Note",
             "doneBy": "Done by",
             "when": "When",
-            "ongoing": "Ongoing"
+            "ongoing": "Ongoing",
+            "noCell": "Not placed yet"
         },
         "actions": {
             "stored": "Stored",
@@ -276,14 +277,21 @@
             "transferred": "Transferred",
             "deactivated": "Deactivated",
             "reactivated": "Reactivated",
-            "product_changed": "Product changed"
+            "product_changed": "Product changed",
+            "note_changed": "Pallet note changed"
         },
         "states": {
             "empty": "Empty",
             "full": "Full",
             "opened": "Opened"
         },
-        "empty": "No activity yet."
+        "empty": "No activity yet.",
+        "correction": {
+            "reason": "Reason",
+            "palletNote": "Pallet note",
+            "noNote": "none",
+            "wasProduct": "Was"
+        }
     },
     "cellVerificationRound": {
         "title": "Cell Verification Rounds",
@@ -4069,7 +4077,8 @@
                 "number": "No.",
                 "product": "Product",
                 "boxes": "Boxes",
-                "expiration": "Expiration date"
+                "expiration": "Expiration date",
+                "note": "Note"
             }
         }
     }
