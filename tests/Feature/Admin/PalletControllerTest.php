@@ -5,6 +5,7 @@ use App\Enums\CellState;
 use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductImageReview;
 use App\Models\Receipt;
 use App\Models\Row;
 use App\Models\Setting;
@@ -240,6 +241,27 @@ test('an unauthenticated caller is redirected to login when viewing the matching
     $response->assertRedirect(route('login'));
 });
 
+test('storing a pallet records no product image review and ignores old image review fields', function () {
+    actingAsAdmin();
+
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cell = $row->cells()->where('flat_number', 2)->first();
+    $product = Product::factory()->boxesCount(10)->create();
+
+    $response = $this->post("/admin/cells/{$cell->id}/pallet", [
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+        'image_review_status' => 'doesnt_match',
+        'image_source' => 'https://cdn.example.com/old-client.png',
+    ]);
+
+    $response->assertRedirect(route('admin.rows.show', $row->letter));
+    $response->assertSessionHasNoErrors();
+    $response->assertInertiaFlash('success', 'Pallet has been stored successfully');
+    expect(Pallet::query()->count())->toBe(1);
+    expect(ProductImageReview::query()->count())->toBe(0);
+});
+
 test('an authenticated admin can store a pallet into an empty cell', function () {
     $admin = actingAsAdmin();
 
@@ -249,8 +271,6 @@ test('an authenticated admin can store a pallet into an empty cell', function ()
     $expirationDate = now()->addMonth()->toDateString();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => $expirationDate,
         'note' => 'Admin backfill.',
@@ -285,8 +305,6 @@ test('storing a pallet into a first-level cell opens it automatically', function
     $product = Product::factory()->boxesCount(10)->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -315,8 +333,6 @@ test('an authenticated admin can store a pallet with no expiration date', functi
     $product = Product::factory()->boxesCount(10)->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => null,
     ]);
@@ -335,8 +351,6 @@ test('storing a pallet into a non-empty cell is rejected with a non-field action
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -356,8 +370,6 @@ test('storing a pallet into an inactive cell is rejected with a non-field action
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -377,8 +389,6 @@ test('storing a pallet into a row under an unfinished verification round is reje
     CellVerificationRound::factory()->covering($row)->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -395,8 +405,6 @@ test('a mobile app user cannot store a pallet via the admin route', function () 
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -411,8 +419,6 @@ test('an unauthenticated caller cannot store a pallet and nothing changes', func
     $product = Product::factory()->create();
 
     $response = $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
@@ -1166,8 +1172,6 @@ test('storing a pallet into a first-level cell leaves it full when level 1 is no
     $product = Product::factory()->boxesCount(10)->create();
 
     $this->post("/admin/cells/{$cell->id}/pallet", [
-        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
-        'image_source' => $product->image_url,
         'product_id' => $product->id,
         'expiration_date' => now()->addMonth()->toDateString(),
     ])->assertRedirect(route('admin.rows.show', $row->letter));

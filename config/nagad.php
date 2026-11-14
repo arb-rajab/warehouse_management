@@ -11,5 +11,5 @@ return [
     'merchant_private_key' => env('NAGAD_MERCHANT_PRIVATE_KEY'),
     // Unset by default: the storefront sends route('nagad.callback'), which carries the /temp prefix.
     // Set it only to send Nagad somewhere else.
-    'callback_url' => env('NAGAD_CALLBACK_URL'),
+    'callback_url' => env('NAGAD_CALLBACK_URL') ?: null,
 ];

@@ -145,7 +145,7 @@ Mark a check `[x]` pass, `[!]` fail (add a note), `[-]` not applicable/skipped (
 - [ ] `POST login` returns a token; bad credentials rejected; throttled when abused. `POST logout` revokes it; `GET user`.
 - [ ] `GET dashboard`, `warehouses`, `rows`, `rows/full`, `rows/frozen` (ETag support: a repeat with `If-None-Match` is 304), `rows/{letter}/cells`, `rows/{letter}/cells/{cell}/flats/{flat}` (rows bind by **letter**, not id).
 - [ ] `GET products`, `products/{id}`, `products/{id}/pallets`; `POST products/{id}/barcodes` (201 / 409 `barcode_taken` / 422).
-- [ ] Pallets: `POST pallets` (needs `product_id`, `warehouse_id`, `row_letter`, `cell_number`, `flat_number`, `image_review_status`, and `image_source` equal to the product's current `image_url`), `GET pallets/unplaced`, `GET pallets/{id}`, `place`, `open` (only on levels where opening is allowed), `remove-boxes` (`boxes_count`), `empty`, `transfer` (`to_*` coordinates).
+- [ ] Pallets: `POST pallets` (needs `product_id`, `warehouse_id`, `row_letter`, `cell_number`, `flat_number`), `GET pallets/unplaced`, `GET pallets/{id}`, `place`, `open` (only on levels where opening is allowed), `remove-boxes` (`boxes_count`), `empty`, `transfer` (`to_*` coordinates).
 - [ ] A slot in a row that is in an active verification round answers 409 `rows_already_in_active_round`; storing on an occupied slot answers 409 `slot_not_empty`.
 - [ ] `GET cell-logs`; verification rounds index/store/show/complete; `POST cell-verification-reports`.
 - [ ] Receipts (admin role only): index, store, show, update pallets, finalize, file upload/show/delete.

@@ -74,7 +74,6 @@ class PalletController extends Controller
                 $request->input('expiration_date'),
                 $user->id,
                 $request->input('note'),
-                $request->imageReviewData(),
             );
         });
     }

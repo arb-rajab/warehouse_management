@@ -1,10 +1,7 @@
 <?php
 
-use App\Enums\CellState;
-use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductImageReview;
-use App\Models\Row;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -109,34 +106,6 @@ test('review history is paginated and excludes other products', function () {
     ProductImageReview::factory()->create();
     $this->get("/admin/products/{$product->id}/image-reviews")->assertOk()->assertJsonCount(10, 'reviews.data')->assertJsonPath('reviews.total', 11);
     $this->get("/admin/products/{$product->id}/image-reviews?page=2")->assertOk()->assertJsonCount(1, 'reviews.data');
-});
-
-test('warehouse placement requires a review and stores mismatches atomically with optional notes', function () {
-    $user = actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->sole();
-    $product = Product::factory()->imageUrl('https://cdn.example.com/reference.jpg')->create();
-    $url = "/admin/cells/{$cell->id}/pallet";
-    $this->post($url, ['product_id' => $product->id])->assertSessionHasErrors(['image_review_status', 'image_source']);
-    expect($cell->fresh()->state)->toBe(CellState::Empty);
-    $this->assertDatabaseCount('pallets', 0);
-    $this->post($url, ['product_id' => $product->id, 'image_review_status' => 'doesnt_match',
-        'image_source' => $product->image_url, 'image_review_note' => 'Different size'])
-        ->assertSessionHasNoErrors();
-    expect(Pallet::query()->sole()->product_id)->toBe($product->id)
-        ->and(ProductImageReview::query()->sole()->note)->toBe('Different size');
-    $this->post($url, ['product_id' => $product->id, 'image_review_status' => 'matches', 'image_source' => $product->image_url])->assertSessionHasErrors('action');
-    $this->assertDatabaseCount('wms_product_image_reviews', 1);
-});
-
-test('mobile placement cannot omit image verification', function () {
-    actingAsMobileUser();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $product = Product::factory()->create();
-    $this->postJson('/api/v1/pallets', ['product_id' => $product->id, 'row_letter' => $row->letter, 'cell_number' => 1, 'flat_number' => 1])
-        ->assertUnprocessable()->assertJsonValidationErrors('image_review_status');
-    $this->assertDatabaseCount('pallets', 0);
-    $this->assertDatabaseCount('wms_product_image_reviews', 0);
 });
 
 test('image uploads reject unsafe files', function () {
