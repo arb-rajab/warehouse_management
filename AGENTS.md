@@ -163,7 +163,7 @@ CI-Verified: tree=<head tree sha> groups=<groups that passed>
 ```
 
 CI's `plan` job then skips exactly those groups for that tree, which cuts a
-typical pull request from about 24 billed minutes to about 1. Ordinary code PRs
+typical pull request from about 24 runner minutes to about 1. Ordinary code PRs
 fail in `Plan CI jobs` before expensive jobs start if the trailer is missing,
 stale, incomplete, or the PR's merged tree differs from its head tree. Require
 `Plan CI jobs` in branch protection to block merging on that failure. Docs-only

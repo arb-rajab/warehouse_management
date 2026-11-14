@@ -139,7 +139,7 @@ jobs:
 
           if ! merge_tree="$(tree_of "$MERGE_SHA")" || ! head_tree="$(tree_of "$HEAD_SHA")" \
             || ! gh api "repos/$REPO/commits/$HEAD_SHA" --jq '.commit.message' > "$RUNNER_TEMP/head-message.txt"; then
-            echo '::error::Could not read the PR commits; refusing to start paid CI without verifying attestation.'
+            echo '::error::Could not read the PR commits; refusing to start the CI jobs without verifying attestation.'
             exit 1
           fi
 
@@ -147,7 +147,7 @@ jobs:
           # establish either an exemption or a valid attestation.
           if ! files="$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" \
             --jq '.[] | .filename, (.previous_filename // empty)')"; then
-            echo '::error::Could not list the PR files; refusing to start paid CI.'
+            echo '::error::Could not list the PR files; refusing to start the CI jobs.'
             exit 1
           fi
 

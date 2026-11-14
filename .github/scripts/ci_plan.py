@@ -46,7 +46,8 @@ so any later content change makes it stale. `--attested-message-file` and
 merged tree equals its head tree. It is ignored when the change touches
 .github/, so a workflow change is still exercised by the run that introduces it.
 With --require-attestation, ordinary code changes fail instead of falling back
-to paid CI when any required group is missing or the merged tree differs.
+to running every group when a required group is missing or the merged tree
+differs.
 
 Usage (CI): changed paths on stdin, one per line; prints `group=true|false`
 lines for $GITHUB_OUTPUT. An empty list prints all-true: an empty answer from

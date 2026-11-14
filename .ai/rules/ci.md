@@ -120,8 +120,9 @@ before planning). Its docstring is the rule list. The constraints behind it:
 - The MySQL job runs only the migration/schema tests, so it has its own `mysql`
   group (`database/`, `tests/Feature/Database/`, `config/database.php`,
   composer manifests) instead of riding on `php`.
-- Billing rounds every job up to a whole minute, and sharding repeats setup per
-  shard, so it costs more minutes than it saves: Playwright stays one job and
+- Sharding repeats setup per shard and each shard takes one of the few runner
+  instances sharing the VPS (GitHub-hosted billing also rounds every job up to
+  a whole minute), so it costs more than it saves: Playwright stays one job and
   Vitest runs inside `js-checks` (Wayfinder types, ESLint, vue-tsc, Vitest in
   one job, each step reporting even if an earlier one failed). Prettier and Pint
   stay separate cheap gates ahead of Pest and Playwright. Prefer more workers on
@@ -142,7 +143,7 @@ before planning). Its docstring is the rule list. The constraints behind it:
   everything. `workflow_dispatch` and deployment workflow calls run everything
   without requiring a trailer, retaining a way to validate merged content.
 - PR API failures, an empty file list and the API's 3000-file limit fail closed
-  instead of falling back to paid CI. The three jobs using `!cancelled()` also
+  instead of falling back to running every job. The three jobs using `!cancelled()` also
   require a successful plan. Skipping uses job-level `if:`, never narrower `on:`
   filters. Do not rename jobs: branch protection may require their check names.
 
@@ -167,6 +168,18 @@ through `tests/e2e/support/ports.mjs`, and the E2E job's port check fails,
 naming the setting, when they are taken. `reuseExistingServer` stays false so a
 run never adopts another runner's server. The `webServer` command must stay
 cmd.exe-safe (`node ... && ...`); its setup is `prepare-e2e.mjs`, not shell.
+
+`deploy.yml` runs all its jobs on the same `CI_RUNNER_LABELS` expression
+(`test-merged-content` is a `uses:` call, so the called `tests.yml` jobs pick
+it up). Its deploy job keeps the SSH key and pinned `known_hosts` in
+`$RUNNER_TEMP/deploy-ssh`, never the shared `~/.ssh`, and removes them in an
+`if: always()` step. It calls `/usr/bin/ssh` (Git for Windows' ssh, not
+Windows' OpenSSH, which wants NTFS ACLs on the key) with `-F /dev/null`,
+`IdentitiesOnly`, `IdentityAgent=none`, `UserKnownHostsFile` set to that file,
+`GlobalKnownHostsFile=/dev/null` and `StrictHostKeyChecking=yes`; it refuses a
+temp path with whitespace or `%`, which ssh options cannot carry. Scripts sent
+to the host need LF endings: `.gitattributes` (`eol=lf`) overrides Windows Git's
+`core.autocrlf=true`; keep it.
 
 `Deploy script` sets `MSYS=winsymlinks:sys`: the script and its test need real
 symlinks, one of them dangling, and Git for Windows' `ln -s` copies by default.
